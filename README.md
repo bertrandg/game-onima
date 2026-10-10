@@ -2,6 +2,8 @@
 
 Jeu de course infinie en 3D dans le Japon traditionnel (inspiré de Subway Surfers), jouable sur ordinateur et téléphone.
 
+**▶ Jouer en ligne : https://bertrandg.github.io/game-onima/**
+
 ## Lancer le jeu
 
 ```bash
