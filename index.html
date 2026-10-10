@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#f7c6d6">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Onima Run</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="game"></div>
+
+  <div id="loading">Chargement… ✿</div>
+
+  <!-- HUD en jeu -->
+  <div id="hud" class="hidden">
+    <div class="score-box">
+      <div class="hud-name" id="hud-name"></div>
+      <div class="score"><span id="score">0</span><small> m</small></div>
+      <div class="best">Record : <span id="hud-best">0</span></div>
+    </div>
+    <div class="hud-btns">
+      <button class="icon-btn btn-mute" aria-label="Son">🔊</button>
+      <button class="icon-btn" id="btn-pause" aria-label="Pause">⏸</button>
+    </div>
+    <div id="toast"></div>
+  </div>
+
+  <!-- Menu principal -->
+  <section id="screen-menu" class="screen">
+    <div class="panel">
+      <h1 class="title">Onima<span>Run</span></h1>
+      <p class="subtitle">おにま ・ ラン</p>
+      <label for="name-input">Ton prénom</label>
+      <input id="name-input" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Ex : Yuki">
+      <div id="name-error" class="error"></div>
+      <button id="btn-play" class="btn primary">Jouer ▶</button>
+      <div class="row">
+        <button id="btn-scores" class="btn">🏆 Scores</button>
+        <button id="btn-help" class="btn">❔ Aide</button>
+      </div>
+      <button class="icon-btn btn-mute corner" aria-label="Son">🔊</button>
+    </div>
+  </section>
+
+  <!-- Aide -->
+  <section id="screen-help" class="screen hidden">
+    <div class="panel">
+      <h2>Comment jouer</h2>
+      <ul class="help">
+        <li><span class="keys">← →</span><span>ou swipe gauche/droite : changer de voie</span></li>
+        <li><span class="keys">↑</span><span>ou swipe vers le haut : sauter</span></li>
+        <li><span class="keys">↓</span><span>ou swipe vers le bas : roulade (et retomber vite)</span></li>
+        <li><span class="keys">Échap</span><span>pause</span></li>
+      </ul>
+      <p class="tip">Saute sur le toit des trains ou prends les rampes en bois pour y monter.
+        Les trains blancs <b>roulent vers toi</b> ! Le moindre choc et c’est perdu.
+        Plus tu vas loin, plus tu marques de points — et plus ça va vite.</p>
+      <button id="btn-help-back" class="btn primary">Retour</button>
+    </div>
+  </section>
+
+  <!-- Scores -->
+  <section id="screen-scores" class="screen hidden">
+    <div class="panel">
+      <h2>🏆 Tableau des scores</h2>
+      <table class="scores">
+        <thead><tr><th>#</th><th>Nom</th><th>Points</th></tr></thead>
+        <tbody id="scores-body"></tbody>
+      </table>
+      <button id="btn-scores-back" class="btn primary">Retour</button>
+    </div>
+  </section>
+
+  <!-- Pause -->
+  <section id="screen-pause" class="screen hidden">
+    <div class="panel small">
+      <h2>Pause</h2>
+      <button id="btn-resume" class="btn primary">Reprendre</button>
+      <button id="btn-restart" class="btn">Recommencer</button>
+      <button id="btn-pause-menu" class="btn">Menu principal</button>
+    </div>
+  </section>
+
+  <!-- Fin de partie -->
+  <section id="screen-over" class="screen hidden">
+    <div class="panel small">
+      <h2>Aïe ! (&gt;_&lt;)</h2>
+      <div class="big-score"><span id="over-score">0</span><small> pts</small></div>
+      <div class="over-best">Record : <span id="over-best">0</span></div>
+      <p id="over-msg" class="over-msg"></p>
+      <button id="btn-again" class="btn primary">Rejouer ▶</button>
+      <div class="row">
+        <button id="btn-over-scores" class="btn">🏆 Scores</button>
+        <button id="btn-over-menu" class="btn">Menu</button>
+      </div>
+    </div>
+  </section>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

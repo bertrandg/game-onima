@@ -1,0 +1,363 @@
+import * as THREE from 'three';
+import {
+  LANES, GRAVITY, JUMP_V, FAST_DROP_V, SLIDE_TIME, PLAYER_H, PLAYER_SLIDE_H, speedAt,
+} from './config.js';
+import { World } from './world.js';
+import { Obstacles } from './obstacles.js';
+import { Girl } from './girl.js';
+import { Input } from './input.js';
+import { Sound } from './audio.js';
+import * as Scores from './scores.js';
+
+// ---------- Rendu ----------
+const container = document.getElementById('game');
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+renderer.setSize(window.innerWidth, window.innerHeight);
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1500);
+
+const world = new World(scene);
+const sound = new Sound();
+const obstacles = new Obstacles(scene, { onHorn: () => sound.horn() });
+const girl = new Girl();
+scene.add(girl.root);
+
+// ---------- État ----------
+const player = {};
+let state = 'menu';         // menu | running | paused | dying | over
+let dist = 0, speed = 0, runTime = 0, deathT = 0, shake = 0, nextMilestone = 500;
+let camAngle = 0, viewShift = 1;
+let playerName = Scores.getName();
+const camPos = new THREE.Vector3(0, 1.6, -4.2);
+const camLook = new THREE.Vector3(0, 1.2, 0);
+
+function resetPlayer() {
+  Object.assign(player, {
+    lane: 1, x: 0, y: 0, z: 0, vy: 0, h: PLAYER_H, grounded: true, coyote: 0,
+    jumpBuf: 0, slideT: 0, slideQueued: false,
+  });
+  girl.reset();
+  girl.root.position.set(0, 0, 0);
+}
+
+function resetWorld() {
+  resetPlayer();
+  dist = 0; speed = 0; runTime = 0; deathT = 0; shake = 0; nextMilestone = 500;
+  obstacles.reset(0);
+  world.reset(0);
+}
+
+// ---------- UI ----------
+const $ = (id) => document.getElementById(id);
+const screens = ['menu', 'help', 'scores', 'pause', 'over'];
+let scoresBack = 'menu';
+let highlightId = null;
+
+function show(name) {
+  for (const s of screens) $('screen-' + s).classList.toggle('hidden', s !== name);
+  $('hud').classList.toggle('hidden', !(name === null && (state === 'running' || state === 'dying')));
+}
+
+function renderScores() {
+  const list = Scores.loadScores().slice(0, 10);
+  const body = $('scores-body');
+  body.innerHTML = '';
+  if (!list.length) {
+    body.innerHTML = '<tr><td colspan="3" class="empty">Aucun score pour l’instant.<br>À toi de jouer !</td></tr>';
+    return;
+  }
+  list.forEach((e, i) => {
+    const tr = document.createElement('tr');
+    if (e.id === highlightId) tr.className = 'me';
+    const medal = ['🥇', '🥈', '🥉'][i] || (i + 1);
+    tr.innerHTML = `<td class="rank">${medal}</td><td class="name"></td><td class="pts">${e.score.toLocaleString('fr-FR')}</td>`;
+    tr.querySelector('.name').textContent = e.name;
+    body.appendChild(tr);
+  });
+}
+
+function openScores(from) {
+  scoresBack = from;
+  renderScores();
+  show('scores');
+}
+
+function updateMuteBtn() {
+  for (const b of document.querySelectorAll('.btn-mute')) {
+    b.textContent = sound.muted ? '🔇' : '🔊';
+    b.setAttribute('aria-label', sound.muted ? 'Activer le son' : 'Couper le son');
+  }
+}
+
+$('name-input').value = playerName;
+$('btn-play').addEventListener('click', () => {
+  const n = $('name-input').value.trim().slice(0, 12);
+  if (!n) {
+    $('name-error').textContent = 'Écris ton prénom pour jouer ✿';
+    $('name-input').classList.remove('shake');
+    void $('name-input').offsetWidth;
+    $('name-input').classList.add('shake');
+    $('name-input').focus();
+    return;
+  }
+  $('name-error').textContent = '';
+  playerName = n;
+  Scores.setName(n);
+  $('name-input').blur();
+  startRun(true);
+});
+$('name-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btn-play').click(); });
+$('btn-scores').addEventListener('click', () => openScores('menu'));
+$('btn-help').addEventListener('click', () => show('help'));
+$('btn-help-back').addEventListener('click', () => show('menu'));
+$('btn-scores-back').addEventListener('click', () => show(scoresBack));
+$('btn-pause').addEventListener('click', () => pause());
+$('btn-resume').addEventListener('click', () => resume());
+$('btn-restart').addEventListener('click', () => startRun(false));
+$('btn-pause-menu').addEventListener('click', () => toMenu());
+$('btn-again').addEventListener('click', () => startRun(false));
+$('btn-over-scores').addEventListener('click', () => openScores('over'));
+$('btn-over-menu').addEventListener('click', () => toMenu());
+for (const b of document.querySelectorAll('.btn-mute')) {
+  b.addEventListener('click', () => { sound.init(); sound.setMuted(!sound.muted); updateMuteBtn(); });
+}
+updateMuteBtn();
+
+function toast(text) {
+  const t = $('toast');
+  t.textContent = text;
+  t.classList.remove('show');
+  void t.offsetWidth;
+  t.classList.add('show');
+}
+
+// ---------- Déroulement ----------
+function startRun(fromMenu) {
+  sound.init();
+  resetWorld();
+  state = 'running';
+  camAngle = fromMenu ? 0 : Math.PI;
+  if (!fromMenu) snapCamera();
+  $('hud-best').textContent = Scores.bestFor(playerName).toLocaleString('fr-FR');
+  $('hud-name').textContent = playerName;
+  show(null);
+  sound.startMusic();
+}
+
+function pause() {
+  if (state !== 'running') return;
+  state = 'paused';
+  sound.stopMusic();
+  show('pause');
+}
+
+function resume() {
+  if (state !== 'paused') return;
+  state = 'running';
+  show(null);
+  sound.startMusic();
+}
+
+function toMenu() {
+  sound.stopMusic();
+  resetWorld();
+  state = 'menu';
+  camAngle = 0;
+  show('menu');
+}
+
+function die() {
+  state = 'dying';
+  deathT = 0;
+  shake = 0.6;
+  sound.crash();
+  sound.stopMusic();
+  if (navigator.vibrate) navigator.vibrate(120);
+}
+
+function gameOver() {
+  state = 'over';
+  const score = Math.floor(dist);
+  const prevBest = Scores.bestFor(playerName);
+  const { entry, rank } = Scores.addScore(playerName, score);
+  highlightId = entry.id;
+  $('over-score').textContent = score.toLocaleString('fr-FR');
+  $('over-best').textContent = Math.max(prevBest, score).toLocaleString('fr-FR');
+  const msg = score > prevBest && prevBest > 0 ? 'Nouveau record personnel ! ✨'
+    : rank === 1 ? 'Meilleur score du tableau ! 👑'
+    : rank <= 10 ? `Tu entres dans le top 10 (n°${rank}) !`
+    : 'Courage, tu peux aller plus loin !';
+  $('over-msg').textContent = msg;
+  show('over');
+}
+
+// ---------- Contrôles ----------
+const active = () => state === 'running';
+new Input({
+  left() { if (player.lane > 0) { player.lane--; sound.lane(); } },
+  right() { if (player.lane < 2) { player.lane++; sound.lane(); } },
+  up() { player.jumpBuf = 0.15; },
+  down() {
+    if (!player.grounded) { player.vy = Math.min(player.vy, FAST_DROP_V); player.slideQueued = true; }
+    else if (player.slideT <= 0) { player.slideT = SLIDE_TIME; sound.slide(); }
+  },
+  pause() { if (state === 'running') pause(); else if (state === 'paused') resume(); },
+}, active);
+
+document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+
+// ---------- Physique ----------
+function step(dt) {
+  speed = speedAt(dist) * Math.min(1, 0.35 + runTime * 0.75);
+  player.z -= speed * dt;
+  dist += speed * dt;
+  obstacles.move(dt);
+
+  player.x += (LANES[player.lane] - player.x) * (1 - Math.exp(-dt * 16));
+  player.jumpBuf -= dt;
+  player.coyote -= dt;
+  if (player.slideT > 0) player.slideT -= dt;
+
+  if (player.jumpBuf > 0 && (player.grounded || player.coyote > 0)) {
+    player.vy = JUMP_V;
+    player.grounded = false;
+    player.coyote = 0;
+    player.jumpBuf = 0;
+    player.slideT = 0;
+    player.slideQueued = false;
+    sound.jump();
+  }
+
+  player.vy -= GRAVITY * dt;
+  player.y += player.vy * dt;
+  player.h = player.slideT > 0 ? PLAYER_SLIDE_H : PLAYER_H;
+
+  const { ground, crash } = obstacles.resolve(player);
+  if (crash) { die(); return; }
+
+  if (player.y <= ground) {
+    if (!player.grounded && player.vy < -4) {
+      sound.land();
+      if (player.slideQueued) { player.slideT = SLIDE_TIME; sound.slide(); }
+    }
+    player.slideQueued = false;
+    player.y = ground;
+    if (player.vy < 0) player.vy = 0;
+    player.grounded = true;
+    player.coyote = 0.1;
+  } else {
+    player.grounded = false;
+  }
+}
+
+// ---------- Caméra ----------
+// 0 en paysage, 1 sur un téléphone en portrait
+const portrait = () => THREE.MathUtils.clamp((1.1 - camera.aspect) / 0.6, 0, 1);
+
+function camTargets(out, look) {
+  const back = (1 - Math.cos(camAngle)) / 2;   // 0 = face à elle (menu), 1 = derrière (course)
+  const pf = portrait();
+  const r = THREE.MathUtils.lerp(4.0, 6.6 + pf * 1.1, back);
+  const camY = THREE.MathUtils.lerp(1.5, player.y * 0.75 + 3.3 + pf * 1.0, back);
+  const follow = 0.8 + pf * 0.2;
+  out.set(player.x * follow * back + Math.sin(camAngle) * r, camY, player.z - Math.cos(camAngle) * r);
+  look.set(player.x * (0.9 + pf * 0.1) * back, THREE.MathUtils.lerp(1.15, player.y * 0.6 + 1.1, back), player.z - 10 * back);
+}
+
+function snapCamera() {
+  camTargets(camPos, camLook);
+}
+
+const _tp = new THREE.Vector3(), _tl = new THREE.Vector3();
+function updateCamera(dt) {
+  const running = state !== 'menu';
+  camAngle += ((running ? Math.PI : 0) - camAngle) * (1 - Math.exp(-dt * (running ? 2.6 : 6)));
+  camTargets(_tp, _tl);
+  // si la caméra passe au-dessus d'un train, on la monte pour garder l'héroïne en vue
+  if (running) {
+    const gCam = obstacles.groundAt(camPos.x, _tp.z, 0.8);
+    if (gCam > 0) _tp.y = Math.max(_tp.y, gCam + 2.4);
+  }
+  const k = 1 - Math.exp(-dt * 10);
+  camPos.x += (_tp.x - camPos.x) * k;
+  camPos.y += (_tp.y - camPos.y) * (1 - Math.exp(-dt * 6));
+  camPos.z = _tp.z;
+  camLook.lerp(_tl, k);
+  camera.position.copy(camPos);
+  if (shake > 0) {
+    camera.position.x += (Math.random() - 0.5) * shake * 0.6;
+    camera.position.y += (Math.random() - 0.5) * shake * 0.6;
+    shake = Math.max(0, shake - dt * 1.5);
+  }
+  camera.lookAt(camLook);
+
+  const fov = running ? 62 + portrait() * 16 + (speed - 14) * 0.3 : 50;
+  camera.fov += (fov - camera.fov) * (1 - Math.exp(-dt * 3));
+
+  // En menu, décale la vue pour laisser la place au panneau
+  viewShift += ((state === 'menu' ? 1 : 0) - viewShift) * (1 - Math.exp(-dt * 4));
+  const w = window.innerWidth, h = window.innerHeight;
+  if (viewShift > 0.002) {
+    if (w > h) camera.setViewOffset(w, h, w * 0.2 * viewShift, 0, w, h);
+    else camera.setViewOffset(w, h, 0, h * 0.2 * viewShift, w, h);
+  } else if (camera.view && camera.view.enabled) camera.clearViewOffset();
+  camera.updateProjectionMatrix();
+}
+
+// ---------- Boucle ----------
+let last = performance.now();
+const scoreEl = $('score');
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+
+  if (state === 'running') {
+    runTime += dt;
+    const n = Math.max(1, Math.ceil(dt * 120));
+    for (let i = 0; i < n && state === 'running'; i++) step(dt / n);
+    obstacles.update(player.z, speed, dist);
+    scoreEl.textContent = Math.floor(dist).toLocaleString('fr-FR');
+    if (dist >= nextMilestone) {
+      toast(`${nextMilestone} m ! Plus vite ✿`);
+      sound.milestone();
+      nextMilestone += 500;
+    }
+  } else if (state === 'dying') {
+    deathT += dt;
+    if (deathT > 1.3) gameOver();
+  }
+
+  if (state !== 'paused') {
+    world.update(state === 'menu' ? dt : dt, player.z, state === 'running' ? speed : 0);
+    let mode = 'idle';
+    if (state === 'running') mode = player.slideT > 0 ? 'roll' : player.grounded ? 'run' : 'jump';
+    else if (state === 'dying' || state === 'over') mode = 'dead';
+    girl.animate(mode, dt, { speed, slideFrac: 1 - Math.max(0, player.slideT) / SLIDE_TIME, vy: player.vy });
+    girl.root.position.set(player.x, player.y, player.z);
+    girl.root.rotation.y = state === 'running' ? (LANES[player.lane] - player.x) * -0.12 : 0;
+    world.setShadow(player.x, obstacles.groundAt(player.x, player.z), player.y, player.z);
+    updateCamera(dt);
+  }
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Accès de test : ouvrir la page avec #debug
+if (location.hash === '#debug') {
+  window.__onima = { player, obstacles, camera, get state() { return state; }, get dist() { return dist; }, get speed() { return speed; } };
+}
+
+resetWorld();
+snapCamera();
+show('menu');
+document.body.classList.add('ready');
+requestAnimationFrame(frame);
