@@ -5,6 +5,7 @@ import { LANES } from './config.js';
 export const CANDY_POINTS = 10;
 const COLORS = ['#ff6fa5', '#5fd3a5', '#5ab4ff', '#ffd23f', '#b07cff', '#ff9a4a'];
 const SPACING = 2.2;
+const TRAIL_LEN = 3;   // bonbons à la suite
 
 function candyGeo(color) {
   const b = new Builder();
@@ -40,13 +41,14 @@ export class Candies {
     this.list = [];
   }
 
-  // Place une ligne de bonbons dans une voie entre zFrom (proche) et zTo (loin)
+  // Place un petit groupe de bonbons (3 au plus) à un endroit au hasard entre zFrom (proche) et zTo (loin)
   placeTrail(lane, zFrom, zTo, obstacles) {
     const x = LANES[lane];
     const geo = this.geos[(Math.random() * this.geos.length) | 0];
-    const n = Math.min(9, Math.floor((zFrom - zTo) / SPACING));
+    const n = Math.min(TRAIL_LEN, Math.floor((zFrom - zTo) / SPACING));
+    const start = zFrom - Math.random() * Math.max(0, zFrom - zTo - n * SPACING);
     for (let i = 0; i < n; i++) {
-      const z = zFrom - i * SPACING;
+      const z = start - i * SPACING;
       let y = 0.9;
       const g = obstacles.groundAt(x, z);
       if (g > 0) y = g + 0.9;
