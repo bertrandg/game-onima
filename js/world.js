@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { LANES } from './config.js';
 import { Builder, U, vcMat, pick, rand } from './geo.js';
 import * as TX from './textures.js';
+import { Scenery, FOG_COLOR } from './scenery.js';
 import { DECOR, THEMES, THEME_ORDER, THEME_LEN, weighted, prebuildDecor } from './decor.js';
 
 const TRACK_LEN = 600;
@@ -22,16 +23,15 @@ export class World {
     this.items = [];
     this.special = prebuildDecor();
 
-    scene.background = TX.skyTexture();
-    scene.fog = new THREE.Fog(TX.FOG_COLOR, 70, 250);
+    scene.fog = new THREE.Fog(FOG_COLOR, 80, 270);
 
-    const hemi = new THREE.HemisphereLight('#dff0ff', '#9bb87a', 1.7);
-    const sun = new THREE.DirectionalLight('#fff1dc', 2.0);
+    const hemi = new THREE.HemisphereLight('#e6ecff', '#a8b97a', 1.75);
+    const sun = new THREE.DirectionalLight('#ffe9cf', 2.1);
     sun.position.set(-0.6, 1, 0.5);
     scene.add(hemi, sun);
 
     this.buildTrack();
-    this.buildFar();
+    this.scenery = new Scenery(scene);
     this.buildPetals();
   }
 
@@ -77,43 +77,6 @@ export class World {
     sh.rotation.x = -Math.PI / 2;
     this.shadow = sh;
     this.scene.add(sh);
-  }
-
-  // Montagnes lointaines (dont le mont Fuji) et nuages : suivent le joueur
-  buildFar() {
-    this.farGroup = new THREE.Group();
-    this.scene.add(this.farGroup);
-    const mat = (c) => new THREE.MeshBasicMaterial({ color: c, fog: false });
-
-    const fuji = new THREE.Mesh(new THREE.ConeGeometry(260, 190, 48, 1, true), mat('#8ea6cf'));
-    fuji.position.set(-140, -10, -760);
-    const cap = new THREE.Mesh(new THREE.ConeGeometry(76, 56, 48), mat('#f4f6fb'));
-    cap.position.set(-140, 85 - 28, -759);
-    this.farGroup.add(fuji, cap);
-
-    const ranges = [
-      [-520, -560, 140, 70, '#a9bed8'], [-330, -600, 160, 60, '#b2c5dc'], [260, -580, 180, 80, '#a5bbd6'],
-      [480, -520, 150, 65, '#b6c8de'], [90, -640, 200, 55, '#bccde1'],
-      [-400, 560, 180, 70, '#aec2da'], [0, 620, 220, 60, '#b8cadf'], [380, 580, 170, 75, '#a9bed8'],
-      [-640, 0, 160, 70, '#b2c5dc'], [640, -60, 160, 70, '#b2c5dc'],
-    ];
-    for (const [x, z, r, h, c] of ranges) {
-      const m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 7), mat(c));
-      m.position.set(x, h / 2 - 15, z);
-      m.rotation.y = Math.random() * 3;
-      this.farGroup.add(m);
-    }
-
-    const cb = new Builder();
-    for (let i = 0; i < 9; i++) {
-      const cx = rand(-450, 450), cz = rand(-650, -250), cy = rand(70, 120);
-      for (let k = 0; k < 4; k++) {
-        cb.add(U.sph, '#ffffff', [cx + rand(-25, 25), cy + rand(-4, 6), cz + rand(-10, 10)],
-          [rand(14, 26), rand(7, 11), rand(10, 16)]);
-      }
-    }
-    const clouds = new THREE.Mesh(cb.build(), new THREE.MeshBasicMaterial({ vertexColors: true, fog: false }));
-    this.farGroup.add(clouds);
   }
 
   buildPetals() {
@@ -187,7 +150,6 @@ export class World {
     this.grassTex.offset.y = (-pz / 10) % 1;
     this.gravelTex.offset.y = (-pz / 3) % 1;
     this.sleeperTex.offset.y = (-pz / 1.3) % 1;
-    this.farGroup.position.z = pz;
 
     this.updatePetals(dt, pz, speed);
   }

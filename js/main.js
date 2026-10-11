@@ -427,6 +427,7 @@ function frame(now) {
     girl.root.rotation.y = state === 'running' ? (LANES[player.lane] - player.x) * -0.12 : 0;
     world.setShadow(player.x, obstacles.groundAt(player.x, player.z), player.y, player.z);
     updateCamera(dt);
+    world.scenery.update(dt, player.z, camera, renderer.getPixelRatio());
   }
   renderer.render(scene, camera);
 }

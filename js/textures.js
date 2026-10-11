@@ -11,20 +11,6 @@ function makeCanvas(w, h, draw, srgb = true) {
   return t;
 }
 
-export const FOG_COLOR = '#f6e3d9';
-
-export function skyTexture() {
-  return makeCanvas(4, 256, (g, w, h) => {
-    const grd = g.createLinearGradient(0, 0, 0, h);
-    grd.addColorStop(0, '#6aaee6');
-    grd.addColorStop(0.35, '#a9d4f0');
-    grd.addColorStop(0.52, '#f6e3d9');
-    grd.addColorStop(1, '#f3d9cc');
-    g.fillStyle = grd;
-    g.fillRect(0, 0, w, h);
-  });
-}
-
 function noise(g, w, h, count, base, spread, size = 2) {
   for (let i = 0; i < count; i++) {
     const v = (Math.random() - 0.5) * spread;
