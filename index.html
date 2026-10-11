@@ -29,7 +29,12 @@
   <div id="hud" class="hidden">
     <div class="score-box">
       <div class="hud-name" id="hud-name"></div>
-      <div class="score"><span id="score">0</span><small> m</small></div>
+      <div class="score"><span id="score">0</span><small> pts</small></div>
+      <div class="hud-line"><span id="hud-dist">0</span> m</div>
+      <div class="candy-row">
+        <span class="candy-ico">🍬</span><span id="hud-candies">0</span>
+        <div class="candy-bar"><div id="hud-candybar"></div></div>
+      </div>
       <div class="best">Record : <span id="hud-best">0</span></div>
     </div>
     <div class="hud-btns">
@@ -65,6 +70,7 @@
         <li><span class="keys">↑</span><span>ou swipe vers le haut : sauter</span></li>
         <li><span class="keys">↓</span><span>ou swipe vers le bas : roulade (et retomber vite)</span></li>
         <li><span class="keys">Échap</span><span>pause</span></li>
+        <li><span class="keys">🍬</span><span>+10 points par bonbon. Tous les 10 bonbons : level up et nouvelle tenue !</span></li>
       </ul>
       <p class="tip">Saute sur le toit des trains ou prends les rampes en bois pour y monter.
         Les trains blancs <b>roulent vers toi</b> ! Le moindre choc et c’est perdu.
@@ -100,6 +106,7 @@
     <div class="panel small">
       <h2>Aïe ! (&gt;_&lt;)</h2>
       <div class="big-score"><span id="over-score">0</span><small> pts</small></div>
+      <div class="over-detail" id="over-detail"></div>
       <div class="over-best">Record : <span id="over-best">0</span></div>
       <p id="over-msg" class="over-msg"></p>
       <button id="btn-again" class="btn primary">Rejouer ▶</button>

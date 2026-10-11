@@ -176,6 +176,12 @@ input.shake { animation: shake 0.4s; border-color: var(--pink-dark); }
 .score { font-size: 32px; font-weight: 800; color: var(--pink); line-height: 1.05; }
 .score small { font-size: 15px; color: var(--muted); }
 .best { font-size: 12px; color: var(--muted); }
+.hud-line { font-size: 13px; font-weight: 800; color: var(--muted); }
+.candy-row { display: flex; align-items: center; gap: 5px; margin: 3px 0 2px; font-weight: 800; font-size: 15px; color: var(--pink-dark); }
+.candy-ico { font-size: 15px; }
+.candy-bar { flex: 1; height: 8px; min-width: 50px; border-radius: 99px; background: var(--pink-light); overflow: hidden; }
+#hud-candybar { height: 100%; width: 0%; border-radius: 99px; background: linear-gradient(90deg, #ffd23f, var(--pink)); transition: width 0.2s; }
+.over-detail { font-size: 14px; font-weight: 800; color: var(--muted); margin-top: -4px; }
 .hud-btns {
   position: absolute;
   top: calc(12px + var(--safe-t)); right: calc(12px + var(--safe-r));

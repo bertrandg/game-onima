@@ -5,6 +5,7 @@ import {
 import { World } from './world.js';
 import { Obstacles } from './obstacles.js';
 import { Girl } from './girl.js';
+import { Candies, CANDY_POINTS } from './candies.js';
 import { Input } from './input.js';
 import { Sound } from './audio.js';
 import * as Scores from './scores.js';
@@ -21,7 +22,8 @@ const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerH
 
 const world = new World(scene);
 const sound = new Sound();
-const obstacles = new Obstacles(scene, { onHorn: () => sound.horn() });
+const candies = new Candies(scene);
+const obstacles = new Obstacles(scene, { onHorn: () => sound.horn(), candies });
 const girl = new Girl();
 scene.add(girl.root);
 
@@ -29,6 +31,8 @@ scene.add(girl.root);
 const player = {};
 let state = 'menu';         // menu | running | paused | dying | over
 let dist = 0, speed = 0, runTime = 0, deathT = 0, shake = 0, nextMilestone = 500;
+let candyCount = 0;
+const totalScore = () => Math.floor(dist) + candyCount * CANDY_POINTS;
 let camAngle = 0, viewShift = 1;
 let playerName = Scores.getName();
 const camPos = new THREE.Vector3(0, 1.6, -4.2);
@@ -46,6 +50,8 @@ function resetPlayer() {
 function resetWorld() {
   resetPlayer();
   dist = 0; speed = 0; runTime = 0; deathT = 0; shake = 0; nextMilestone = 500;
+  candyCount = 0;
+  candies.reset();
   obstacles.reset(0);
   world.reset(0);
 }
@@ -143,6 +149,8 @@ function startRun(fromMenu) {
   if (!fromMenu) snapCamera();
   $('hud-best').textContent = Scores.bestFor(playerName).toLocaleString('fr-FR');
   $('hud-name').textContent = playerName;
+  $('hud-candies').textContent = '0';
+  $('hud-candybar').style.width = '0%';
   show(null);
   sound.startMusic();
 }
@@ -180,11 +188,12 @@ function die() {
 
 function gameOver() {
   state = 'over';
-  const score = Math.floor(dist);
+  const score = totalScore();
   const prevBest = Scores.bestFor(playerName);
   const { entry, rank } = Scores.addScore(playerName, score);
   highlightId = entry.id;
   $('over-score').textContent = score.toLocaleString('fr-FR');
+  $('over-detail').textContent = `${Math.floor(dist).toLocaleString('fr-FR')} m  +  ${candyCount} 🍬 × ${CANDY_POINTS}`;
   $('over-best').textContent = Math.max(prevBest, score).toLocaleString('fr-FR');
   const msg = score > prevBest && prevBest > 0 ? 'Nouveau record personnel ! ✨'
     : rank === 1 ? 'Meilleur score du tableau ! 👑'
@@ -208,6 +217,76 @@ new Input({
 }, active);
 
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+
+// ---------- Bonbons et niveaux ----------
+function collectCandies(n) {
+  for (let i = 0; i < n; i++) {
+    candyCount++;
+    if (candyCount % 10 === 0) {
+      const level = candyCount / 10;
+      const p = girl.levelUp(level);
+      sound.levelUp();
+      sparkles.burst(player.x, player.y + 1, player.z);
+      toast(`Level up ! ✨ ${p.name}`);
+    } else {
+      sound.candy((candyCount % 10) - 1);
+    }
+  }
+  $('hud-candies').textContent = candyCount;
+  const bar = $('hud-candybar');
+  bar.style.width = `${(candyCount % 10) * 10}%`;
+}
+
+// Gerbe d'étoiles autour de l'héroïne
+const sparkles = (() => {
+  const N = 60;
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(N * 3), vel = new Float32Array(N * 3), col = new Float32Array(N * 3);
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const c = document.createElement('canvas');
+  c.width = c.height = 32;
+  const g = c.getContext('2d');
+  g.fillStyle = '#fff';
+  g.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 ? 6 : 15, a = (i / 10) * Math.PI * 2 - Math.PI / 2;
+    g.lineTo(16 + Math.cos(a) * r, 16 + Math.sin(a) * r);
+  }
+  g.fill();
+  const pts = new THREE.Points(geo, new THREE.PointsMaterial({
+    size: 0.35, map: new THREE.CanvasTexture(c), vertexColors: true, transparent: true, depthWrite: false, alphaTest: 0.1,
+  }));
+  pts.visible = false;
+  scene.add(pts);
+  const palette = ['#fff4a3', '#ffb3d9', '#b8e6ff', '#ffffff', '#ffd23f'].map((h) => new THREE.Color(h));
+  let life = 0;
+  return {
+    burst(x, y, z) {
+      for (let i = 0; i < N; i++) {
+        pos.set([x, y, z], i * 3);
+        const a = Math.random() * Math.PI * 2, e = (Math.random() - 0.3) * 2, s = 2.5 + Math.random() * 3;
+        vel.set([Math.cos(a) * s, e * s * 0.6 + 2, Math.sin(a) * s], i * 3);
+        const k = palette[i % palette.length];
+        col.set([k.r, k.g, k.b], i * 3);
+      }
+      geo.attributes.color.needsUpdate = true;
+      life = 1;
+      pts.visible = true;
+    },
+    update(dt) {
+      if (life <= 0) return;
+      life -= dt * 1.2;
+      for (let i = 0; i < N * 3; i += 3) {
+        vel[i + 1] -= 6 * dt;
+        pos[i] += vel[i] * dt; pos[i + 1] += vel[i + 1] * dt; pos[i + 2] += vel[i + 2] * dt - speed * dt * 0.8;
+      }
+      geo.attributes.position.needsUpdate = true;
+      pts.material.size = 0.35 * Math.max(0, life) + 0.05;
+      if (life <= 0) pts.visible = false;
+    },
+  };
+})();
 
 // ---------- Physique ----------
 function step(dt) {
@@ -237,6 +316,9 @@ function step(dt) {
 
   const { ground, crash } = obstacles.resolve(player);
   if (crash) { die(); return; }
+
+  const got = candies.collect(player);
+  if (got) collectCandies(got);
 
   if (player.y <= ground) {
     if (!player.grounded && player.vy < -4) {
@@ -310,6 +392,7 @@ function updateCamera(dt) {
 // ---------- Boucle ----------
 let last = performance.now();
 const scoreEl = $('score');
+const distEl = $('hud-dist');
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.05, (now - last) / 1000);
@@ -320,7 +403,8 @@ function frame(now) {
     const n = Math.max(1, Math.ceil(dt * 120));
     for (let i = 0; i < n && state === 'running'; i++) step(dt / n);
     obstacles.update(player.z, speed, dist);
-    scoreEl.textContent = Math.floor(dist).toLocaleString('fr-FR');
+    scoreEl.textContent = totalScore().toLocaleString('fr-FR');
+    distEl.textContent = Math.floor(dist).toLocaleString('fr-FR');
     if (dist >= nextMilestone) {
       toast(`${nextMilestone} m ! Plus vite ✿`);
       sound.milestone();
@@ -332,7 +416,9 @@ function frame(now) {
   }
 
   if (state !== 'paused') {
-    world.update(state === 'menu' ? dt : dt, player.z, state === 'running' ? speed : 0);
+    world.update(dt, player.z, state === 'running' ? speed : 0);
+    candies.update(dt, player.z);
+    sparkles.update(dt);
     let mode = 'idle';
     if (state === 'running') mode = player.slideT > 0 ? 'roll' : player.grounded ? 'run' : 'jump';
     else if (state === 'dying' || state === 'over') mode = 'dead';
@@ -353,7 +439,7 @@ window.addEventListener('resize', () => {
 
 // Accès de test : ouvrir la page avec #debug
 if (location.hash === '#debug') {
-  window.__onima = { player, obstacles, camera, get state() { return state; }, get dist() { return dist; }, get speed() { return speed; } };
+  window.__onima = { player, obstacles, camera, candies, get candyCount() { return candyCount; }, get state() { return state; }, get dist() { return dist; }, get speed() { return speed; } };
 }
 
 resetWorld();

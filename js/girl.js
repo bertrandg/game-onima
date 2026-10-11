@@ -17,6 +17,18 @@ const COL = {
   dark: '#2b1830',
 };
 
+// Tenues débloquées tous les 10 bonbons : robe, plis, rubans, noeuds
+export const PALETTES = [
+  { name: 'Rose sakura', dress: '#ff9cc4', dressDark: '#f27fae', ribbon: '#ff6fa5', red: '#e2475a' },
+  { name: 'Lavande', dress: '#c6a6ff', dressDark: '#a885f0', ribbon: '#8f6cf0', red: '#6b4bd6' },
+  { name: 'Menthe', dress: '#8fe3c0', dressDark: '#6fcfa8', ribbon: '#ff8fb6', red: '#2fae84' },
+  { name: 'Ciel', dress: '#9fd2ff', dressDark: '#7dbcf5', ribbon: '#ffd23f', red: '#3a86e0' },
+  { name: 'Pêche', dress: '#ffbf94', dressDark: '#f7a276', ribbon: '#ff7a7a', red: '#e8663c' },
+  { name: 'Citron', dress: '#ffe680', dressDark: '#f5d35a', ribbon: '#5ab4ff', red: '#f0a21f' },
+  { name: 'Cerise', dress: '#ff7f8e', dressDark: '#ec6274', ribbon: '#fff1f5', red: '#c22a45' },
+  { name: 'Minuit', dress: '#6f7bd8', dressDark: '#5a64c0', ribbon: '#ffd6f0', red: '#f2c94c' },
+];
+
 function toonGradient(levels) {
   const t = new THREE.DataTexture(new Uint8Array(levels), levels.length, 1, THREE.RedFormat);
   t.minFilter = t.magFilter = THREE.NearestFilter;
@@ -351,11 +363,25 @@ export class Girl {
       return t;
     });
 
+    this.palMats = { dress: m(COL.dress), dressDark: m(COL.dressDark), ribbon: m(COL.ribbon), red: m(COL.red) };
+    this.pop = 0;
     this.phase = 0;
     this.blinkT = 0;
     this.nextBlink = 2.5;
     this.happyT = 0;
     this.deadT = 0;
+  }
+
+  setPalette(i) {
+    const p = PALETTES[i % PALETTES.length];
+    for (const k of Object.keys(this.palMats)) this.palMats[k].color.set(p[k]);
+    return p;
+  }
+
+  // petit rebond quand elle change de tenue
+  levelUp(i) {
+    this.pop = 1;
+    return this.setPalette(i);
   }
 
   setFace(kind) {
@@ -370,6 +396,9 @@ export class Girl {
     this.body.position.y = -0.55;
     this.root.rotation.set(0, 0, 0);
     this.deadT = 0;
+    this.pop = 0;
+    this.root.scale.setScalar(1);
+    this.setPalette(0);
     this.setFace('open');
   }
 
@@ -452,9 +481,13 @@ export class Girl {
       this.happyT -= dt;
       if (this.happyT < -4) this.happyT = 1.4;
     }
+    if (this.pop > 0) {
+      this.pop = Math.max(0, this.pop - dt * 2);
+      this.root.scale.setScalar(1 + Math.sin(this.pop * Math.PI * 3) * 0.12 * this.pop);
+    }
     let face = 'open';
     if (mode === 'dead') face = 'ouch';
-    else if (mode === 'jump' || mode === 'roll' || (mode === 'idle' && this.happyT > 0)) face = 'happy';
+    else if (mode === 'jump' || mode === 'roll' || this.pop > 0 || (mode === 'idle' && this.happyT > 0)) face = 'happy';
     else if (this.blinkT > 0) face = 'blink';
     this.setFace(face);
   }

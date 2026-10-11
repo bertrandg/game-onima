@@ -86,6 +86,25 @@ export class Sound {
     [587.33, 783.99, 880].forEach((f, i) => this.tone(f, 0.25, { type: 'triangle', vol: 0.12, at: t + i * 0.09 }));
   }
 
+  // la note monte à chaque bonbon jusqu'au 10e
+  candy(step) {
+    const f = SCALE[step % SCALE.length] * 2;
+    const t = this.ctx?.currentTime || 0;
+    this.tone(f, 0.12, { type: 'triangle', vol: 0.14, at: t });
+    this.tone(f * 1.5, 0.15, { type: 'sine', vol: 0.08, at: t + 0.05 });
+  }
+  levelUp() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => {
+      this.tone(f, 0.18, { type: 'square', vol: 0.07, at: t + i * 0.07 });
+      this.tone(f, 0.3, { type: 'triangle', vol: 0.12, at: t + i * 0.07 });
+    });
+    this.tone(1568, 0.6, { type: 'triangle', vol: 0.14, at: t + 0.38 });
+    this.tone(2093, 0.7, { type: 'sine', vol: 0.08, at: t + 0.45, to: 2637 });
+    this.noise(0.5, { vol: 0.06, freq: 6000, q: 0.8, at: t + 0.38 });
+  }
+
   pluck(freq, t, vol = 0.14) {
     this.tone(freq, 0.9, { type: 'triangle', vol, at: t, out: this.music });
     this.tone(freq * 2, 0.35, { vol: vol * 0.35, at: t, out: this.music });

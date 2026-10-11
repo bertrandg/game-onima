@@ -106,9 +106,10 @@ function buildShared() {
 const randInt = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 
 export class Obstacles {
-  constructor(scene, { onHorn } = {}) {
+  constructor(scene, { onHorn, candies } = {}) {
     this.scene = scene;
     this.onHorn = onHorn || (() => {});
+    this.candies = candies;
     this.S = buildShared();
     this.list = [];
     this.reset(0);
@@ -120,6 +121,7 @@ export class Obstacles {
     this.cursor = startZ - 70;
     this.busy = [startZ, startZ, startZ];   // z le plus lointain occupé par voie
     this.reserve = null;
+    this.lastRowZ = null;
   }
 
   buildTrain(cars, moving, ramp) {
@@ -181,8 +183,32 @@ export class Obstacles {
     this.busy[lane] = z - depth;
   }
 
-  // Génère une "rangée" d'obstacles en z, renvoie l'espacement jusqu'à la suivante
+  // Génère une rangée puis une ligne de bonbons entre la rangée précédente et celle-ci
   spawnRow(z, speed, dist) {
+    const gap = this.spawnObstacles(z, speed, dist);
+    if (this.candies && this.lastRowZ !== null && Math.random() < 0.65) {
+      const zFrom = this.lastRowZ - 1, zTo = z - 3;
+      const lanes = [0, 1, 2].filter((l) => !(this.reserve && this.reserve.lane === l)
+        && !this.list.some((o) => o.moving && o.lane === l));
+      if (lanes.length) this.candies.placeTrail(lanes[(Math.random() * lanes.length) | 0], zFrom, zTo, this);
+    }
+    this.lastRowZ = z;
+    return gap;
+  }
+
+  // Barrière la plus proche d'un point dans une voie
+  barrierNear(lane, z) {
+    let best = null;
+    for (const o of this.list) {
+      if (o.lane !== lane || (o.kind !== 'low' && o.kind !== 'high')) continue;
+      const d = Math.abs(z - (o.zNear + o.zFar) / 2);
+      if (!best || d < best.d) best = { kind: o.kind, d };
+    }
+    return best;
+  }
+
+  // Génère une "rangée" d'obstacles en z, renvoie l'espacement jusqu'à la suivante
+  spawnObstacles(z, speed, dist) {
     const diff = Math.min(1, dist / 2500);
     const rowGap = Math.max(15, speed * 1.1) + rand(0, 8) * (1 - diff * 0.5);
     const minGap = Math.max(7, speed * 0.55);
@@ -241,6 +267,7 @@ export class Obstacles {
       const d = o.v * dt;
       o.zNear += d; o.zFar += d; o.trainFront += d;
       o.mesh.position.z = o.trainFront;
+      if (this.candies) this.candies.eatBy(o);
     }
   }
 
