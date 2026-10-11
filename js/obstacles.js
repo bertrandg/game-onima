@@ -110,6 +110,7 @@ export class Obstacles {
     this.scene = scene;
     this.onHorn = onHorn || (() => {});
     this.candies = candies;
+    this.trainTop = TRAIN_TOP;
     this.S = buildShared();
     this.list = [];
     this.reset(0);
@@ -203,11 +204,21 @@ export class Obstacles {
   // Génère une rangée puis une ligne de bonbons entre la rangée précédente et celle-ci
   spawnRow(z, speed, dist) {
     const gap = this.spawnObstacles(z, speed, dist);
-    if (this.candies && this.lastRowZ !== null && Math.random() < 0.65) {
+    if (this.candies && this.lastRowZ !== null) {
       const zFrom = this.lastRowZ - 1, zTo = z - 3;
       const lanes = [0, 1, 2].filter((l) => !(this.reserve && this.reserve.lane === l)
         && !this.list.some((o) => o.moving && o.lane === l));
-      if (lanes.length) this.candies.placeTrail(lanes[(Math.random() * lanes.length) | 0], zFrom, zTo, this);
+      let trailLane = -1;
+      if (lanes.length && Math.random() < 0.65) {
+        trailLane = lanes[(Math.random() * lanes.length) | 0];
+        this.candies.placeTrail(trailLane, zFrom, zTo, this);
+      }
+      // fugu, bien plus rare que les friandises, jamais dans la voie des friandises
+      const fuguLanes = lanes.filter((l) => l !== trailLane);
+      if (dist > 150 && fuguLanes.length && Math.random() < 0.07 + 0.07 * Math.min(1, dist / 3000) && zFrom - zTo > 6) {
+        const fz = zFrom - 3 - Math.random() * (zFrom - zTo - 6);
+        this.candies.placeFugu(fuguLanes[(Math.random() * fuguLanes.length) | 0], fz, this);
+      }
     }
     this.lastRowZ = z;
     return gap;

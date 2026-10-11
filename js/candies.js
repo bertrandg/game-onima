@@ -70,6 +70,54 @@ function lanternGeo() {
   return b.build();
 }
 
+// Fugu (poisson-globe) : boule tachetée hérissée d'épines, gros yeux, lèvres roses, nageoires
+const FUGU_R = 0.42;
+const _up = new THREE.Vector3(0, 1, 0), _n = new THREE.Vector3(), _q = new THREE.Quaternion(), _e = new THREE.Euler();
+function fuguGeo() {
+  const b = new Builder();
+  // corps : dessus fauve, ventre crème
+  const body = new THREE.SphereGeometry(FUGU_R, 26, 18).toNonIndexed();
+  body.deleteAttribute('uv');
+  const pos = body.attributes.position, col = new Float32Array(pos.count * 3);
+  const top = new THREE.Color('#c99a62'), belly = new THREE.Color('#f4ecdc'), c = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    const y = pos.getY(i) / FUGU_R;
+    c.copy(belly).lerp(top, Math.min(1, Math.max(0, (y - 0.05) / 0.5)));
+    col.set([c.r, c.g, c.b], i * 3);
+  }
+  body.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  b.parts.push(body);
+
+  // taches brunes et épines réparties régulièrement (spirale de Fibonacci)
+  const N = 90;
+  for (let i = 0; i < N; i++) {
+    const y = 1 - (2 * (i + 0.5)) / N, r = Math.sqrt(1 - y * y), a = i * 2.39996;
+    _n.set(Math.cos(a) * r, y, Math.sin(a) * r);
+    const face = _n.z > 0.55 && _n.y > -0.45 && _n.y < 0.55;   // laisser le visage dégagé
+    if (face) continue;
+    _q.setFromUnitVectors(_up, _n);
+    _e.setFromQuaternion(_q);
+    const rot = [_e.x, _e.y, _e.z];
+    if (_n.y < 0.75) b.add(U.sph, '#7a4a2a', [_n.x * FUGU_R * 0.99, _n.y * FUGU_R * 0.99, _n.z * FUGU_R * 0.99], [0.035, 0.012, 0.035], rot);
+    b.add(U.cone8, '#fbf6ea', [_n.x * (FUGU_R + 0.035), _n.y * (FUGU_R + 0.035), _n.z * (FUGU_R + 0.035)], [0.018, 0.08, 0.018], rot);
+  }
+  // yeux
+  for (const sx of [-1, 1]) {
+    b.add(BALL, '#f2e6c8', [sx * 0.17, 0.12, 0.34], [0.1, 0.1, 0.09]);
+    b.add(BALL, '#c99a3a', [sx * 0.17, 0.12, 0.405], [0.07, 0.07, 0.04]);
+    b.add(BALL, '#141010', [sx * 0.165, 0.115, 0.43], [0.048, 0.05, 0.03]);
+    b.add(BALL, '#ffffff', [sx * 0.15, 0.14, 0.455], [0.015, 0.015, 0.01]);
+    // nageoires pectorales translucides
+    b.add(U.cone8, '#f2deb0', [sx * 0.44, 0.08, 0.05], [0.13, 0.2, 0.03], [0, 0, -sx * 1.25]);
+  }
+  // lèvres roses
+  b.add(BALL, '#d98c86', [0, -0.08, 0.4], [0.11, 0.055, 0.05]);
+  b.add(BALL, '#5a2a2a', [0, -0.08, 0.432], [0.075, 0.025, 0.03]);
+  // queue
+  b.add(U.cone8, '#e8cf9a', [0, 0.02, -0.47], [0.12, 0.14, 0.03], [Math.PI / 2, 0, 0]);
+  return b.build();
+}
+
 // Friandises à ramasser (dango, shiso, lanternes) : sur les voies, les toits, en arc au-dessus des barrières
 export class Candies {
   constructor(scene) {
@@ -86,17 +134,48 @@ export class Candies {
       { geo: lanternGeo(), mat: glowMat, spin: true },
     ];
     this.list = [];
+    this.fugu = { geo: fuguGeo(), mat };
+    this.fugus = [];
   }
 
   warmupGroup() {
     const g = new THREE.Group();
     this.kinds.forEach((k, i) => { const m = new THREE.Mesh(k.geo, k.mat); m.position.x = i; g.add(m); });
+    g.add(new THREE.Mesh(this.fugu.geo, this.fugu.mat));
     return g;
   }
 
   reset() {
     for (const c of this.list) this.scene.remove(c.mesh);
+    for (const f of this.fugus) this.scene.remove(f.mesh);
     this.list = [];
+    this.fugus = [];
+  }
+
+  // Fugu flottant : jamais sur une rampe ni à côté d'une barrière (toujours évitable en sautant)
+  placeFugu(lane, z, obstacles) {
+    const x = LANES[lane];
+    const g = obstacles.groundAt(x, z);
+    if (g > 0 && g < obstacles.trainTop - 0.01) return false;
+    const b = obstacles.barrierNear(lane, z);
+    if (b && b.d < 4) return false;
+    const y = g + 0.95;
+    const mesh = new THREE.Mesh(this.fugu.geo, this.fugu.mat);
+    mesh.position.set(x, y, z);
+    this.scene.add(mesh);
+    this.fugus.push({ mesh, x, y, z, lane, phase: Math.random() * 6 });
+    return true;
+  }
+
+  // Le joueur touche-t-il un fugu ?
+  hitFugu(p) {
+    for (const f of this.fugus) {
+      if (!f.mesh.visible) continue;
+      if (Math.abs(f.x - p.x) > FUGU_R + 0.28 || Math.abs(f.z - p.z) > FUGU_R + 0.3) continue;
+      const fy = f.mesh.position.y;
+      if (fy - FUGU_R * 0.85 < p.y + p.h && fy + FUGU_R * 0.85 > p.y) return f;
+    }
+    return null;
   }
 
   // Place un petit groupe de bonbons (3 au plus) à un endroit au hasard entre zFrom (proche) et zTo (loin)
@@ -131,6 +210,9 @@ export class Candies {
         c.mesh.visible = false;
       }
     }
+    for (const f of this.fugus) {
+      if (f.mesh.visible && f.lane === train.lane && f.z <= train.zNear && f.z >= train.zFar && f.y < train.top) f.mesh.visible = false;
+    }
   }
 
   update(dt, pz) {
@@ -144,6 +226,17 @@ export class Candies {
       this.list[j++] = c;
     }
     this.list.length = j;
+
+    // fugus : flottent, se gonflent doucement et se dandinent face au joueur
+    j = 0;
+    for (const f of this.fugus) {
+      if (f.z > pz + 15) { this.scene.remove(f.mesh); continue; }
+      f.mesh.position.y = f.y + Math.sin(t * 2.2 + f.phase) * 0.12;
+      f.mesh.scale.setScalar(1 + Math.sin(t * 3 + f.phase) * 0.06);
+      f.mesh.rotation.set(Math.sin(t * 1.7 + f.phase) * 0.12, Math.sin(t * 1.3 + f.phase) * 0.35, Math.sin(t * 2.1 + f.phase) * 0.1);
+      this.fugus[j++] = f;
+    }
+    this.fugus.length = j;
   }
 
   // Renvoie le nombre de bonbons ramassés par le joueur

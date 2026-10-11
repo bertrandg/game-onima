@@ -365,6 +365,7 @@ function step(dt) {
   const { ground, crash } = obstacles.resolve(player);
   if (crash) { die(); return; }
 
+  if (candies.hitFugu(player)) { die(); return; }
   const got = candies.collect(player);
   if (got) collectCandies(got);
 
