@@ -22,6 +22,15 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      # Ajoute la version (commit) aux fichiers CSS/JS : le navigateur ne peut pas mélanger
+      # une page récente avec des fichiers d'une ancienne version gardés en cache
+      - name: Versionner les fichiers
+        run: |
+          V="${GITHUB_SHA::8}"
+          sed -i "s#css/style.css#css/style.css?v=$V#; s#js/main.js#js/main.js?v=$V#" index.html
+          sed -i -E "s#(from '\./[a-z]+\.js)'#\1?v=$V'#g" js/*.js
+          grep -n "?v=" index.html
+          grep -c "?v=" js/*.js
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -156,13 +156,21 @@ input.shake { animation: shake 0.4s; border-color: var(--pink-dark); }
   display: grid; place-items: center;
   padding: 0;
 }
-.corner-btns { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; }
-.corner-btns .icon-btn { width: 40px; height: 40px; font-size: 17px; }
-.btn-fs svg { width: 22px; height: 22px; fill: none; stroke: var(--pink-dark); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
-.corner-btns .btn-fs svg { width: 19px; height: 19px; }
-.btn-fs .ico-exit, body.is-fullscreen .btn-fs .ico-enter { display: none; }
-body.is-fullscreen .btn-fs .ico-exit { display: block; }
-body.no-fullscreen .btn-fs { display: none; }
+/* Boutons du coin supérieur droit */
+#top-btns {
+  position: fixed; z-index: 30;
+  top: calc(12px + var(--safe-t)); right: calc(12px + var(--safe-r));
+  display: flex; gap: 8px;
+}
+#top-btns svg { width: 22px; height: 22px; fill: none; stroke: var(--pink-dark); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+#top-btns svg .fill { fill: var(--pink-dark); stroke-width: 1.2; }
+#top-btns .icon-btn { color: var(--pink-dark); transition: transform 0.1s; }
+#top-btns .icon-btn:active { transform: scale(0.9); }
+#btn-pause { display: none; }
+body.in-run #btn-pause { display: grid; }
+.ico-muted, .ico-exit, body.is-muted .ico-sound, body.is-fullscreen .ico-enter { display: none; }
+body.is-muted .ico-muted, body.is-fullscreen .ico-exit { display: block; }
+body.no-fullscreen #btn-fs { display: none; }
 
 /* ---------- Aide ---------- */
 .help { list-style: none; padding: 0; margin: 0; text-align: left; display: flex; flex-direction: column; gap: 10px; }
@@ -213,11 +221,6 @@ body.no-fullscreen .btn-fs { display: none; }
 .candy-bar { flex: 1; height: 8px; min-width: 50px; border-radius: 99px; background: var(--pink-light); overflow: hidden; }
 #hud-candybar { height: 100%; width: 0%; border-radius: 99px; background: linear-gradient(90deg, #ffd23f, var(--pink)); transition: width 0.2s; }
 .over-detail { font-size: 14px; font-weight: 800; color: var(--muted); margin-top: -4px; }
-.hud-btns {
-  position: absolute;
-  top: calc(12px + var(--safe-t)); right: calc(12px + var(--safe-r));
-  display: flex; gap: 8px; pointer-events: auto;
-}
 #toast {
   position: absolute; left: 50%; top: 22%;
   transform: translate(-50%, 0);
@@ -236,7 +239,7 @@ body.no-fullscreen .btn-fs { display: none; }
 /* ---------- Téléphone (portrait) ---------- */
 @media (max-aspect-ratio: 1/1) {
   #screen-menu { justify-content: center; align-items: flex-end; padding-right: calc(16px + var(--safe-r)); }
-  #screen-menu .panel { padding: 58px 20px 18px; gap: 10px; }
+  #screen-menu .panel { padding: 18px 20px 18px; gap: 10px; }
   .title { font-size: 38px; }
   .title span { font-size: 24px; display: inline; margin-left: 8px; }
 }

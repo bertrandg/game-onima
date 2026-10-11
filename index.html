@@ -43,14 +43,6 @@
       </div>
       <div class="best">Record : <span id="hud-best">0</span></div>
     </div>
-    <div class="hud-btns">
-      <button class="icon-btn btn-mute" aria-label="Son">🔊</button>
-      <button class="icon-btn btn-fs" aria-label="Plein écran">
-        <svg class="ico-enter" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
-        <svg class="ico-exit" viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>
-      </button>
-      <button class="icon-btn" id="btn-pause" aria-label="Pause">⏸</button>
-    </div>
     <div id="toast"></div>
   </div>
 
@@ -66,13 +58,6 @@
       <div class="row">
         <button id="btn-scores" class="btn">🏆 Scores</button>
         <button id="btn-help" class="btn">❔ Aide</button>
-      </div>
-      <div class="corner-btns">
-        <button class="icon-btn btn-mute" aria-label="Son">🔊</button>
-        <button class="icon-btn btn-fs" aria-label="Plein écran">
-          <svg class="ico-enter" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
-          <svg class="ico-exit" viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>
-        </button>
       </div>
     </div>
   </section>
@@ -132,6 +117,21 @@
       </div>
     </div>
   </section>
+
+  <!-- Boutons toujours en haut à droite : son, plein écran, pause (en course) -->
+  <div id="top-btns">
+    <button class="icon-btn" id="btn-mute" aria-label="Couper le son">
+      <svg class="ico-sound" viewBox="0 0 24 24"><path class="fill" d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
+      <svg class="ico-muted" viewBox="0 0 24 24"><path class="fill" d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
+    </button>
+    <button class="icon-btn" id="btn-fs" aria-label="Plein écran">
+      <svg class="ico-enter" viewBox="0 0 24 24"><path d="M4.5 9V5.5a1 1 0 0 1 1-1H9M15 4.5h3.5a1 1 0 0 1 1 1V9M19.5 15v3.5a1 1 0 0 1-1 1H15M9 19.5H5.5a1 1 0 0 1-1-1V15"/></svg>
+      <svg class="ico-exit" viewBox="0 0 24 24"><path d="M9 4.5V8a1 1 0 0 1-1 1H4.5M19.5 9H16a1 1 0 0 1-1-1V4.5M15 19.5V16a1 1 0 0 1 1-1h3.5M4.5 15H8a1 1 0 0 1 1 1v3.5"/></svg>
+    </button>
+    <button class="icon-btn" id="btn-pause" aria-label="Pause">
+      <svg viewBox="0 0 24 24"><path class="fill" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>
+    </button>
+  </div>
 
   <script type="module" src="js/main.js"></script>
 </body>

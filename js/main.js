@@ -67,7 +67,9 @@ let highlightId = null;
 
 function show(name) {
   for (const s of screens) $('screen-' + s).classList.toggle('hidden', s !== name);
-  $('hud').classList.toggle('hidden', !(name === null && (state === 'running' || state === 'dying')));
+  const inRun = name === null && (state === 'running' || state === 'dying');
+  $('hud').classList.toggle('hidden', !inRun);
+  document.body.classList.toggle('in-run', inRun);
 }
 
 function renderScores() {
@@ -94,8 +96,12 @@ function openScores(from) {
   show('scores');
 }
 
+// ---------- Boutons du coin (son, plein écran, pause) ----------
 function updateMuteBtn() {
-  // ---------- Plein écran ----------
+  document.body.classList.toggle('is-muted', sound.muted);
+  $('btn-mute').setAttribute('aria-label', sound.muted ? 'Activer le son' : 'Couper le son');
+}
+
 const fsTarget = document.documentElement;
 const canFullscreen = !!(fsTarget.requestFullscreen || fsTarget.webkitRequestFullscreen);
 const isFullscreen = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
@@ -110,23 +116,15 @@ function toggleFullscreen() {
 function updateFullscreenBtn() {
   const fs = isFullscreen();
   document.body.classList.toggle('is-fullscreen', fs);
-  for (const b of document.querySelectorAll('.btn-fs')) b.setAttribute('aria-label', fs ? 'Quitter le plein écran' : 'Plein écran');
+  $('btn-fs').setAttribute('aria-label', fs ? 'Quitter le plein écran' : 'Plein écran');
 }
 // pas d'API plein écran (ex. Safari sur iPhone) : on cache le bouton
 if (!canFullscreen) document.body.classList.add('no-fullscreen');
-for (const b of document.querySelectorAll('.btn-fs')) b.addEventListener('click', toggleFullscreen);
 document.addEventListener('fullscreenchange', updateFullscreenBtn);
 document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
 window.addEventListener('keydown', (e) => {
   if ((e.key === 'f' || e.key === 'F') && !(e.target instanceof HTMLInputElement) && canFullscreen) toggleFullscreen();
 });
-updateFullscreenBtn();
-
-for (const b of document.querySelectorAll('.btn-mute')) {
-    b.textContent = sound.muted ? '🔇' : '🔊';
-    b.setAttribute('aria-label', sound.muted ? 'Activer le son' : 'Couper le son');
-  }
-}
 
 $('name-input').value = playerName;
 $('btn-play').addEventListener('click', () => {
@@ -157,10 +155,10 @@ $('btn-pause-menu').addEventListener('click', () => toMenu());
 $('btn-again').addEventListener('click', () => startRun(false));
 $('btn-over-scores').addEventListener('click', () => openScores('over'));
 $('btn-over-menu').addEventListener('click', () => toMenu());
-for (const b of document.querySelectorAll('.btn-mute')) {
-  b.addEventListener('click', () => { sound.init(); sound.setMuted(!sound.muted); updateMuteBtn(); });
-}
+$('btn-mute').addEventListener('click', () => { sound.init(); sound.setMuted(!sound.muted); updateMuteBtn(); });
+$('btn-fs').addEventListener('click', toggleFullscreen);
 updateMuteBtn();
+updateFullscreenBtn();
 
 function toast(text) {
   const t = $('toast');
