@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Héroïne chibi aux oreilles de chat : cheveux vert très sombre, kimono vert, longue jupe bordeaux
 const COL = {
@@ -148,6 +149,28 @@ function drawFace(kind) {
 }
 
 const lerp = (a, b, k) => a + (b - a) * k;
+
+// Fusionne, dans chaque groupe animé, les pièces qui partagent le même matériau :
+// même rendu, beaucoup moins d'appels de dessin
+function mergeByMaterial(obj) {
+  for (const child of [...obj.children]) if (!child.isMesh) mergeByMaterial(child);
+  const byMat = new Map();
+  for (const c of obj.children) {
+    if (!c.isMesh) continue;
+    if (!byMat.has(c.material)) byMat.set(c.material, []);
+    byMat.get(c.material).push(c);
+  }
+  for (const [mat, list] of byMat) {
+    if (list.length < 2) continue;
+    const geos = list.map((m) => {
+      m.updateMatrix();
+      const g = m.geometry.clone().applyMatrix4(m.matrix);
+      return g.index ? g.toNonIndexed() : g;
+    });
+    for (const m of list) obj.remove(m);
+    obj.add(new THREE.Mesh(mergeGeometries(geos), mat));
+  }
+}
 const ONE = new THREE.Vector3(1, 1, 1);
 
 export class Girl {
@@ -182,6 +205,8 @@ export class Girl {
 
     // root : position monde ; pivot : rotation (roulade/chute) ; body : modèle (pieds à y = 0, visage vers -z)
     this.root = new THREE.Group();
+    this.baseScale = 0.8;   // un peu plus petite par rapport aux trains et obstacles
+    this.root.scale.setScalar(this.baseScale);
     this.pivot = group(this.root, [0, 0.55, 0]);
     this.body = group(this.pivot, [0, -0.55, 0]);
     const B = this.body;
@@ -197,10 +222,38 @@ export class Girl {
     // ---------- Longue jupe bordeaux ----------
     add(B, cyl(0.2, 0.36, 0.74, 20), pal.skirt, [0, 0.5, 0]);
     add(B, cyl(0.205, 0.215, 0.09, 20), pal.skirtDark, [0, 0.87, 0]);
+    // plis de la jupe et ourlet
+    // (fusionnés en une seule géométrie : 1 appel de dessin)
+    const pleats = [];
+    const _o = new THREE.Object3D();
+    _o.rotation.order = 'YXZ';
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * Math.PI * 2;
+      _o.position.set(Math.sin(a) * 0.284, 0.5, Math.cos(a) * 0.284);
+      _o.rotation.set(-0.21, a, 0);
+      _o.updateMatrix();
+      pleats.push(new THREE.BoxGeometry(0.012, 0.72, 0.012).applyMatrix4(_o.matrix));
+    }
+    add(B, mergeGeometries(pleats), pal.skirtDark);
+    add(B, cyl(0.362, 0.366, 0.05, 20), pal.skirtDark, [0, 0.16, 0]);
 
     // ---------- Kimono vert ----------
     add(B, cyl(0.16, 0.22, 0.42), pal.top, [0, 1.08, 0]);
     add(B, cyl(0.22, 0.26, 0.12), pal.top, [0, 0.89, 0]);
+    add(B, cyl(0.262, 0.264, 0.035, 20), pal.sash, [0, 0.83, 0]);       // liseré du bas de la veste
+    // ceinture nouée : noeud sur le côté et deux pans qui pendent
+    add(B, cyl(0.228, 0.228, 0.07, 20), pal.sash, [0, 0.93, 0]);
+    const knot = group(B, [0.13, 0.93, -0.18]);
+    add(knot, sph, pal.sash, [0, 0, 0], [0.04, 0.035, 0.03]);
+    for (const sx of [-1, 1]) add(knot, sph, pal.sash, [sx * 0.05, 0.005, 0], [0.05, 0.025, 0.018], [0, 0, -sx * 0.35]);
+    add(knot, new THREE.BoxGeometry(0.03, 0.2, 0.01), pal.sash, [-0.015, -0.11, 0], [1, 1, 1], [0, 0, 0.12]);
+    add(knot, new THREE.BoxGeometry(0.03, 0.16, 0.01), pal.sash, [0.025, -0.09, 0.005], [1, 1, 1], [0, 0, -0.18]);
+    // petite bourse à remèdes d'apothicaire, à la hanche
+    const pouch = group(B, [-0.25, 0.78, 0.04]);
+    add(pouch, sph, m('#a8845a'), [0, 0, 0], [0.075, 0.09, 0.06]);
+    add(pouch, cyl(0.04, 0.05, 0.03, 10), m('#8a6a44'), [0, 0.08, 0]);
+    add(pouch, cyl(0.006, 0.006, 0.16, 6), m('#5a4030'), [0.01, 0.15, 0], [1, 1, 1], [0, 0, -0.2]);
+    add(pouch, sph, m('#e8556c'), [0, 0.02, -0.06], [0.018, 0.018, 0.01]);
     // col croisé blanc et bleu pâle
     add(B, new THREE.TorusGeometry(0.12, 0.03, 8, 20), m(COL.collar), [0, 1.28, 0], [1, 1, 1], [Math.PI / 2, 0, 0]);
     for (const sx of [-1, 1]) {
@@ -210,6 +263,10 @@ export class Girl {
     // bandoulière en diagonale (devant et dans le dos)
     add(B, new THREE.BoxGeometry(0.065, 0.56, 0.02), pal.sash, [0.0, 1.06, -0.2], [1, 1, 1], [0.15, 0, 0.6]);
     add(B, new THREE.BoxGeometry(0.065, 0.56, 0.02), pal.sash, [0.0, 1.06, 0.205], [1, 1, 1], [-0.15, 0, -0.6]);
+    // liserés foncés du col croisé
+    for (const sx of [-1, 1]) {
+      add(B, new THREE.BoxGeometry(0.02, 0.22, 0.02), pal.sash, [sx * 0.075, 1.19, -0.172], [1, 1, 1], [0.22, 0, -sx * 0.48]);
+    }
     add(B, cyl(0.052, 0.052, 0.1), m(COL.skin), [0, 1.32, 0]);
 
     // ---------- Bras : larges manches de kimono ----------
@@ -218,6 +275,8 @@ export class Girl {
       add(arm, sph, pal.top, [0, -0.02, 0], [0.08, 0.08, 0.08]);
       add(arm, cyl(0.07, 0.125, 0.34), pal.top, [0, -0.19, 0]);
       add(arm, cyl(0.128, 0.128, 0.06, 16, true), pal.cuff, [0, -0.36, 0]);
+      add(arm, cyl(0.131, 0.131, 0.015, 16, true), pal.sash, [0, -0.335, 0]);
+      add(arm, cyl(0.075, 0.075, 0.05, 12, true), m(COL.collar), [0, -0.38, 0]);   // manche intérieure blanche
       add(arm, sph, m(COL.skin), [0, -0.39, 0], [0.045, 0.05, 0.04]);
       return arm;
     });
@@ -274,6 +333,9 @@ export class Girl {
       add(this.ribbon, sph, pal.ribbon, [sx * 0.05, 0.02, 0], [0.055, 0.03, 0.02], [0, 0.4, -sx * 0.4]);
     }
     add(this.ribbon, sph, pal.ribbon, [0, 0, 0], [0.025, 0.025, 0.025]);
+    // épingle à cheveux en bois piquée dans le chignon, avec une perle
+    add(bun, cyl(0.009, 0.007, 0.36, 6), m('#8a5a2a'), [-0.02, 0.04, 0.02], [1, 1, 1], [0.2, 0, 1.15]);
+    add(bun, sph, m(COL.beadTeal), [-0.18, 0.12, 0.05], [0.022, 0.022, 0.022]);
     // oreilles de chat
     for (const sx of [-1, 1]) {
       add(H, new THREE.ConeGeometry(0.11, 0.24, 4), hairMat, [sx * 0.21, 0.36, 0.04], [1, 1, 0.55], [0, Math.PI / 4, -sx * 0.38]);
@@ -288,6 +350,7 @@ export class Girl {
       add(br, new THREE.ConeGeometry(0.035, 0.1, 8), hairMat, [0, -0.33, 0]);
     }
 
+    mergeByMaterial(this.root);
     this.allMats = [...Object.values(mats), ...Object.values(pal), hairMat, this.faceMat];
     this.palMats = pal;
     this.setPalette(0);
@@ -331,7 +394,7 @@ export class Girl {
     this.root.rotation.set(0, 0, 0);
     this.deadT = 0;
     this.pop = 0;
-    this.root.scale.setScalar(1);
+    this.root.scale.setScalar(this.baseScale);
     this.setPalette(0);
     this.setFace('open');
   }
@@ -415,7 +478,7 @@ export class Girl {
     }
     if (this.pop > 0) {
       this.pop = Math.max(0, this.pop - dt * 2);
-      this.root.scale.setScalar(1 + Math.sin(this.pop * Math.PI * 3) * 0.12 * this.pop);
+      this.root.scale.setScalar(this.baseScale * (1 + Math.sin(this.pop * Math.PI * 3) * 0.12 * this.pop));
     }
     let face = 'open';
     if (mode === 'dead') face = 'ouch';

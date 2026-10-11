@@ -139,17 +139,63 @@ function shrineTorii(b) {
   b.add(U.box, '#2b2b2b', [0, 3.2, 0], [0.18, 0.5, 0.35]);
 }
 
-// Grand torii au-dessus de la voie (assez haut pour sauter depuis un train)
+// Grand portail monumental au-dessus de la voie (toit de tuiles noir aux bords relevés,
+// consoles, plaque, clous dorés). Assez haut pour sauter depuis le toit d'un train.
 export function bigTorii(b) {
-  for (const x of [-5.6, 5.6]) {
-    b.add(U.cyl, RED, [x, 5, 0], [0.34, 10, 0.34]);
-    b.add(U.cyl, '#2b2b2b', [x, 0.3, 0], [0.42, 0.6, 0.42]);
+  const R = '#c8322a', R2 = '#a8261f', GOLD = '#e0b04a', TILE = '#30333a', TILE2 = '#3d4149';
+  for (const sx of [-1, 1]) {
+    const x = sx * 5.3;
+    // socle à deux gradins et poteau carré
+    b.add(U.box, R2, [x, 0.25, 0], [1.6, 0.5, 1.6]);
+    b.add(U.box, R, [x, 0.65, 0], [1.25, 0.3, 1.25]);
+    b.add(U.box, R, [x, 4.9, 0], [0.78, 8.6, 0.78]);
+    b.add(U.box, R2, [x, 4.9, 0], [0.82, 8.6, 0.2]);
+    // clous dorés le long du poteau
+    for (let k = 0; k < 6; k++) {
+      for (const sz of [-1, 1]) b.add(U.box, GOLD, [x, 1.6 + k * 1.15, sz * 0.4], [0.16, 0.16, 0.04]);
+    }
+    // petites balustrades de part et d'autre du pied
+    const fx = x + sx * 1.35;
+    for (const dz of [-0.9, 0, 0.9]) b.add(U.box, R, [fx, 0.75, dz], [0.12, 1.5, 0.12]);
+    for (const y of [0.55, 1.25]) b.add(U.box, R, [fx, y, 0], [0.1, 0.1, 2.0]);
+    for (const dz of [-0.9, 0.9]) b.add(U.cone4, R2, [fx, 1.6, dz], [0.09, 0.2, 0.09], [0, Math.PI / 4, 0]);
+    // consoles ajourées sous la poutre basse
+    b.add(U.box, R, [x - sx * 0.95, 7.55, 0], [1.2, 0.18, 0.3], [0, 0, sx * 0.35]);
+    b.add(U.box, R2, [x - sx * 1.05, 7.75, 0], [0.7, 0.14, 0.32]);
   }
-  b.add(U.box, '#2b2b2b', [0, 10.1, 0], [14.2, 0.55, 0.9]);
-  b.add(U.box, RED, [0, 9.65, 0], [13.2, 0.4, 0.7]);
-  b.add(U.box, RED, [0, 8.4, 0], [12.4, 0.38, 0.45]);
-  b.add(U.box, '#2b2b2b', [0, 9.0, 0], [0.5, 1.0, 0.5]);
-  b.add(U.box, '#f2e6c9', [0, 9.0, 0.26], [0.36, 0.8, 0.04]);
+  // poutre basse (nuki) avec clous dorés
+  b.add(U.box, R, [0, 8.05, 0], [12.4, 0.45, 0.55]);
+  for (const x of [-3.2, -1.2, 1.2, 3.2]) b.add(U.box, GOLD, [x, 8.05, 0.29], [0.18, 0.18, 0.03]);
+  // poutre haute et grappes de consoles (tokyō)
+  b.add(U.box, R, [0, 8.85, 0], [12.0, 0.35, 0.7]);
+  for (const x of [-5.3, -3.5, -1.8, 1.8, 3.5, 5.3]) {
+    b.add(U.box, R2, [x, 9.15, 0], [0.5, 0.25, 0.9]);
+    b.add(U.box, R, [x, 9.38, 0], [0.9, 0.2, 1.2]);
+    b.add(U.box, GOLD, [x, 9.15, 0.46], [0.12, 0.12, 0.02]);
+  }
+  // plaque centrale noire encadrée de rouge et d'or
+  b.add(U.box, GOLD, [0, 8.75, 0.36], [1.0, 1.25, 0.08]);
+  b.add(U.box, '#1c1a1a', [0, 8.75, 0.41], [0.82, 1.05, 0.04]);
+  for (let k = 0; k < 4; k++) b.add(U.box, '#d8b04a', [0, 9.1 - k * 0.24, 0.435], [0.36, 0.06, 0.01]);
+  // bande rouge sous l'avant-toit, avec petits chevrons
+  b.add(U.box, R, [0, 9.6, 0], [14.6, 0.32, 3.0]);
+  for (let i = 0; i < 28; i++) b.add(U.box, '#f2e6c9', [-7.0 + i * 0.52, 9.47, 1.52], [0.14, 0.08, 0.04]);
+  // toit de tuiles : versants + rangées de tuiles + coins relevés + faîtage
+  b.add(U.roof, TILE, [0, 9.75, 0], [3.6, 1.35, 15.2], [0, Math.PI / 2, 0]);
+  for (let i = 0; i < 30; i++) {
+    const x = -7.25 + i * 0.5;
+    for (const sz of [-1, 1]) b.add(U.box, TILE2, [x, 10.4, sz * 0.92], [0.12, 0.1, 1.95], [sz * 0.64, 0, 0]);
+  }
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      b.add(U.box, TILE, [sx * 7.55, 9.95, sz * 1.65], [1.1, 0.16, 0.5], [0, sz * sx * 0.5, sx * 0.4]);
+    }
+  }
+  b.add(U.box, '#22252b', [0, 11.12, 0], [13.2, 0.3, 0.32]);
+  for (const sx of [-1, 1]) {
+    b.add(U.box, '#22252b', [sx * 6.7, 11.4, 0], [0.3, 0.5, 0.34], [0, 0, -sx * 0.4]);
+    b.add(U.sph, GOLD, [sx * 6.85, 11.68, 0], [0.12, 0.12, 0.12]);
+  }
 }
 
 function paddy(b) {

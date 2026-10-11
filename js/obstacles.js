@@ -55,19 +55,36 @@ function buildShared() {
   }
   s.low.push({ geo: b.build(), depth: 0.84 });
 
-  b = new Builder();   // bottes de paille ficelées
-  for (const x of [-0.55, 0.55]) {
-    b.add(U.cyl, '#e3c66f', [x, 0.45, 0], [0.45, 1.05, 0.45], [0, 0, Math.PI / 2]);
-    for (const r of [0.38, 0.28, 0.17, 0.07]) {  // spirale visible aux extrémités
-      for (const ex of [-0.53, 0.53]) b.add(U.cyl, r > 0.2 ? '#cfae55' : '#b8973f', [x + ex, 0.45, 0], [r, 0.012, r], [0, 0, Math.PI / 2]);
-    }
-    for (let i = 0; i < 10; i++) {               // brins qui dépassent
-      const a = (i / 10) * Math.PI * 2;
-      b.add(U.box, '#f0d98a', [x + (Math.random() - 0.5) * 0.9, 0.45 + Math.sin(a) * 0.45, Math.cos(a) * 0.45], [0.14, 0.012, 0.012], [a, 0, 0.4]);
-    }
-    for (const dx of [-0.28, 0.28]) b.add(U.cyl, '#8a6a34', [x + dx, 0.45, 0], [0.462, 0.04, 0.462], [0, 0, Math.PI / 2]);
+  b = new Builder();   // pile de tawara (sacs de riz en paille tressée), 2 en bas + 1 en haut
+  {
+    const CAPS = new THREE.CapsuleGeometry(1, 1, 6, 16);
+    const tawara = (x, y) => {
+      const r = 0.27, len = 0.98;
+      b.add(CAPS, '#dcc27e', [x, y, 0], [r, len / 3, r], [0, 0, Math.PI / 2]);   // capsule : hauteur totale 3 avant échelle
+      // brins de paille dans la longueur
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2;
+        b.add(U.box, i % 2 ? '#c7a85f' : '#ecd79c', [x, y + Math.sin(a) * r * 0.99, Math.cos(a) * r * 0.99], [len * 0.82, 0.018, 0.03], [a, 0, 0]);
+      }
+      // trois liens de corde
+      for (const dx of [-0.3, 0, 0.3]) {
+        b.add(U.cyl, '#7a5a32', [x + dx, y, 0], [r + 0.02, 0.05, r + 0.02], [0, 0, Math.PI / 2]);
+        b.add(U.cyl, '#9a7444', [x + dx + 0.02, y, 0], [r + 0.025, 0.012, r + 0.025], [0, 0, Math.PI / 2]);
+      }
+      // couvercles tressés (sandawara) aux deux bouts
+      for (const sx of [-1, 1]) {
+        const ex = x + sx * (len / 2 - 0.02);
+        b.add(U.cyl, '#b48f4a', [ex, y, 0], [r * 0.92, 0.04, r * 0.92], [0, 0, Math.PI / 2]);
+        b.add(U.cyl, '#d6b66c', [ex + sx * 0.022, y, 0], [r * 0.7, 0.012, r * 0.7], [0, 0, Math.PI / 2]);
+        b.add(U.cyl, '#a07c3c', [ex + sx * 0.03, y, 0], [r * 0.35, 0.012, r * 0.35], [0, 0, Math.PI / 2]);
+        b.add(U.cone8, '#c7a85f', [ex + sx * 0.08, y, 0], [0.06, 0.12, 0.06], [0, 0, -sx * Math.PI / 2]);
+      }
+    };
+    tawara(-0.52, 0.27);
+    tawara(0.52, 0.27);
+    tawara(0, 0.72);
   }
-  s.low.push({ geo: b.build(), depth: 0.9 });
+  s.low.push({ geo: b.build(), depth: 0.56 });
 
   b = new Builder();   // barrière de bambou avec corde sacrée (shimenawa) et papiers (shide)
   for (const x of [-0.95, 0.95]) {
@@ -87,31 +104,33 @@ function buildShared() {
   }
   s.low.push({ geo: b.build(), depth: 0.5 });
 
-  // Barrière haute (à glisser dessous) : portique de boutique avec petit toit, noren et lanternes
+  // Barrière haute (à glisser dessous) : petit torii vermillon, nuki basse, plaque dorée
   b = new Builder();
-  for (const x of [-1.22, 1.22]) {
-    b.add(U.box, '#6b3f22', [x, 1.5, 0], [0.16, 3, 0.16]);
-    b.add(U.box, '#4a2a16', [x, 0.08, 0], [0.24, 0.16, 0.24]);
-    // lanterne rouge suspendue
-    b.add(U.sph, '#d8392f', [x * 0.93, 2.25, 0.2], [0.13, 0.19, 0.13]);
-    b.add(U.cyl, '#1e1a18', [x * 0.93, 2.46, 0.2], [0.07, 0.04, 0.07]);
-    b.add(U.cyl, '#1e1a18', [x * 0.93, 2.04, 0.2], [0.07, 0.04, 0.07]);
-    b.add(U.box, '#f4e6c4', [x * 0.93, 2.25, 0.33], [0.04, 0.18, 0.01]);
+  const VER = '#e8502a', VER2 = '#c93d1e', BLACK = '#1f1f22', GOLD = '#d9a93a';
+  for (const sx of [-1, 1]) {
+    const x = sx * 1.15;
+    b.add(U.cyl, VER, [x, 1.3, 0], [0.12, 2.6, 0.12], [0, 0, sx * 0.03]);
+    b.add(U.cyl, BLACK, [x, 0.2, 0], [0.15, 0.4, 0.15]);
+    b.add(U.cyl, BLACK, [x, 0.42, 0], [0.135, 0.05, 0.135]);
+    // cales des extrémités de la nuki
+    b.add(U.box, VER2, [x, 1.44, 0.12], [0.1, 0.1, 0.06]);
   }
-  b.add(U.box, '#6b3f22', [0, 2.82, 0], [2.65, 0.14, 0.2]);
-  b.add(U.box, '#6b3f22', [0, 2.5, 0], [2.45, 0.08, 0.1]);
-  b.add(U.roof, '#3f4656', [0, 2.9, 0], [3.1, 0.38, 0.62]);
-  b.add(U.box, '#2c3140', [0, 3.27, 0], [3.1, 0.06, 0.08]);
-  for (let i = 0; i < 9; i++) b.add(U.box, '#353b4a', [-1.4 + i * 0.35, 2.92, 0.3], [0.06, 0.06, 0.04]);
-  // noren indigo à trois pans avec motif de vagues blanches
-  for (const x of [-0.74, 0, 0.74]) {
-    b.add(U.box, '#24356e', [x, 1.86, 0], [0.7, 1.15, 0.05]);
-    for (const k of [-0.2, 0, 0.2]) b.add(U.cyl, '#f4f1ea', [x + k, 1.42, 0.03], [0.08, 0.012, 0.08], [Math.PI / 2, 0, 0]);
-    b.add(U.cyl, '#24356e', [x + 0.0, 1.38, 0.035], [0.06, 0.012, 0.06], [Math.PI / 2, 0, 0]);
+  // nuki (traverse basse, dépasse des poteaux)
+  b.add(U.box, VER, [0, 1.44, 0], [3.0, 0.2, 0.14]);
+  // plaque (gakuzuka) dorée au centre
+  b.add(U.box, VER, [0, 1.75, 0], [0.12, 0.45, 0.1]);
+  b.add(U.box, GOLD, [0, 1.98, 0.02], [0.46, 0.62, 0.07]);
+  b.add(U.box, '#2a2016', [0, 1.98, 0.06], [0.34, 0.5, 0.02]);
+  for (let k = 0; k < 4; k++) b.add(U.box, '#e6c26a', [0, 2.15 - k * 0.11, 0.075], [0.05 + (k % 2) * 0.08, 0.035, 0.01]);
+  for (const [dx, dy] of [[-0.23, 0.31], [0.23, 0.31], [-0.23, -0.31], [0.23, -0.31]]) b.add(U.sph, GOLD, [dx, 1.98 + dy, 0.04], [0.05, 0.05, 0.03]);
+  // shimaki (poutre rouge sous le linteau)
+  b.add(U.box, VER, [0, 2.44, 0], [3.0, 0.2, 0.22]);
+  // kasagi noir aux extrémités relevées
+  b.add(U.box, BLACK, [0, 2.6, 0], [2.3, 0.14, 0.3]);
+  for (const sx of [-1, 1]) {
+    b.add(U.box, BLACK, [sx * 1.45, 2.65, 0], [0.75, 0.14, 0.3], [0, 0, sx * 0.14]);
+    b.add(U.box, VER2, [sx * 1.4, 2.53, 0], [0.7, 0.06, 0.24], [0, 0, sx * 0.14]);
   }
-  b.add(U.cyl, '#f4f1ea', [0, 2.06, 0.03], [0.17, 0.02, 0.17], [Math.PI / 2, 0, 0]);
-  b.add(U.cyl, '#24356e', [0, 2.06, 0.042], [0.11, 0.02, 0.11], [Math.PI / 2, 0, 0]);
-  b.add(U.box, '#3a2a20', [0, 2.46, 0], [2.4, 0.06, 0.06]);
   s.highGeo = b.build();
   return s;
 }
@@ -319,7 +338,7 @@ export class Obstacles {
       } else if (o.kind === 'low') {
         if (p.y < 1.0) crash = o;
       } else if (o.kind === 'high') {
-        if (p.y + p.h > 1.28 && p.y < 3.1) crash = o;
+        if (p.y + p.h > 1.32 && p.y < 2.75) crash = o;   // nuki basse : passer en roulade
       }
     }
     return { ground, crash };
