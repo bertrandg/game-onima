@@ -10,14 +10,14 @@ const COL = {
   collar: '#e4ecf7',
   collarBlue: '#b9c9e6',
   shoe: '#3a2430',
-  beadPink: '#e86a8a',
-  beadTeal: '#3fb3a0',
+  beadPink: '#d8303a',
+  beadTeal: '#2f6fb8',
   dark: '#2b1a1a',
 };
 
 // Tenues débloquées tous les 10 bonbons : haut, poignets, bandoulière, jupe, ruban
 export const PALETTES = [
-  { name: 'Jade', top: '#62a86c', cuff: '#b4dc84', sash: '#2f7350', skirt: '#7d2a4c', ribbon: '#8a6ad8' },
+  { name: 'Jade', top: '#62a86c', cuff: '#b4dc84', sash: '#2f7350', skirt: '#7d2a4c', ribbon: '#4a7fd0' },
   { name: 'Sakura', top: '#f49ac0', cuff: '#ffd6e6', sash: '#c2457a', skirt: '#3b4a8a', ribbon: '#ffd23f' },
   { name: 'Lavande', top: '#a98be0', cuff: '#e2d4ff', sash: '#6a4bb8', skirt: '#3d2f63', ribbon: '#ff8fb6' },
   { name: 'Ciel', top: '#6fb3e8', cuff: '#cfe8ff', sash: '#2e6fb0', skirt: '#24406e', ribbon: '#ffd23f' },
@@ -35,7 +35,18 @@ function toonGradient(levels) {
 }
 
 // ---------- Visage dessiné (texture sur la sphère de la tête, centrée en u = 0.75) ----------
-const FACE_W = 1024, FACE_H = 512, FCX = 768, EYE_Y = 270, EYE_DX = 64;
+const FACE_W = 1024, FACE_H = 512, FCX = 768, EYE_Y = 284, EYE_DX = 66;
+
+// étoile à 4 branches (reflet dans les yeux)
+function star4(g, x, y, r) {
+  g.beginPath();
+  g.moveTo(x, y - r);
+  g.quadraticCurveTo(x + r * 0.15, y - r * 0.15, x + r * 0.8, y);
+  g.quadraticCurveTo(x + r * 0.15, y + r * 0.15, x, y + r);
+  g.quadraticCurveTo(x - r * 0.15, y + r * 0.15, x - r * 0.8, y);
+  g.quadraticCurveTo(x - r * 0.15, y - r * 0.15, x, y - r);
+  g.fill();
+}
 
 function drawFace(kind) {
   const c = document.createElement('canvas');
@@ -49,27 +60,27 @@ function drawFace(kind) {
 
   for (const sx of [-1, 1]) {
     // joues roses et petits traits
-    const bx = FCX + sx * 98, by = 306;
-    const grd = g.createRadialGradient(bx, by, 2, bx, by, 34);
-    grd.addColorStop(0, 'rgba(255,125,140,0.45)');
+    const bx = FCX + sx * 104, by = 326;
+    const grd = g.createRadialGradient(bx, by, 2, bx, by, 32);
+    grd.addColorStop(0, 'rgba(255,125,140,0.42)');
     grd.addColorStop(1, 'rgba(255,125,140,0)');
     g.fillStyle = grd;
     g.beginPath();
-    g.ellipse(bx, by, 36, 22, 0, 0, Math.PI * 2);
+    g.ellipse(bx, by, 34, 20, 0, 0, Math.PI * 2);
     g.fill();
-    g.strokeStyle = 'rgba(225,90,110,0.7)';
-    g.lineWidth = 3;
+    g.strokeStyle = 'rgba(225,90,110,0.6)';
+    g.lineWidth = 2.5;
     for (let i = -1; i <= 1; i++) {
       g.beginPath();
-      g.moveTo(bx + 14 + i * 9 - 4, by + 8);
-      g.lineTo(bx + 14 + i * 9 + 4, by - 8);
+      g.moveTo(bx + 12 + i * 8 - 3, by + 7);
+      g.lineTo(bx + 12 + i * 8 + 3, by - 7);
       g.stroke();
     }
-    // taches de rousseur
-    g.fillStyle = 'rgba(185,105,70,0.75)';
-    for (const [dx, dy] of [[-30, 2], [-20, -6], [-14, 6], [-24, 12], [-36, -4]]) {
+    // taches de rousseur sous les yeux
+    g.fillStyle = 'rgba(185,105,70,0.8)';
+    for (const [dx, dy] of [[-26, 0], [-16, -6], [-10, 5], [-20, 10], [-32, -6], [-4, -2]]) {
       g.beginPath();
-      g.arc(FCX + sx * (EYE_DX + dx + 4), 304 + dy, 2.6, 0, Math.PI * 2);
+      g.arc(FCX + sx * (EYE_DX + dx), 330 + dy, 2.4, 0, Math.PI * 2);
       g.fill();
     }
   }
@@ -78,11 +89,37 @@ function drawFace(kind) {
   for (const sx of [-1, 1]) {
     const ex = FCX + sx * EYE_DX, ey = EYE_Y;
     if (kind === 'open') {
+      // grands yeux violets aux reflets en étoile
+      g.fillStyle = '#ffffff';
+      g.beginPath(); g.ellipse(ex, ey + 3, 31, 36, 0, 0, Math.PI * 2); g.fill();
+      const ig = g.createLinearGradient(0, ey - 32, 0, ey + 38);
+      ig.addColorStop(0, '#2a1450');
+      ig.addColorStop(0.45, '#5b34a8');
+      ig.addColorStop(1, '#c9a6ff');
+      g.fillStyle = ig;
+      g.beginPath(); g.ellipse(ex, ey + 5, 27, 33, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(25,10,45,0.85)';
+      g.beginPath(); g.ellipse(ex, ey + 2, 14, 17, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#ffffff';
+      star4(g, ex, ey + 2, 17);                   // étoile centrale
+      g.beginPath(); g.arc(ex - sx * 12, ey - 15, 5, 0, Math.PI * 2); g.fill();
+      g.beginPath(); g.arc(ex + sx * 13, ey + 22, 3, 0, Math.PI * 2); g.fill();
+      // trait de cils épais, légèrement inquiet (plus haut côté intérieur)
+      g.lineWidth = 8;
+      g.beginPath();
+      g.moveTo(ex - sx * 34, ey - 18);
+      g.quadraticCurveTo(ex, ey - 40, ex + sx * 32, ey - 28);
+      g.stroke();
+      g.lineWidth = 5;
+      g.beginPath(); g.moveTo(ex - sx * 33, ey - 17); g.lineTo(ex - sx * 44, ey - 9); g.stroke();
+      g.lineWidth = 2.5;
+      g.beginPath(); g.moveTo(ex - sx * 16, ey + 40); g.quadraticCurveTo(ex - sx * 26, ey + 38, ex - sx * 30, ey + 28); g.stroke();
+    } else if (kind === 'blink') {
       // yeux fermés d'aise : trait arrondi et petits cils dessous
       g.lineWidth = 8;
       g.beginPath();
-      g.moveTo(ex - 36, ey + 4);
-      g.quadraticCurveTo(ex, ey - 12, ex + 36, ey + 4);
+      g.moveTo(ex - 34, ey + 4);
+      g.quadraticCurveTo(ex, ey - 12, ex + 34, ey + 4);
       g.stroke();
       g.lineWidth = 4;
       for (const k of [-0.55, 0, 0.55]) {
@@ -95,8 +132,8 @@ function drawFace(kind) {
     } else if (kind === 'happy') {
       g.lineWidth = 9;
       g.beginPath();
-      g.moveTo(ex - 32, ey + 12);
-      g.quadraticCurveTo(ex, ey - 28, ex + 32, ey + 12);
+      g.moveTo(ex - 30, ey + 10);
+      g.quadraticCurveTo(ex, ey - 28, ex + 30, ey + 10);
       g.stroke();
     } else if (kind === 'ouch') {
       g.lineWidth = 9;
@@ -112,33 +149,46 @@ function drawFace(kind) {
   }
 
   // bouche
-  const my = 338;
+  const my = 352;
   if (kind === 'happy' || kind === 'ouch') {
     g.fillStyle = '#b8344b';
     g.beginPath();
     if (kind === 'happy') {
-      g.moveTo(FCX - 20, my - 6);
-      g.quadraticCurveTo(FCX, my + 34, FCX + 20, my - 6);
+      g.moveTo(FCX - 18, my - 6);
+      g.quadraticCurveTo(FCX, my + 30, FCX + 18, my - 6);
       g.closePath();
     } else {
-      g.ellipse(FCX, my + 2, 11, 9, 0, 0, Math.PI * 2);
+      g.ellipse(FCX, my + 2, 10, 8, 0, 0, Math.PI * 2);
     }
     g.fill();
     g.save();
     g.clip();
     g.fillStyle = '#ff8fa6';
-    g.beginPath(); g.ellipse(FCX, my + 14, 12, 7, 0, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.ellipse(FCX, my + 13, 11, 6, 0, 0, Math.PI * 2); g.fill();
     g.restore();
   } else {
-    // bouche de chat "ω"
-    g.strokeStyle = COL.dark;
-    g.lineWidth = 5;
+    // "tehe" : petite bouche ouverte et langue tirée
+    g.fillStyle = '#9a2a3a';
     g.beginPath();
-    g.moveTo(FCX - 24, my - 6);
-    g.quadraticCurveTo(FCX - 24, my + 10, FCX - 12, my + 8);
-    g.quadraticCurveTo(FCX, my + 6, FCX, my - 2);
-    g.quadraticCurveTo(FCX, my + 6, FCX + 12, my + 8);
-    g.quadraticCurveTo(FCX + 24, my + 10, FCX + 24, my - 6);
+    g.moveTo(FCX - 16, my - 4);
+    g.quadraticCurveTo(FCX, my - 9, FCX + 16, my - 4);
+    g.quadraticCurveTo(FCX + 12, my + 10, FCX, my + 11);
+    g.quadraticCurveTo(FCX - 12, my + 10, FCX - 16, my - 4);
+    g.fill();
+    g.fillStyle = '#ff8a9e';
+    g.beginPath();
+    g.moveTo(FCX - 10, my + 4);
+    g.quadraticCurveTo(FCX - 12, my + 24, FCX + 1, my + 25);
+    g.quadraticCurveTo(FCX + 12, my + 24, FCX + 10, my + 4);
+    g.fill();
+    g.strokeStyle = '#e0607a';
+    g.lineWidth = 2;
+    g.beginPath(); g.moveTo(FCX, my + 9); g.lineTo(FCX, my + 18); g.stroke();
+    g.strokeStyle = COL.dark;
+    g.lineWidth = 3;
+    g.beginPath();
+    g.moveTo(FCX - 17, my - 4);
+    g.quadraticCurveTo(FCX, my - 10, FCX + 17, my - 4);
     g.stroke();
   }
 
@@ -270,14 +320,23 @@ export class Girl {
     add(B, cyl(0.052, 0.052, 0.1), m(COL.skin), [0, 1.32, 0]);
 
     // ---------- Bras : larges manches de kimono ----------
+    // bras en deux parties (coude) pour pouvoir lever les petites mains
+    this.forearms = [];
     this.arms = [-1, 1].map((sx) => {
       const arm = group(B, [sx * 0.19, 1.25, 0]);
       add(arm, sph, pal.top, [0, -0.02, 0], [0.08, 0.08, 0.08]);
-      add(arm, cyl(0.07, 0.125, 0.34), pal.top, [0, -0.19, 0]);
-      add(arm, cyl(0.128, 0.128, 0.06, 16, true), pal.cuff, [0, -0.36, 0]);
-      add(arm, cyl(0.131, 0.131, 0.015, 16, true), pal.sash, [0, -0.335, 0]);
-      add(arm, cyl(0.075, 0.075, 0.05, 12, true), m(COL.collar), [0, -0.38, 0]);   // manche intérieure blanche
-      add(arm, sph, m(COL.skin), [0, -0.39, 0], [0.045, 0.05, 0.04]);
+      add(arm, cyl(0.07, 0.1, 0.18), pal.top, [0, -0.09, 0]);
+      const fore = group(arm, [0, -0.17, 0]);
+      add(fore, sph, pal.top, [0, 0, 0], [0.095, 0.06, 0.095]);
+      add(fore, cyl(0.098, 0.125, 0.17), pal.top, [0, -0.085, 0]);
+      add(fore, cyl(0.128, 0.128, 0.06, 16, true), pal.cuff, [0, -0.19, 0]);
+      add(fore, cyl(0.131, 0.131, 0.015, 16, true), pal.sash, [0, -0.165, 0]);
+      add(fore, cyl(0.075, 0.075, 0.05, 12, true), m(COL.collar), [0, -0.21, 0]);   // manche intérieure blanche
+      // petite main avec doigts esquissés
+      add(fore, sph, m(COL.skin), [0, -0.235, 0], [0.05, 0.055, 0.035]);
+      for (const f of [-1, 0, 1]) add(fore, sph, m(COL.skin), [f * 0.025, -0.285, 0], [0.014, 0.024, 0.014]);
+      add(fore, sph, m(COL.skin), [-sx * 0.045, -0.25, 0], [0.013, 0.022, 0.013], [0, 0, sx * 0.6]);
+      this.forearms.push(fore);
       return arm;
     });
 
@@ -299,8 +358,7 @@ export class Girl {
     // ---------- Tête ----------
     const H = (this.head = group(B, [0, 1.63, 0]));
     H.scale.setScalar(1.06);
-    const open = drawFace('open');
-    this.faceTex = { open, blink: open, happy: drawFace('happy'), ouch: drawFace('ouch') };
+    this.faceTex = { open: drawFace('open'), blink: drawFace('blink'), happy: drawFace('happy'), ouch: drawFace('ouch') };
     this.faceMat = new THREE.MeshToonMaterial({ map: this.faceTex.open, gradientMap: toonGradient([200, 235, 255]) });
     add(H, new THREE.SphereGeometry(1, 48, 32), this.faceMat, [0, 0, 0], [0.34, 0.34, 0.34]);
     this.face = 'open';
@@ -406,7 +464,7 @@ export class Girl {
     const [legL, legR] = this.legs;
     const [armL, armR] = this.arms;
     const tgt = {
-      legL: 0, legR: 0, armLx: 0, armRx: 0, armLz: -0.25, armRz: 0.25,
+      legL: 0, legR: 0, armLx: 0, armRx: 0, armLz: -0.25, armRz: 0.25, fore: 0.35,
       bodyY: 0, lean: 0, headZ: 0, headX: 0,
     };
     let tailSpeed = 3, tailAmp = 0.25, tailLift = 0.75;
@@ -427,10 +485,14 @@ export class Girl {
       tgt.headX = 0.1;
       tailSpeed = 6; tailAmp = 0.15; tailLift = 1.5;
     } else if (mode === 'idle') {
+      // pose "pattes de chat" : petites mains levées de part et d'autre de la poitrine
       tgt.bodyY = Math.sin(t * 2.2) * 0.02;
-      tgt.armRz = 2.55 + Math.sin(t * 8) * 0.3;
-      tgt.armLz = -0.3;
-      tgt.headZ = Math.sin(t * 1.4) * 0.12;
+      tgt.armLx = 0.35; tgt.armRx = 0.35;
+      tgt.armLz = -0.32; tgt.armRz = 0.32;
+      tgt.fore = 2.15;
+      tgt.foreWave = Math.sin(t * 5) * 0.12;
+      tgt.headZ = Math.sin(t * 1.4) * 0.1;
+      tgt.headX = 0.06;
     } else if (mode === 'dead') {
       tgt.armLz = -2.2; tgt.armRz = 2.2;
       tgt.legL = 0.5; tgt.legR = -0.2;
@@ -442,6 +504,10 @@ export class Girl {
     armL.rotation.x = lerp(armL.rotation.x, tgt.armLx, k);
     armR.rotation.x = lerp(armR.rotation.x, tgt.armRx, k);
     armL.rotation.z = lerp(armL.rotation.z, tgt.armLz, k);
+    this.forearms.forEach((f, i) => {
+      const w = tgt.foreWave ? (i ? -tgt.foreWave : tgt.foreWave) : 0;
+      f.rotation.x = lerp(f.rotation.x, tgt.fore + w, k);
+    });
     armR.rotation.z = lerp(armR.rotation.z, tgt.armRz, k);
     this.body.position.y = lerp(this.body.position.y, -0.55 + tgt.bodyY, k);
     this.body.rotation.x = lerp(this.body.rotation.x, tgt.lean, k);
@@ -472,17 +538,17 @@ export class Girl {
     }
 
     // expressions : yeux fermés d'aise, sourire en saut / en saluant, >< en cas de choc
-    if (mode === 'idle') {
-      this.happyT -= dt;
-      if (this.happyT < -4) this.happyT = 1.4;
-    }
+    this.nextBlink -= dt;
+    if (this.nextBlink <= 0) { this.blinkT = 0.14; this.nextBlink = 2.2 + Math.random() * 2.5; }
+    this.blinkT -= dt;
     if (this.pop > 0) {
       this.pop = Math.max(0, this.pop - dt * 2);
       this.root.scale.setScalar(this.baseScale * (1 + Math.sin(this.pop * Math.PI * 3) * 0.12 * this.pop));
     }
     let face = 'open';
     if (mode === 'dead') face = 'ouch';
-    else if (mode === 'jump' || mode === 'roll' || this.pop > 0 || (mode === 'idle' && this.happyT > 0)) face = 'happy';
+    else if (mode === 'jump' || mode === 'roll' || this.pop > 0) face = 'happy';
+    else if (this.blinkT > 0) face = 'blink';
     this.setFace(face);
   }
 }

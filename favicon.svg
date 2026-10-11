@@ -30,7 +30,7 @@
   <rect x="13" y="30" width="5.2" height="19" rx="1" fill="url(#hair)"/>
   <rect x="45.8" y="30" width="5.2" height="19" rx="1" fill="url(#hair)"/>
   <!-- ruban violet -->
-  <path d="M51 22 L57 18 L57.5 25 Z M51 22 L55 28.5 L49 27.5 Z" fill="#8a6ad8"/><circle cx="51.2" cy="23.5" r="1.6" fill="#7556c4"/>
+  <path d="M51 22 L57 18 L57.5 25 Z M51 22 L55 28.5 L49 27.5 Z" fill="#4a7fd0"/><circle cx="51.2" cy="23.5" r="1.6" fill="#3a68b8"/>
   <!-- yeux fermés d'aise -->
   <path d="M21 38.6 Q25.2 35.6 29.4 38.6 M34.6 38.6 Q38.8 35.6 43 38.6" fill="none" stroke="#2b1a1a" stroke-width="1.8" stroke-linecap="round"/>
   <path d="M23 38.3 L22.6 40.2 M25.2 37.5 L25.2 39.6 M27.4 38.3 L27.8 40.2 M36.6 38.3 L36.2 40.2 M38.8 37.5 L38.8 39.6 M41 38.3 L41.4 40.2"

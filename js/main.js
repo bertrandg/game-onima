@@ -391,11 +391,11 @@ const portrait = () => THREE.MathUtils.clamp((1.1 - camera.aspect) / 0.6, 0, 1);
 function camTargets(out, look) {
   const back = (1 - Math.cos(camAngle)) / 2;   // 0 = face à elle (menu), 1 = derrière (course)
   const pf = portrait();
-  const r = THREE.MathUtils.lerp(4.0, 6.6 + pf * 1.1, back);
-  const camY = THREE.MathUtils.lerp(1.5, player.y * 0.75 + 3.3 + pf * 1.0, back);
+  const r = THREE.MathUtils.lerp(2.75, 6.6 + pf * 1.1, back);   // menu : cadrage rapproché
+  const camY = THREE.MathUtils.lerp(1.25, player.y * 0.75 + 3.3 + pf * 1.0, back);
   const follow = 0.8 + pf * 0.2;
   out.set(player.x * follow * back + Math.sin(camAngle) * r, camY, player.z - Math.cos(camAngle) * r);
-  look.set(player.x * (0.9 + pf * 0.1) * back, THREE.MathUtils.lerp(1.15, player.y * 0.6 + 1.1, back), player.z - 10 * back);
+  look.set(player.x * (0.9 + pf * 0.1) * back, THREE.MathUtils.lerp(0.98, player.y * 0.6 + 1.1, back), player.z - 10 * back);
 }
 
 function snapCamera() {
