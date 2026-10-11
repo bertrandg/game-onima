@@ -14,7 +14,7 @@ import * as Scores from './scores.js';
 // ---------- Rendu ----------
 const container = document.getElementById('game');
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.setSize(window.innerWidth, window.innerHeight);
 container.appendChild(renderer.domElement);
 
@@ -153,6 +153,7 @@ function startRun(fromMenu) {
   if (!fromMenu) snapCamera();
   $('hud-best').textContent = Scores.bestFor(playerName).toLocaleString('fr-FR');
   $('hud-name').textContent = playerName;
+  hudScore = -1; hudDist = -1;
   $('hud-candies').textContent = '0';
   $('hud-candybar').style.width = '0%';
   show(null);
@@ -278,10 +279,12 @@ const sparkles = (() => {
     size: 0.35, map: new THREE.CanvasTexture(c), vertexColors: true, transparent: true, depthWrite: false, alphaTest: 0.1,
   }));
   pts.visible = false;
+  pts.frustumCulled = false;
   scene.add(pts);
   const palette = ['#fff4a3', '#ffb3d9', '#b8e6ff', '#ffffff', '#ffd23f'].map((h) => new THREE.Color(h));
   let life = 0;
   return {
+    points: pts,
     burst(x, y, z) {
       for (let i = 0; i < N; i++) {
         pos.set([x, y, z], i * 3);
@@ -414,6 +417,7 @@ let last = performance.now();
 const _sp = new THREE.Vector3();
 const scoreEl = $('score');
 const distEl = $('hud-dist');
+let hudScore = -1, hudDist = -1;
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.05, (now - last) / 1000);
@@ -424,8 +428,10 @@ function frame(now) {
     const n = Math.max(1, Math.ceil(dt * 120));
     for (let i = 0; i < n && state === 'running'; i++) step(dt / n);
     obstacles.update(player.z, speed, dist);
-    scoreEl.textContent = totalScore().toLocaleString('fr-FR');
-    distEl.textContent = Math.floor(dist).toLocaleString('fr-FR');
+    // le HUD n'est modifié que si la valeur change (évite des recalculs de mise en page)
+    const sc = totalScore(), dm = Math.floor(dist);
+    if (sc !== hudScore) { hudScore = sc; scoreEl.textContent = sc.toLocaleString('fr-FR'); }
+    if (dm !== hudDist) { hudDist = dm; distEl.textContent = dm.toLocaleString('fr-FR'); }
     if (dist >= nextMilestone) {
       toast(`${nextMilestone} m ! Plus vite ✿`);
       sound.milestone();
@@ -468,10 +474,31 @@ window.addEventListener('resize', () => {
 
 // Accès de test : ouvrir la page avec #debug
 if (location.hash === '#debug') {
-  window.__onima = { player, obstacles, camera, candies, addCandies: (n) => collectCandies(n), fx, get candyCount() { return candyCount; }, get state() { return state; }, get dist() { return dist; }, get speed() { return speed; } };
+  window.__onima = { player, obstacles, camera, candies, addCandies: (n) => collectCandies(n), fx, renderer, get candyCount() { return candyCount; }, get state() { return state; }, get dist() { return dist; }, get speed() { return speed; } };
+}
+
+// Préchauffage : compile tous les shaders et envoie toutes les textures au GPU dès le chargement,
+// pour éviter les à-coups la première fois qu'un train, un bonbon ou l'effet de level up apparaît
+function warmUp() {
+  const g = new THREE.Group();
+  g.add(obstacles.warmupGroup(), candies.warmupGroup());
+  g.position.set(0, 0, -8);
+  scene.add(g);
+  sparkles.points.visible = true;
+  for (const t of Object.values(girl.faceTex)) renderer.initTexture(t);
+  g.traverse((o) => {
+    for (const m of [].concat(o.material || [])) if (m.map) renderer.initTexture(m.map);
+  });
+  camera.position.set(0, 3, 6);
+  camera.lookAt(0, 1, -8);
+  renderer.compile(scene, camera);
+  renderer.render(scene, camera);
+  scene.remove(g);
+  sparkles.points.visible = false;
 }
 
 resetWorld();
+warmUp();
 snapCamera();
 show('menu');
 document.body.classList.add('ready');

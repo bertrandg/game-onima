@@ -32,15 +32,15 @@ html, body {
 #fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 
 #levelup {
-  position: fixed; left: 50%; top: 30%;
+  position: fixed; left: 50%; top: calc(17% + var(--safe-t));
   transform: translate(-50%, -50%);
   text-align: center; pointer-events: none; opacity: 0;
   white-space: nowrap;
 }
 #levelup { visibility: hidden; will-change: transform, opacity; }
-#levelup.show { visibility: visible; animation: levelup 1.6s cubic-bezier(.2, 1.3, .4, 1) forwards; }
+#levelup.show { visibility: visible; animation: levelup 1.4s cubic-bezier(.2, 1.3, .4, 1) forwards; }
 .lu-title {
-  font-size: clamp(42px, 11vw, 84px); font-weight: 800; line-height: 1;
+  font-size: clamp(34px, 8vw, 58px); font-weight: 800; line-height: 1;
   background: linear-gradient(90deg, #ff7fb0, #ffd23f, #7fe0b0, #6fc3ff, #c39bff);
   -webkit-background-clip: text; background-clip: text; color: transparent;
   -webkit-text-stroke: 2px #fff;
@@ -50,8 +50,8 @@ html, body {
   0% { opacity: 0; transform: translate(-50%, -50%) scale(0.2) rotate(-8deg); }
   18% { opacity: 1; transform: translate(-50%, -50%) scale(1.15) rotate(3deg); }
   30% { transform: translate(-50%, -50%) scale(1) rotate(0); }
-  80% { opacity: 1; transform: translate(-50%, -55%) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -75%) scale(0.9); }
+  70% { opacity: 1; transform: translate(-50%, -55%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -80%) scale(0.9); }
 }
 
 #loading {

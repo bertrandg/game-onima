@@ -29,6 +29,12 @@ export class Candies {
     this.list = [];
   }
 
+  warmupGroup() {
+    const g = new THREE.Group();
+    this.geos.forEach((geo, i) => { const m = new THREE.Mesh(geo, this.mat); m.position.x = i; g.add(m); });
+    return g;
+  }
+
   reset() {
     for (const c of this.list) this.scene.remove(c.mesh);
     this.list = [];

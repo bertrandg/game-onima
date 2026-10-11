@@ -155,6 +155,23 @@ export class Obstacles {
     return g;
   }
 
+  // Un exemplaire de chaque objet, pour précompiler les shaders et charger les textures au démarrage
+  warmupGroup() {
+    const S = this.S, g = new THREE.Group();
+    const all = [...S.liveries, S.express];
+    all.forEach((mats, i) => {
+      for (const arr of [mats.lead, mats.mid]) {
+        const m = new THREE.Mesh(S.carGeo, arr);
+        m.position.set(i * 3, 1.4, 0);
+        g.add(m);
+      }
+    });
+    g.add(this.buildTrain(2, true, true));
+    for (const l of S.low) g.add(new THREE.Mesh(l.geo, vcMat));
+    g.add(new THREE.Mesh(S.highGeo, vcMat));
+    return g;
+  }
+
   addTrain(lane, z, cars, ramp, moving) {
     const len = cars * CAR_LEN + (cars - 1) * CAR_GAP;
     const rampLen = ramp ? RAMP_LEN : 0;

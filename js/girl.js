@@ -192,6 +192,7 @@ function drawFace(kind) {
 }
 
 const lerp = (a, b, k) => a + (b - a) * k;
+const ONE = new THREE.Vector3(1, 1, 1);
 
 export class Girl {
   constructor() {
@@ -475,7 +476,7 @@ export class Girl {
       this.pivot.position.y = 0.55 + Math.max(0, Math.sin(Math.min(this.deadT * 5, Math.PI))) * 0.4;
     } else {
       this.pivot.rotation.x = lerp(this.pivot.rotation.x, 0, 1 - Math.exp(-dt * 20));
-      this.pivot.scale.lerp(new THREE.Vector3(1, 1, 1), k);
+      this.pivot.scale.lerp(ONE, k);
       this.pivot.position.y = 0.55;
     }
 
