@@ -95,7 +95,34 @@ function openScores(from) {
 }
 
 function updateMuteBtn() {
-  for (const b of document.querySelectorAll('.btn-mute')) {
+  // ---------- Plein écran ----------
+const fsTarget = document.documentElement;
+const canFullscreen = !!(fsTarget.requestFullscreen || fsTarget.webkitRequestFullscreen);
+const isFullscreen = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+function toggleFullscreen() {
+  if (isFullscreen()) {
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  } else {
+    const p = (fsTarget.requestFullscreen || fsTarget.webkitRequestFullscreen).call(fsTarget, { navigationUI: 'hide' });
+    if (p && p.catch) p.catch(() => {});
+  }
+}
+function updateFullscreenBtn() {
+  const fs = isFullscreen();
+  document.body.classList.toggle('is-fullscreen', fs);
+  for (const b of document.querySelectorAll('.btn-fs')) b.setAttribute('aria-label', fs ? 'Quitter le plein écran' : 'Plein écran');
+}
+// pas d'API plein écran (ex. Safari sur iPhone) : on cache le bouton
+if (!canFullscreen) document.body.classList.add('no-fullscreen');
+for (const b of document.querySelectorAll('.btn-fs')) b.addEventListener('click', toggleFullscreen);
+document.addEventListener('fullscreenchange', updateFullscreenBtn);
+document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
+window.addEventListener('keydown', (e) => {
+  if ((e.key === 'f' || e.key === 'F') && !(e.target instanceof HTMLInputElement) && canFullscreen) toggleFullscreen();
+});
+updateFullscreenBtn();
+
+for (const b of document.querySelectorAll('.btn-mute')) {
     b.textContent = sound.muted ? '🔇' : '🔊';
     b.setAttribute('aria-label', sound.muted ? 'Activer le son' : 'Couper le son');
   }

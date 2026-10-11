@@ -156,7 +156,13 @@ input.shake { animation: shake 0.4s; border-color: var(--pink-dark); }
   display: grid; place-items: center;
   padding: 0;
 }
-.icon-btn.corner { position: absolute; top: 12px; right: 12px; width: 40px; height: 40px; font-size: 17px; }
+.corner-btns { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; }
+.corner-btns .icon-btn { width: 40px; height: 40px; font-size: 17px; }
+.btn-fs svg { width: 22px; height: 22px; fill: none; stroke: var(--pink-dark); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.corner-btns .btn-fs svg { width: 19px; height: 19px; }
+.btn-fs .ico-exit, body.is-fullscreen .btn-fs .ico-enter { display: none; }
+body.is-fullscreen .btn-fs .ico-exit { display: block; }
+body.no-fullscreen .btn-fs { display: none; }
 
 /* ---------- Aide ---------- */
 .help { list-style: none; padding: 0; margin: 0; text-align: left; display: flex; flex-direction: column; gap: 10px; }
@@ -230,7 +236,7 @@ input.shake { animation: shake 0.4s; border-color: var(--pink-dark); }
 /* ---------- Téléphone (portrait) ---------- */
 @media (max-aspect-ratio: 1/1) {
   #screen-menu { justify-content: center; align-items: flex-end; padding-right: calc(16px + var(--safe-r)); }
-  #screen-menu .panel { padding: 18px 20px 18px; gap: 10px; }
+  #screen-menu .panel { padding: 58px 20px 18px; gap: 10px; }
   .title { font-size: 38px; }
   .title span { font-size: 24px; display: inline; margin-left: 8px; }
 }
