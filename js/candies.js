@@ -215,11 +215,28 @@ export class Candies {
     }
   }
 
-  update(dt, pz) {
+  update(dt, pz, player) {
     const t = performance.now() / 1000;
     let j = 0;
     for (const c of this.list) {
       if (c.z > pz + 15) { this.scene.remove(c.mesh); continue; }
+      // ramassée : petit "pop", puis elle vole vers l'héroïne en rétrécissant et en tournoyant
+      if (c.grab !== undefined) {
+        c.grab += dt;
+        const k = c.grab / 0.38;
+        if (k >= 1) { c.mesh.visible = false; c.grab = undefined; this.list[j++] = c; continue; }
+        const pop = k < 0.25 ? 1 + Math.sin((k / 0.25) * Math.PI / 2) * 0.7 : 1.7 * (1 - (k - 0.25) / 0.75);
+        c.mesh.scale.setScalar(Math.max(0.01, pop));
+        const e = k * k;
+        c.mesh.position.set(
+          c.x + (player.x - c.x) * e,
+          c.y + 0.4 * Math.sin(k * Math.PI) + (player.y + 1.0 - c.y) * e,
+          c.z + (player.z - c.z) * e,
+        );
+        c.mesh.rotation.y += dt * 14;
+        this.list[j++] = c;
+        continue;
+      }
       if (c.spin) c.mesh.rotation.y += dt * 3;
       else c.mesh.rotation.set(-0.15, Math.sin(t * 2.5 + c.phase) * 0.55, Math.sin(t * 2 + c.phase) * 0.15);
       c.mesh.position.y = c.y + Math.sin(t * 4 + c.phase) * 0.08;
@@ -243,10 +260,10 @@ export class Candies {
   collect(p) {
     let got = 0;
     for (const c of this.list) {
-      if (!c.mesh.visible) continue;
+      if (!c.mesh.visible || c.grab !== undefined) continue;
       if (Math.abs(c.x - p.x) > 0.75 || Math.abs(c.z - p.z) > 0.8) continue;
       if (c.y < p.y - 0.4 || c.y > p.y + p.h + 0.5) continue;
-      c.mesh.visible = false;
+      c.grab = 0;   // l'animation de ramassage démarre
       got++;
     }
     return got;

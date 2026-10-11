@@ -30,6 +30,69 @@ html, body {
 #game, #game canvas { position: fixed; inset: 0; display: block; }
 
 #fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+#fx-layer { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+
+/* +10 qui s'envole avec des petits coeurs et étoiles */
+.pop-score {
+  position: absolute; transform: translate(-50%, -50%);
+  font-weight: 800; font-size: 26px; color: #ff6fa5;
+  -webkit-text-stroke: 1.5px #fff; paint-order: stroke fill;
+  text-shadow: 0 2px 0 rgba(232, 90, 147, 0.5);
+  animation: pop-score 0.9s cubic-bezier(.2, 1.4, .4, 1) forwards;
+  will-change: transform, opacity;
+}
+@keyframes pop-score {
+  0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+  20% { transform: translate(-50%, -90%) scale(1.25); opacity: 1; }
+  45% { transform: translate(-50%, -110%) scale(1); }
+  100% { transform: translate(-50%, -220%) scale(0.9); opacity: 0; }
+}
+.pop-bit {
+  position: absolute; transform: translate(-50%, -50%);
+  font-size: 18px; color: var(--c, #ff8fb6);
+  animation: pop-bit 0.8s ease-out forwards;
+  will-change: transform, opacity;
+}
+@keyframes pop-bit {
+  0% { transform: translate(-50%, -50%) scale(0.2) rotate(0); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1) rotate(var(--r)); opacity: 0; }
+}
+
+/* traits de vitesse et petit nuage de poussière au changement de voie */
+.dash {
+  position: absolute; width: 90px; height: 70px; transform: translate(-50%, -50%) scaleX(var(--dir, 1));
+  will-change: transform, opacity;
+}
+.dash i {
+  position: absolute; left: 0; height: 6px; border-radius: 6px;
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,1));
+  box-shadow: 0 0 8px rgba(255, 190, 220, 0.8);
+  animation: dash-line 0.32s ease-out forwards;
+}
+.dash i:nth-child(1) { top: 12px; width: 60px; }
+.dash i:nth-child(2) { top: 32px; width: 80px; animation-delay: 0.03s; }
+.dash i:nth-child(3) { top: 52px; width: 50px; animation-delay: 0.06s; }
+.dash b {
+  position: absolute; bottom: -18px; width: 22px; height: 22px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,250,240,0.9), rgba(255,250,240,0));
+  animation: dash-puff 0.45s ease-out forwards;
+}
+.dash b:nth-of-type(1) { left: 54px; }
+.dash b:nth-of-type(2) { left: 34px; animation-delay: 0.05s; }
+@keyframes dash-line { from { transform: translateX(30px) scaleX(0.3); opacity: 1; } to { transform: translateX(-10px) scaleX(1); opacity: 0; } }
+@keyframes dash-puff { from { transform: scale(0.3); opacity: 1; } to { transform: translate(-18px, -10px) scale(1.8); opacity: 0; } }
+
+/* défaite : flash rouge puis l'écran s'assombrit */
+#death-dim {
+  position: fixed; inset: 0; pointer-events: none; opacity: 0;
+  background:
+    radial-gradient(ellipse at 50% 60%, rgba(60, 0, 8, 0.15), rgba(25, 0, 4, 0.85) 75%),
+    rgba(10, 0, 3, 0.35);
+  transition: opacity 0.2s;
+}
+#death-dim.on { opacity: 1; transition: opacity 1.4s ease-in; }
+.hit-flash { position: absolute; inset: 0; background: rgba(220, 20, 40, 0.5); animation: hit-flash 0.45s ease-out forwards; }
+@keyframes hit-flash { from { opacity: 1; } to { opacity: 0; } }
 
 #levelup {
   position: fixed; left: 50%; top: calc(17% + var(--safe-t));
@@ -72,6 +135,7 @@ button { font-family: inherit; cursor: pointer; }
   background: rgba(255, 230, 240, 0.25);
   touch-action: auto;
 }
+#screen-over { background: none; }   /* laisse voir l'écran assombri de la défaite */
 #screen-menu { background: none; justify-content: flex-end; padding-right: max(6vw, 16px); }
 
 /* Illustration de l'héroïne sur l'écran d'accueil */

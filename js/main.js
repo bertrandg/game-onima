@@ -171,6 +171,8 @@ function toast(text) {
 // ---------- Déroulement ----------
 function startRun(fromMenu) {
   fx.stop();
+  blood.reset();
+  $('death-dim').classList.remove('on');
   sound.init();
   resetWorld();
   state = 'running';
@@ -201,6 +203,8 @@ function resume() {
 
 function toMenu() {
   fx.stop();
+  blood.reset();
+  $('death-dim').classList.remove('on');
   sound.stopMusic();
   resetWorld();
   state = 'menu';
@@ -211,6 +215,9 @@ function toMenu() {
 function die() {
   fx.stop();
   state = 'dying';
+  blood.start(player.x, player.y, player.z, obstacles.groundAt(player.x, player.z));
+  $('death-dim').classList.add('on');
+  fxEl('hit-flash', 0, 0, 500);
   deathT = 0;
   shake = 0.6;
   sound.crash();
@@ -238,8 +245,8 @@ function gameOver() {
 // ---------- Contrôles ----------
 const active = () => state === 'running';
 new Input({
-  left() { if (player.lane > 0) { player.lane--; sound.lane(); } },
-  right() { if (player.lane < 2) { player.lane++; sound.lane(); } },
+  left() { if (player.lane > 0) { player.lane--; sound.lane(); laneFx(-1); } },
+  right() { if (player.lane < 2) { player.lane++; sound.lane(); laneFx(1); } },
   up() { player.jumpBuf = 0.15; },
   down() {
     if (!player.grounded) { player.vy = Math.min(player.vy, FAST_DROP_V); player.slideQueued = true; }
@@ -254,6 +261,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) pause
 function collectCandies(n) {
   for (let i = 0; i < n; i++) {
     candyCount++;
+    popCollect();
     if (candyCount % 10 === 0) {
       const level = candyCount / 10;
       sound.candy(9);
@@ -332,6 +340,161 @@ const sparkles = (() => {
       geo.attributes.position.needsUpdate = true;
       pts.material.size = 0.35 * Math.max(0, life) + 0.05;
       if (life <= 0) pts.visible = false;
+    },
+  };
+})();
+
+// ---------- Petits effets à l'écran (DOM) ----------
+const fxLayer = $('fx-layer');
+const _scr = new THREE.Vector3();
+function toScreen(x, y, z) {
+  _scr.set(x, y, z).project(camera);
+  return { x: (_scr.x + 1) / 2 * window.innerWidth, y: (1 - _scr.y) / 2 * window.innerHeight };
+}
+function fxEl(cls, x, y, life, html = '') {
+  const el = document.createElement('div');
+  el.className = cls;
+  el.style.left = `${x}px`;
+  el.style.top = `${y}px`;
+  el.innerHTML = html;
+  fxLayer.appendChild(el);
+  setTimeout(() => el.remove(), life);
+  return el;
+}
+// "+10" qui s'envole avec des coeurs et des étoiles autour de l'héroïne
+function popCollect() {
+  const p = toScreen(player.x, player.y + 1.7, player.z);
+  fxEl('pop-score', p.x + (Math.random() - 0.5) * 30, p.y, 950, `+${CANDY_POINTS}`);
+  const bits = ['♥', '✦', '♥', '✧', '♡'];
+  const cols = ['#ff7fb0', '#ffd23f', '#ff9ec7', '#9fd8ff', '#c9a6ff'];
+  for (let i = 0; i < 5; i++) {
+    const a = -Math.PI / 2 + (i - 2) * 0.55 + (Math.random() - 0.5) * 0.3;
+    const d = 45 + Math.random() * 30;
+    const el = fxEl('pop-bit', p.x, p.y + 20, 850, bits[i]);
+    el.style.setProperty('--dx', `${Math.cos(a) * d}px`);
+    el.style.setProperty('--dy', `${Math.sin(a) * d}px`);
+    el.style.setProperty('--r', `${(Math.random() - 0.5) * 120}deg`);
+    el.style.setProperty('--c', cols[i]);
+  }
+}
+// traits de vitesse et poussière derrière l'héroïne quand elle change de voie
+function laneFx(dir) {
+  girl.dash(dir);
+  const p = toScreen(player.x - dir * 0.6, player.y + 0.8, player.z);
+  const el = fxEl('dash', p.x, p.y, 500, '<i></i><i></i><i></i><b></b><b></b>');
+  el.style.setProperty('--dir', dir > 0 ? 1 : -1);
+}
+
+// ---------- Défaite : jets de sang, flaque, écran qui s'assombrit ----------
+const blood = (() => {
+  const N = 600;
+  const pos = new Float32Array(N * 3).fill(-1000), vel = new Float32Array(N * 3), col = new Float32Array(N * 3);
+  const alive = new Uint8Array(N);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const c = document.createElement('canvas');
+  c.width = c.height = 32;
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(13, 13, 1, 16, 16, 15);
+  grd.addColorStop(0, '#fff');
+  grd.addColorStop(0.5, '#fff');
+  grd.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grd;
+  g.beginPath(); g.arc(16, 16, 15, 0, Math.PI * 2); g.fill();
+  const pts = new THREE.Points(geo, new THREE.PointsMaterial({
+    size: 0.14, map: new THREE.CanvasTexture(c), vertexColors: true, transparent: true, alphaTest: 0.35,
+  }));
+  pts.frustumCulled = false;
+  scene.add(pts);
+  // flaque et éclaboussures au sol
+  const puddle = new THREE.Group();
+  const pmat = new THREE.MeshBasicMaterial({ color: '#6e0610', transparent: true, opacity: 0.92, depthWrite: false });
+  const disc = new THREE.CircleGeometry(1, 28);
+  const pool = new THREE.Mesh(disc, pmat);
+  pool.rotation.x = -Math.PI / 2;
+  puddle.add(pool);
+  const splats = [];
+  for (let i = 0; i < 9; i++) {
+    const m = new THREE.Mesh(disc, pmat);
+    m.rotation.x = -Math.PI / 2;
+    puddle.add(m);
+    splats.push(m);
+  }
+  puddle.visible = false;
+  scene.add(puddle);
+  const reds = ['#b00818', '#d0101e', '#8a0412', '#e01a2a'].map((h) => new THREE.Color(h));
+  let emitT = 0, ground = 0, idx = 0, poolS = 0, poolShown = 0, t = 0;
+  const origin = new THREE.Vector3();
+
+  function emit(n, strength) {
+    for (let k = 0; k < n; k++) {
+      const i = idx++ % N, j = i * 3;
+      alive[i] = 1;
+      pos[j] = origin.x + (Math.random() - 0.5) * 0.25;
+      pos[j + 1] = origin.y + (Math.random() - 0.5) * 0.2;
+      pos[j + 2] = origin.z + (Math.random() - 0.5) * 0.25;
+      const a = Math.random() * Math.PI * 2, r = Math.random() * 2.2 * strength;
+      vel[j] = Math.cos(a) * r;
+      vel[j + 1] = (3 + Math.random() * 4.5) * strength;
+      vel[j + 2] = Math.sin(a) * r + 0.8;
+      const cl = reds[(Math.random() * reds.length) | 0];
+      col[j] = cl.r; col[j + 1] = cl.g; col[j + 2] = cl.b;
+    }
+  }
+  return {
+    start(x, y, z, gY) {
+      origin.set(x, y + 0.9, z + 0.05);
+      ground = gY;
+      emitT = 1.15;
+      t = 0;
+      poolS = 0.15; poolShown = 0;
+      puddle.position.set(x, gY + 0.03, z);
+      puddle.visible = true;
+      for (const s of splats) {
+        const a = Math.random() * Math.PI * 2, d = 0.5 + Math.random() * 1.3;
+        s.position.set(Math.cos(a) * d, 0.002, Math.sin(a) * d);
+        s.userData.size = 0.05 + Math.random() * 0.13;
+        s.scale.setScalar(0.001);
+      }
+      pool.scale.setScalar(0.001);
+      emit(60, 1.2);   // premier jet à l'impact
+    },
+    reset() {
+      emitT = 0;
+      alive.fill(0);
+      pos.fill(-1000);
+      geo.attributes.position.needsUpdate = true;
+      puddle.visible = false;
+    },
+    update(dt) {
+      if (!puddle.visible) return;
+      t += dt;
+      if (emitT > 0) {
+        emitT -= dt;
+        // jaillit par saccades, comme des battements de coeur
+        const beat = Math.max(0, Math.sin(t * 13));
+        emit(Math.round(beat * 520 * dt), 0.6 + beat * 0.7);
+      }
+      for (let i = 0; i < N; i++) {
+        if (!alive[i]) continue;
+        const j = i * 3;
+        vel[j + 1] -= 18 * dt;
+        pos[j] += vel[j] * dt; pos[j + 1] += vel[j + 1] * dt; pos[j + 2] += vel[j + 2] * dt;
+        if (pos[j + 1] < ground + 0.03) {
+          alive[i] = 0;
+          pos[j + 1] = -1000;
+          poolS = Math.min(1.7, poolS + 0.006);
+        }
+      }
+      geo.attributes.position.needsUpdate = true;
+      geo.attributes.color.needsUpdate = true;
+      poolShown += (poolS - poolShown) * (1 - Math.exp(-dt * 3));
+      pool.scale.set(poolShown, poolShown * 0.85, 1);
+      for (const s of splats) {
+        const target = Math.min(1, t * 2) * s.userData.size * 1.6;
+        s.scale.setScalar(Math.max(0.001, target));
+      }
     },
   };
 })();
@@ -473,8 +636,9 @@ function frame(now) {
 
   if (state !== 'paused') {
     world.update(dt, player.z, state === 'running' ? speed : 0);
-    candies.update(dt, player.z);
+    candies.update(dt, player.z, player);
     sparkles.update(dt);
+    blood.update(dt);
     let mode = 'idle';
     if (state === 'running') mode = player.slideT > 0 ? 'roll' : player.grounded ? 'run' : 'jump';
     else if (state === 'dying' || state === 'over') mode = 'dead';

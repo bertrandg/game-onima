@@ -414,6 +414,8 @@ export class Girl {
     this.setPalette(0);
     this.tails = [];
     this.pop = 0;
+    this.dashE = 0;
+    this.dashDir = 0;
     this.phase = 0;
     this.blinkT = 0;
     this.nextBlink = 2.5;
@@ -431,6 +433,12 @@ export class Girl {
   // halo lumineux (0 = normal, 1 = toute blanche)
   setGlow(v) {
     for (const mat of this.allMats) mat.emissive.setRGB(v, v * 0.95, v * 0.85);
+  }
+
+  // changement de voie : elle s'incline dans le virage et s'écrase un peu
+  dash(dir) {
+    this.dashDir = dir;
+    this.dashE = 1;
   }
 
   // petit rebond quand elle change de tenue
@@ -520,6 +528,12 @@ export class Girl {
       seg.rotation.z = Math.sin(t * tailSpeed - i * 0.7) * tailAmp * (0.4 + i * 0.12);
       seg.rotation.x = i > 4 ? -0.35 : -0.12;   // la queue se recourbe vers le haut
     });
+
+    // inclinaison et écrasement du changement de voie (décroissance douce)
+    this.dashE = Math.max(0, this.dashE - dt * 4.5);
+    const de = Math.sin(this.dashE * Math.PI) * (this.dashE > 0 ? 1 : 0);
+    this.root.rotation.z = -this.dashDir * 0.3 * de;
+    this.body.scale.set(1 + 0.12 * de, 1 - 0.1 * de, 1 + 0.06 * de);
 
     // roulade
     if (mode === 'roll') {
