@@ -27,7 +27,7 @@ jobs:
       - name: Versionner les fichiers
         run: |
           V="${GITHUB_SHA::8}"
-          sed -i "s#css/style.css#css/style.css?v=$V#; s#js/main.js#js/main.js?v=$V#" index.html
+          sed -i "s#css/style.css#css/style.css?v=$V#; s#js/main.js#js/main.js?v=$V#; s#img/chara.svg#img/chara.svg?v=$V#" index.html
           sed -i -E "s#(from '\./[a-z]+\.js)'#\1?v=$V'#g" js/*.js
           grep -n "?v=" index.html
           grep -c "?v=" js/*.js

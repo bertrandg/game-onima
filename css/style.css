@@ -74,6 +74,20 @@ button { font-family: inherit; cursor: pointer; }
 }
 #screen-menu { background: none; justify-content: flex-end; padding-right: max(6vw, 16px); }
 
+/* Illustration de l'héroïne sur l'écran d'accueil */
+#menu-chara {
+  position: absolute; left: max(4vw, 12px); bottom: 2vh;
+  height: min(92vh, 640px); aspect-ratio: 400 / 560;
+  pointer-events: none;
+  animation: chara-in 0.6s cubic-bezier(.2, 1.4, .4, 1);
+}
+#menu-chara img { position: relative; width: 100%; height: 100%; display: block; filter: drop-shadow(0 6px 10px rgba(90, 40, 70, 0.25)); }
+.chara-shadow {
+  position: absolute; left: 22%; right: 22%; bottom: 0.5%; height: 4%;
+  background: radial-gradient(closest-side, rgba(60, 30, 50, 0.35), rgba(60, 30, 50, 0));
+}
+@keyframes chara-in { from { transform: translateY(30px) scale(0.9); opacity: 0; } to { transform: none; opacity: 1; } }
+
 .panel {
   position: relative;
   width: min(380px, 100%);
@@ -238,6 +252,7 @@ body.no-fullscreen #btn-fs { display: none; }
 
 /* ---------- Téléphone (portrait) ---------- */
 @media (max-aspect-ratio: 1/1) {
+  #menu-chara { left: 50%; bottom: auto; top: calc(2vh + var(--safe-t)); height: min(50vh, 520px); transform: translateX(-50%); animation: none; }
   #screen-menu { justify-content: center; align-items: flex-end; padding-right: calc(16px + var(--safe-r)); }
   #screen-menu .panel { padding: 18px 20px 18px; gap: 10px; }
   .title { font-size: 38px; }

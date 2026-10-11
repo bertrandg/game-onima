@@ -34,7 +34,7 @@ let state = 'menu';         // menu | running | paused | dying | over
 let dist = 0, speed = 0, runTime = 0, deathT = 0, shake = 0, nextMilestone = 500;
 let candyCount = 0;
 const totalScore = () => Math.floor(dist) + candyCount * CANDY_POINTS;
-let camAngle = 0, viewShift = 1;
+let camAngle = Math.PI, viewShift = 1;
 let playerName = Scores.getName();
 const camPos = new THREE.Vector3(0, 1.6, -4.2);
 const camLook = new THREE.Vector3(0, 1.2, 0);
@@ -174,8 +174,8 @@ function startRun(fromMenu) {
   sound.init();
   resetWorld();
   state = 'running';
-  camAngle = fromMenu ? 0 : Math.PI;
-  if (!fromMenu) snapCamera();
+  camAngle = Math.PI;
+  snapCamera();
   $('hud-best').textContent = Scores.bestFor(playerName).toLocaleString('fr-FR');
   $('hud-name').textContent = playerName;
   hudScore = -1; hudDist = -1;
@@ -204,7 +204,7 @@ function toMenu() {
   sound.stopMusic();
   resetWorld();
   state = 'menu';
-  camAngle = 0;
+  camAngle = Math.PI;
   show('menu');
 }
 
@@ -405,7 +405,8 @@ function snapCamera() {
 const _tp = new THREE.Vector3(), _tl = new THREE.Vector3();
 function updateCamera(dt) {
   const running = state !== 'menu';
-  camAngle += ((running ? Math.PI : 0) - camAngle) * (1 - Math.exp(-dt * (running ? 2.6 : 6)));
+  // au menu, la caméra regarde la voie et le mont Fuji (l'héroïne est l'illustration 2D)
+  camAngle += (Math.PI - camAngle) * (1 - Math.exp(-dt * (running ? 2.6 : 6)));
   camTargets(_tp, _tl);
   // si la caméra passe au-dessus d'un train, on la monte pour garder l'héroïne en vue
   if (running) {
@@ -417,6 +418,7 @@ function updateCamera(dt) {
   camPos.y += (_tp.y - camPos.y) * (1 - Math.exp(-dt * 6));
   camPos.z = _tp.z;
   camLook.lerp(_tl, k);
+  if (!Number.isFinite(camPos.x + camPos.y + camPos.z + camLook.x + camLook.y)) snapCamera();
   camera.position.copy(camPos);
   if (shake > 0) {
     camera.position.x += (Math.random() - 0.5) * shake * 0.6;
@@ -446,7 +448,8 @@ const distEl = $('hud-dist');
 let hudScore = -1, hudDist = -1;
 function frame(now) {
   requestAnimationFrame(frame);
-  const dt = Math.min(0.05, (now - last) / 1000);
+  // intervalle borné et toujours valide (onglet en arrière-plan, horloge incohérente…)
+  const dt = Math.min(0.05, Math.max(0, (now - last) / 1000)) || 0;
   last = now;
 
   if (state === 'running') {
@@ -477,6 +480,7 @@ function frame(now) {
     else if (state === 'dying' || state === 'over') mode = 'dead';
     girl.animate(mode, dt, { speed, slideFrac: 1 - Math.max(0, player.slideT) / SLIDE_TIME, vy: player.vy });
     girl.root.position.set(player.x, player.y, player.z);
+    girl.root.visible = state !== 'menu';
     girl.root.rotation.y = state === 'running' ? (LANES[player.lane] - player.x) * -0.12 : 0;
     world.setShadow(player.x, obstacles.groundAt(player.x, player.z), player.y, player.z);
     updateCamera(dt);
