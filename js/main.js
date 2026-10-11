@@ -225,7 +225,7 @@ function gameOver() {
   const { entry, rank } = Scores.addScore(playerName, score);
   highlightId = entry.id;
   $('over-score').textContent = score.toLocaleString('fr-FR');
-  $('over-detail').textContent = `${Math.floor(dist).toLocaleString('fr-FR')} m  +  ${candyCount} 🍬 × ${CANDY_POINTS}`;
+  $('over-detail').textContent = `${Math.floor(dist).toLocaleString('fr-FR')} m  +  ${candyCount} 🍡 × ${CANDY_POINTS}`;
   $('over-best').textContent = Math.max(prevBest, score).toLocaleString('fr-FR');
   const msg = score > prevBest && prevBest > 0 ? 'Nouveau record personnel ! ✨'
     : rank === 1 ? 'Meilleur score du tableau ! 👑'
@@ -503,7 +503,7 @@ if (location.hash === '#debug') {
 }
 
 // Préchauffage : compile tous les shaders et envoie toutes les textures au GPU dès le chargement,
-// pour éviter les à-coups la première fois qu'un train, un bonbon ou l'effet de level up apparaît
+// pour éviter les à-coups la première fois qu'un train, une friandise ou l'effet de level up apparaît
 function warmUp() {
   const g = new THREE.Group();
   g.add(obstacles.warmupGroup(), candies.warmupGroup());
