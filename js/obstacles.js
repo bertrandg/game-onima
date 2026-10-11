@@ -1,52 +1,19 @@
 import * as THREE from 'three';
 import { Builder, U, vcMat, pick, rand } from './geo.js';
-import * as TX from './textures.js';
+import { buildTrainKit, buildTrainMesh } from './trains.js';
 import {
   LANES, TRAIN_TOP, TRAIN_HALF_W, CAR_LEN, CAR_GAP, RAMP_LEN, MOVING_TRAIN_SPEED,
   SPAWN_AHEAD, DESPAWN_BEHIND,
 } from './config.js';
 
-const LIVERIES = [
-  { body: '#f1e9d2', stripe: '#c8323c', stripe2: '#c8323c' },   // crème et rouge
-  { body: '#3f8f5c', stripe: '#f08a2a', stripe2: '#f6c27a' },   // vert et orange
-  { body: '#e6e8ea', stripe: '#2f8c8a', stripe2: '#7cc6c0' },   // gris et turquoise
-];
-const EXPRESS = { body: '#f7f8fa', stripe: '#1e5bbf', stripe2: '#5aa0e6' }; // trains en mouvement
-
 const STEP = 0.5;            // tolérance pour monter sur un toit
 const P_HALF_X = 0.32;
 const P_HALF_Z = 0.35;
 
-function liveryMats(l, moving) {
-  const side = new THREE.MeshLambertMaterial({ map: TX.trainSideTexture(l) });
-  const front = new THREE.MeshLambertMaterial({ map: TX.trainFrontTexture(l, moving) });
-  const end = new THREE.MeshLambertMaterial({ color: l.body });
-  return {
-    lead: [side, side, end, end, front, end],
-    mid: [side, side, end, end, end, end],
-  };
-}
-
 function buildShared() {
   const s = {};
-  s.liveries = LIVERIES.map((l) => liveryMats(l, false));
-  s.express = liveryMats(EXPRESS, true);
-  s.carGeo = new THREE.BoxGeometry(TRAIN_HALF_W * 2, 2.15, CAR_LEN);
-  s.roofMat = new THREE.MeshLambertMaterial({ color: '#9da3a8' });
-  s.roofGeo = new THREE.BoxGeometry(2.0, 0.1, CAR_LEN - 0.4);
-  s.lightGeo = new THREE.BoxGeometry(0.34, 0.2, 0.06);
-  s.lightMat = new THREE.MeshBasicMaterial({ color: '#fffbe0' });
-
-  let b = new Builder();
-  b.add(U.box, '#2d2f33', [0, 0.27, 0], [1.8, 0.4, CAR_LEN - 1.4]);
-  for (const zz of [CAR_LEN / 2 - 1.3, CAR_LEN / 2 - 2.2, -CAR_LEN / 2 + 1.3, -CAR_LEN / 2 + 2.2]) {
-    for (const x of [-0.75, 0.75]) b.add(U.cyl, '#1d1e21', [x, 0.3, zz], [0.3, 0.14, 0.3], [0, 0, Math.PI / 2]);
-  }
-  s.underGeo = b.build();
-
-  b = new Builder();
-  b.add(U.box, '#3a3a3e', [0, 1.3, 0], [1.4, 1.8, CAR_GAP + 0.1]);
-  s.connGeo = b.build();
+  s.trains = buildTrainKit();
+  let b;
 
   // Rampe en bois : du sol (z = RAMP_LEN) au toit (z = 0)
   b = new Builder();
@@ -66,39 +33,85 @@ function buildShared() {
 
   // Barrières basses (à sauter)
   s.low = [];
-  b = new Builder();   // tonneaux de saké
+  b = new Builder();   // tonneaux de saké (komodaru) enveloppés de paille
   for (const x of [-0.55, 0.55]) {
-    b.add(U.cyl, '#c39a62', [x, 0.475, 0], [0.42, 0.95, 0.42]);
-    for (const y of [0.15, 0.8]) b.add(U.cyl, '#5a4430', [x, y, 0], [0.435, 0.07, 0.435]);
-    b.add(U.cyl, '#d9b47c', [x, 0.96, 0], [0.38, 0.02, 0.38]);
-    b.add(U.box, '#f4efe6', [x, 0.5, 0.38], [0.42, 0.36, 0.08]);
-    b.add(U.cyl, '#d23b3b', [x, 0.5, 0.43], [0.1, 0.02, 0.1], [Math.PI / 2, 0, 0]);
+    b.add(U.cyl, '#d7bd86', [x, 0.47, 0], [0.42, 0.94, 0.42]);
+    for (let i = 0; i < 14; i++) {               // brins de paille verticaux
+      const a = (i / 14) * Math.PI * 2;
+      b.add(U.box, i % 2 ? '#c8a96c' : '#e2cb94', [x + Math.cos(a) * 0.415, 0.47, Math.sin(a) * 0.415], [0.035, 0.9, 0.02], [0, -a, 0]);
+    }
+    for (const y of [0.12, 0.32, 0.62, 0.84]) {  // cordes tressées
+      b.add(U.cyl, '#6b4a2c', [x, y, 0], [0.44, 0.045, 0.44]);
+      b.add(U.cyl, '#8a6440', [x, y + 0.02, 0], [0.442, 0.012, 0.442]);
+    }
+    b.add(U.cyl, '#8b6a42', [x, 0.95, 0], [0.4, 0.03, 0.4]);
+    b.add(U.cyl, '#b48c58', [x, 0.965, 0], [0.33, 0.01, 0.33]);
+    // étiquette rouge et blanche avec calligraphie
+    b.add(U.box, '#f6f0e2', [x, 0.48, 0.405], [0.4, 0.38, 0.03]);
+    b.add(U.box, '#c8302a', [x, 0.48, 0.42], [0.3, 0.3, 0.01]);
+    for (const [dx, dy, w, h] of [[0, 0.07, 0.03, 0.16], [-0.06, 0.02, 0.1, 0.025], [0, -0.06, 0.12, 0.025], [0.05, -0.02, 0.025, 0.09]]) {
+      b.add(U.box, '#1a1010', [x + dx, 0.48 + dy, 0.428], [w, h, 0.006]);
+    }
   }
   s.low.push({ geo: b.build(), depth: 0.84 });
-  b = new Builder();   // bottes de paille
+
+  b = new Builder();   // bottes de paille ficelées
   for (const x of [-0.55, 0.55]) {
     b.add(U.cyl, '#e3c66f', [x, 0.45, 0], [0.45, 1.05, 0.45], [0, 0, Math.PI / 2]);
-    for (const dx of [-0.25, 0.25]) b.add(U.cyl, '#a48c4a', [x + dx, 0.45, 0], [0.46, 0.05, 0.46], [0, 0, Math.PI / 2]);
+    for (const r of [0.38, 0.28, 0.17, 0.07]) {  // spirale visible aux extrémités
+      for (const ex of [-0.53, 0.53]) b.add(U.cyl, r > 0.2 ? '#cfae55' : '#b8973f', [x + ex, 0.45, 0], [r, 0.012, r], [0, 0, Math.PI / 2]);
+    }
+    for (let i = 0; i < 10; i++) {               // brins qui dépassent
+      const a = (i / 10) * Math.PI * 2;
+      b.add(U.box, '#f0d98a', [x + (Math.random() - 0.5) * 0.9, 0.45 + Math.sin(a) * 0.45, Math.cos(a) * 0.45], [0.14, 0.012, 0.012], [a, 0, 0.4]);
+    }
+    for (const dx of [-0.28, 0.28]) b.add(U.cyl, '#8a6a34', [x + dx, 0.45, 0], [0.462, 0.04, 0.462], [0, 0, Math.PI / 2]);
   }
   s.low.push({ geo: b.build(), depth: 0.9 });
-  b = new Builder();   // barrière de bambou avec corde sacrée
+
+  b = new Builder();   // barrière de bambou avec corde sacrée (shimenawa) et papiers (shide)
   for (const x of [-0.95, 0.95]) {
-    b.add(U.box, '#8c6a3c', [x, 0.55, 0], [0.08, 1.25, 0.08], [0, 0, 0.45]);
-    b.add(U.box, '#8c6a3c', [x, 0.55, 0], [0.08, 1.25, 0.08], [0, 0, -0.45]);
+    for (const r of [0.45, -0.45]) b.add(U.cyl6, '#9a7642', [x, 0.55, 0], [0.05, 1.3, 0.05], [0, 0, r]);
+    b.add(U.cyl6, '#5a4026', [x, 0.82, 0.0], [0.07, 0.08, 0.07], [Math.PI / 2, 0, 0]);
   }
-  for (const y of [0.4, 0.7]) b.add(U.cyl6, '#a7c05e', [0, y, 0.05], [0.07, 2.4, 0.07], [0, 0, Math.PI / 2]);
-  b.add(U.cyl6, '#e8dcb5', [0, 0.98, 0.05], [0.07, 2.4, 0.07], [0, 0, Math.PI / 2]);
-  for (const x of [-0.6, 0, 0.6]) b.add(U.box, '#ffffff', [x, 0.8, 0.1], [0.12, 0.28, 0.02]);
+  for (const y of [0.35, 0.62]) {
+    b.add(U.cyl6, '#a7c05e', [0, y, 0.06], [0.07, 2.4, 0.07], [0, 0, Math.PI / 2]);
+    for (const nx of [-0.8, -0.2, 0.4, 1.0]) b.add(U.cyl6, '#7f9a3e', [nx, y, 0.06], [0.075, 0.03, 0.075], [0, 0, Math.PI / 2]);
+  }
+  for (let i = 0; i < 12; i++) {                 // corde torsadée
+    const x = -1.1 + i * 0.2;
+    b.add(U.sph, i % 2 ? '#d9c690' : '#efe0b4', [x, 0.98 - Math.sin((i / 11) * Math.PI) * 0.06, 0.08], [0.12, 0.075, 0.075], [0, 0, 0.5]);
+  }
+  for (const x of [-0.6, 0, 0.6]) {             // shide en zigzag
+    for (let k = 0; k < 4; k++) b.add(U.box, '#ffffff', [x + (k % 2 ? 0.04 : -0.04), 0.86 - k * 0.075, 0.12], [0.1, 0.07, 0.01]);
+  }
   s.low.push({ geo: b.build(), depth: 0.5 });
 
-  // Barrière haute (à glisser dessous) : portique avec noren
+  // Barrière haute (à glisser dessous) : portique de boutique avec petit toit, noren et lanternes
   b = new Builder();
-  for (const x of [-1.22, 1.22]) b.add(U.cyl, '#d6452f', [x, 1.5, 0], [0.1, 3, 0.1]);
-  b.add(U.box, '#2a2a2a', [0, 3.02, 0], [2.95, 0.2, 0.32]);
-  b.add(U.box, '#d6452f', [0, 2.82, 0], [2.6, 0.15, 0.22]);
+  for (const x of [-1.22, 1.22]) {
+    b.add(U.box, '#6b3f22', [x, 1.5, 0], [0.16, 3, 0.16]);
+    b.add(U.box, '#4a2a16', [x, 0.08, 0], [0.24, 0.16, 0.24]);
+    // lanterne rouge suspendue
+    b.add(U.sph, '#d8392f', [x * 0.93, 2.25, 0.2], [0.13, 0.19, 0.13]);
+    b.add(U.cyl, '#1e1a18', [x * 0.93, 2.46, 0.2], [0.07, 0.04, 0.07]);
+    b.add(U.cyl, '#1e1a18', [x * 0.93, 2.04, 0.2], [0.07, 0.04, 0.07]);
+    b.add(U.box, '#f4e6c4', [x * 0.93, 2.25, 0.33], [0.04, 0.18, 0.01]);
+  }
+  b.add(U.box, '#6b3f22', [0, 2.82, 0], [2.65, 0.14, 0.2]);
+  b.add(U.box, '#6b3f22', [0, 2.5, 0], [2.45, 0.08, 0.1]);
+  b.add(U.roof, '#3f4656', [0, 2.9, 0], [3.1, 0.38, 0.62]);
+  b.add(U.box, '#2c3140', [0, 3.27, 0], [3.1, 0.06, 0.08]);
+  for (let i = 0; i < 9; i++) b.add(U.box, '#353b4a', [-1.4 + i * 0.35, 2.92, 0.3], [0.06, 0.06, 0.04]);
+  // noren indigo à trois pans avec motif de vagues blanches
+  for (const x of [-0.74, 0, 0.74]) {
+    b.add(U.box, '#24356e', [x, 1.86, 0], [0.7, 1.15, 0.05]);
+    for (const k of [-0.2, 0, 0.2]) b.add(U.cyl, '#f4f1ea', [x + k, 1.42, 0.03], [0.08, 0.012, 0.08], [Math.PI / 2, 0, 0]);
+    b.add(U.cyl, '#24356e', [x + 0.0, 1.38, 0.035], [0.06, 0.012, 0.06], [Math.PI / 2, 0, 0]);
+  }
+  b.add(U.cyl, '#f4f1ea', [0, 2.06, 0.03], [0.17, 0.02, 0.17], [Math.PI / 2, 0, 0]);
+  b.add(U.cyl, '#24356e', [0, 2.06, 0.042], [0.11, 0.02, 0.11], [Math.PI / 2, 0, 0]);
   b.add(U.box, '#3a2a20', [0, 2.46, 0], [2.4, 0.06, 0.06]);
-  for (const x of [-0.74, 0, 0.74]) b.add(U.box, '#2c3c78', [x, 1.86, 0], [0.7, 1.15, 0.05]);
-  b.add(U.cyl6, '#f4f1ea', [0, 2.05, 0.03], [0.17, 0.02, 0.17], [Math.PI / 2, 0, 0]);
   s.highGeo = b.build();
   return s;
 }
@@ -126,48 +139,21 @@ export class Obstacles {
   }
 
   buildTrain(cars, moving, ramp) {
-    const S = this.S;
-    const mats = moving ? S.express : pick(S.liveries);
-    const g = new THREE.Group();
-    for (let i = 0; i < cars; i++) {
-      const z0 = -i * (CAR_LEN + CAR_GAP);
-      const zc = z0 - CAR_LEN / 2;
-      const body = new THREE.Mesh(S.carGeo, i === 0 ? mats.lead : mats.mid);
-      body.position.set(0, 0.35 + 1.075, zc);
-      const roof = new THREE.Mesh(S.roofGeo, S.roofMat);
-      roof.position.set(0, 2.55, zc);
-      const under = new THREE.Mesh(S.underGeo, vcMat);
-      under.position.z = zc;
-      g.add(body, roof, under);
-      if (i > 0) {
-        const c = new THREE.Mesh(S.connGeo, vcMat);
-        c.position.z = z0 + CAR_GAP / 2;
-        g.add(c);
-      }
-    }
-    if (moving) {
-      for (const x of [-0.7, 0.7]) {
-        const l = new THREE.Mesh(S.lightGeo, S.lightMat);
-        l.position.set(x, 1.5, 0.03);
-        g.add(l);
-      }
-    }
-    if (ramp) g.add(new THREE.Mesh(S.rampGeo, vcMat));
+    const T = this.S.trains;
+    const g = buildTrainMesh(T, moving ? T.express : pick(T.liveries), cars, moving);
+    if (ramp) g.add(new THREE.Mesh(this.S.rampGeo, vcMat));
     return g;
   }
 
   // Un exemplaire de chaque objet, pour précompiler les shaders et charger les textures au démarrage
   warmupGroup() {
-    const S = this.S, g = new THREE.Group();
-    const all = [...S.liveries, S.express];
-    all.forEach((mats, i) => {
-      for (const arr of [mats.lead, mats.mid]) {
-        const m = new THREE.Mesh(S.carGeo, arr);
-        m.position.set(i * 3, 1.4, 0);
-        g.add(m);
-      }
+    const S = this.S, T = S.trains, g = new THREE.Group();
+    [...T.liveries, T.express].forEach((l, i) => {
+      const m = buildTrainMesh(T, l, 2, l === T.express);
+      m.position.x = i * 3;
+      g.add(m);
     });
-    g.add(this.buildTrain(2, true, true));
+    g.add(new THREE.Mesh(S.rampGeo, vcMat));
     for (const l of S.low) g.add(new THREE.Mesh(l.geo, vcMat));
     g.add(new THREE.Mesh(S.highGeo, vcMat));
     return g;
