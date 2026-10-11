@@ -93,6 +93,12 @@ export class Sound {
     this.tone(f, 0.12, { type: 'triangle', vol: 0.14, at: t });
     this.tone(f * 1.5, 0.15, { type: 'sine', vol: 0.08, at: t + 0.05 });
   }
+  thunder() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.noise(0.12, { vol: 0.35, freq: 3500, q: 0.6, at: t, type: 'highpass' });
+    this.noise(1.2, { vol: 0.45, freq: 160, q: 0.7, at: t + 0.03, type: 'lowpass' });
+  }
   levelUp() {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;

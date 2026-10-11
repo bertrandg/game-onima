@@ -6,6 +6,7 @@ import { World } from './world.js';
 import { Obstacles } from './obstacles.js';
 import { Girl } from './girl.js';
 import { Candies, CANDY_POINTS } from './candies.js';
+import { LevelUpFx } from './fx.js';
 import { Input } from './input.js';
 import { Sound } from './audio.js';
 import * as Scores from './scores.js';
@@ -60,6 +61,8 @@ function resetWorld() {
 const $ = (id) => document.getElementById(id);
 const screens = ['menu', 'help', 'scores', 'pause', 'over'];
 let scoresBack = 'menu';
+const fx = new LevelUpFx($('fx'));
+let lastGlow = 0;
 let highlightId = null;
 
 function show(name) {
@@ -142,6 +145,7 @@ function toast(text) {
 
 // ---------- Déroulement ----------
 function startRun(fromMenu) {
+  fx.stop();
   sound.init();
   resetWorld();
   state = 'running';
@@ -170,6 +174,7 @@ function resume() {
 }
 
 function toMenu() {
+  fx.stop();
   sound.stopMusic();
   resetWorld();
   state = 'menu';
@@ -178,6 +183,7 @@ function toMenu() {
 }
 
 function die() {
+  fx.stop();
   state = 'dying';
   deathT = 0;
   shake = 0.6;
@@ -224,10 +230,17 @@ function collectCandies(n) {
     candyCount++;
     if (candyCount % 10 === 0) {
       const level = candyCount / 10;
-      const p = girl.levelUp(level);
-      sound.levelUp();
-      sparkles.burst(player.x, player.y + 1, player.z);
-      toast(`Level up ! ✨ ${p.name}`);
+      sound.candy(9);
+      fx.start({
+        onBolt: () => sound.thunder(),
+        onPeak: () => {
+          const p = girl.levelUp(level);
+          sound.levelUp();
+          sparkles.burst(player.x, player.y + 1, player.z);
+          showLevelUp(p.name);
+          if (navigator.vibrate) navigator.vibrate([30, 40, 60]);
+        },
+      });
     } else {
       sound.candy((candyCount % 10) - 1);
     }
@@ -235,6 +248,14 @@ function collectCandies(n) {
   $('hud-candies').textContent = candyCount;
   const bar = $('hud-candybar');
   bar.style.width = `${(candyCount % 10) * 10}%`;
+}
+
+function showLevelUp(name) {
+  const el = $('levelup');
+  $('levelup-name').textContent = `✨ ${name} ✨`;
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
 }
 
 // Gerbe d'étoiles autour de l'héroïne
@@ -391,12 +412,15 @@ function updateCamera(dt) {
 
 // ---------- Boucle ----------
 let last = performance.now();
+const _sp = new THREE.Vector3();
 const scoreEl = $('score');
 const distEl = $('hud-dist');
 function frame(now) {
   requestAnimationFrame(frame);
-  const dt = Math.min(0.05, (now - last) / 1000);
+  const realDt = Math.min(0.05, (now - last) / 1000);
   last = now;
+  // ralenti pendant le level up (le temps du jeu est ralenti, pas l'effet)
+  const dt = state === 'running' ? realDt * fx.timeScale : realDt;
 
   if (state === 'running') {
     runTime += dt;
@@ -426,8 +450,15 @@ function frame(now) {
     girl.root.position.set(player.x, player.y, player.z);
     girl.root.rotation.y = state === 'running' ? (LANES[player.lane] - player.x) * -0.12 : 0;
     world.setShadow(player.x, obstacles.groundAt(player.x, player.z), player.y, player.z);
-    updateCamera(dt);
+    updateCamera(realDt);
     world.scenery.update(dt, player.z, camera, renderer.getPixelRatio());
+
+    if (fx.active) {
+      _sp.set(player.x, player.y + 1.0, player.z).project(camera);
+      fx.update(realDt, (_sp.x + 1) / 2 * window.innerWidth, (1 - _sp.y) / 2 * window.innerHeight);
+    }
+    const glow = fx.glow;
+    if (glow !== lastGlow) { girl.setGlow(glow); lastGlow = glow; }
   }
   renderer.render(scene, camera);
 }
@@ -440,7 +471,7 @@ window.addEventListener('resize', () => {
 
 // Accès de test : ouvrir la page avec #debug
 if (location.hash === '#debug') {
-  window.__onima = { player, obstacles, camera, candies, get candyCount() { return candyCount; }, get state() { return state; }, get dist() { return dist; }, get speed() { return speed; } };
+  window.__onima = { player, obstacles, camera, candies, addCandies: (n) => collectCandies(n), fx, get candyCount() { return candyCount; }, get state() { return state; }, get dist() { return dist; }, get speed() { return speed; } };
 }
 
 resetWorld();

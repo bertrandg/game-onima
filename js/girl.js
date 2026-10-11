@@ -363,6 +363,7 @@ export class Girl {
       return t;
     });
 
+    this.allMats = [...Object.values(mats), this.faceMat];
     this.palMats = { dress: m(COL.dress), dressDark: m(COL.dressDark), ribbon: m(COL.ribbon), red: m(COL.red) };
     this.pop = 0;
     this.phase = 0;
@@ -376,6 +377,11 @@ export class Girl {
     const p = PALETTES[i % PALETTES.length];
     for (const k of Object.keys(this.palMats)) this.palMats[k].color.set(p[k]);
     return p;
+  }
+
+  // halo lumineux (0 = normal, 1 = toute blanche)
+  setGlow(v) {
+    for (const mat of this.allMats) mat.emissive.setRGB(v, v * 0.95, v * 0.85);
   }
 
   // petit rebond quand elle change de tenue
