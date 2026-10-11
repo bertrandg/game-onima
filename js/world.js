@@ -3,14 +3,51 @@ import { LANES } from './config.js';
 import { Builder, U, vcMat, pick, rand } from './geo.js';
 import * as TX from './textures.js';
 import { Scenery, FOG_COLOR } from './scenery.js';
-import { DECOR, THEMES, THEME_ORDER, THEME_LEN, weighted, prebuildDecor } from './decor.js';
+import { DECOR, THEMES, THEME_ORDER, THEME_LEN, STRIP_LEN, weighted, prebuildDecor } from './decor.js';
 
 const TRACK_LEN = 600;
+const CHUNK = STRIP_LEN;   // le décor est généré par tranches de 32 m fusionnées en un seul objet
+// bandes latérales : écart en z entre éléments et dispersion en x
 const BANDS = {
-  near: { x: (w) => 5.4 + w / 2 + rand(0, 0.6), gap: () => rand(0.3, 3) },
-  mid: { x: (w) => 8.6 + w / 2 + rand(0, 2.5), gap: () => rand(0.4, 4) },
-  far: { x: (w) => 22 + w / 2 + rand(0, 28), gap: () => rand(2, 12) },
+  edge: { spread: 0.4, gap: () => rand(0.5, 3.5) },
+  near: { spread: 0.6, gap: () => rand(0.3, 2.5) },
+  mid: { spread: 2.5, gap: () => rand(0.3, 3) },
+  far: { spread: 28, gap: () => rand(1, 9) },
 };
+
+// Fusion incrémentale d'une tranche : les éléments (rotation autour de y + échelle uniforme + teinte)
+// sont recopiés dans des tableaux communs, quelques-uns par image, pour ne jamais provoquer d'à-coup.
+function startJob(parts, zFar) {
+  let n = 0;
+  for (const p of parts) n += p.geo.attributes.position.count;
+  return { parts, zFar, i: 0, o: 0, P: new Float32Array(n * 3), N: new Float32Array(n * 3), C: new Float32Array(n * 3) };
+}
+function mergeNext(job) {
+  const { geo, x0, z0, rot, sc, tint } = job.parts[job.i++];
+  const pa = geo.attributes.position.array, na = geo.attributes.normal.array, ca = geo.attributes.color.array;
+  const c = Math.cos(rot), sn = Math.sin(rot);
+  const P = job.P, N = job.N, C = job.C, o = job.o, t0 = tint[0], t1 = tint[1], t2 = tint[2];
+  for (let i = 0; i < pa.length; i += 3) {
+    const x = pa[i], z = pa[i + 2], nx = na[i], nz = na[i + 2];
+    P[o + i] = (c * x + sn * z) * sc + x0;
+    P[o + i + 1] = pa[i + 1] * sc;
+    P[o + i + 2] = (c * z - sn * x) * sc + z0;
+    N[o + i] = c * nx + sn * nz;
+    N[o + i + 1] = na[i + 1];
+    N[o + i + 2] = c * nz - sn * nx;
+    C[o + i] = ca[i] * t0; C[o + i + 1] = ca[i + 1] * t1; C[o + i + 2] = ca[i + 2] * t2;
+  }
+  job.o += pa.length;
+  return job.i >= job.parts.length;
+}
+function finishJob(job) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(job.P, 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(job.N, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(job.C, 3));
+  g.computeBoundingSphere();
+  return g;
+}
 
 export function themeAt(z) {
   const zone = Math.floor(Math.max(0, -z) / THEME_LEN);
@@ -98,36 +135,81 @@ export class World {
   }
 
   reset(startZ) {
-    for (const it of this.items) this.scene.remove(it.mesh);
+    for (const it of this.items) { this.scene.remove(it.mesh); if (it.own) it.mesh.geometry.dispose(); }
     this.items = [];
     this.cursors = { '-1': {}, '1': {} };
     for (const s of ['-1', '1']) for (const band of Object.keys(BANDS)) this.cursors[s][band] = startZ + 140 - rand(0, 8);
+    this.chunkCursor = startZ + 140;
     this.toriiCursor = startZ - 60;
-    this.update(0, startZ, 0);
+    this.jobs = [];
+    this.update(0, startZ, 0, true);
   }
 
-  spawnItem(side, band, z) {
+  // Ajoute un élément de décor à la tranche en cours ; renvoie le z du prochain élément de la bande
+  placeItem(side, band, z, parts) {
     const theme = THEMES[themeAt(z)];
-    const type = weighted(theme[band]);
-    if (!type) return z - rand(2, 6);
+    const list = theme[band];
+    const type = list && list.length ? weighted(list) : null;
+    if (!type) return z - rand(1.5, 5);
     const d = DECOR[type];
-    const mesh = new THREE.Mesh(pick(d.geos), vcMat);
-    const x = side * BANDS[band].x(d.w);
-    mesh.position.set(x, 0, z - d.len / 2);
-    mesh.rotation.y = d.face ? (side > 0 ? Math.PI : 0) : Math.random() * Math.PI * 2;
-    this.scene.add(mesh);
-    this.items.push({ mesh, zFar: z - d.len });
-    return z - d.len - BANDS[band].gap();
+    const sc = d.face ? rand(0.95, 1.06) : rand(0.85, 1.18);
+    const x = side * (theme.x[band] + (d.w * sc) / 2 + rand(0, BANDS[band].spread));
+    const rotY = d.face ? (side > 0 ? Math.PI : 0) : rand(0, Math.PI * 2);
+    // légère variation de teinte pour casser la répétition
+    const k = rand(0.92, 1.07);
+    parts.push({ geo: pick(d.geos), x0: x, z0: z - (d.len * sc) / 2, rot: rotY, sc, tint: [k * rand(0.97, 1.03), k * rand(0.97, 1.03), k * rand(0.97, 1.03)] });
+    // densité de zone appliquée près de la voie seulement (au loin les éléments sont minuscules)
+    return z - d.len * sc - BANDS[band].gap() * (band === 'far' ? 1 : theme.dense || 1);
   }
 
-  update(dt, pz, speed) {
-    const ahead = pz - 250;
+  // Construit une tranche de décor [z0, z0 - CHUNK] des deux côtés et la fusionne en un seul objet
+  buildChunk(z0) {
+    const parts = [];
+    const zEnd = z0 - CHUNK;
+    let zFar = zEnd;
     for (const s of [-1, 1]) {
       const cur = this.cursors[String(s)];
       for (const band of Object.keys(BANDS)) {
-        while (cur[band] > ahead) cur[band] = this.spawnItem(s, band, cur[band]);
+        while (cur[band] > zEnd) {
+          cur[band] = this.placeItem(s, band, cur[band], parts);
+          zFar = Math.min(zFar, cur[band]);   // la tranche disparaît quand son élément le plus lointain est dépassé
+        }
       }
+      // sol de la zone (rue pavée, chemin, mousse)
+      const theme = THEMES[themeAt(z0 - CHUNK / 2)];
+      const gd = DECOR[theme.ground];
+      parts.push({ geo: pick(gd.geos), x0: s * (4.85 + gd.w / 2), z0: z0 - CHUNK / 2, rot: s > 0 ? Math.PI : 0, sc: 1, tint: [1, 1, 1] });
     }
+    // guirlande de lanternes au-dessus des voies dans les villages
+    if (themeAt(z0) === 'village' && Math.random() < 0.45) {
+      parts.push({ geo: this.special.garland, x0: 0, z0: z0 - rand(4, CHUNK - 4), rot: 0, sc: 1, tint: [1, 1, 1] });
+    }
+    this.jobs.push(startJob(parts, zFar));
+  }
+
+  // Avance les fusions en attente, dans la limite d'un budget de temps par image
+  processJobs(budgetMs) {
+    const t0 = performance.now();
+    while (this.jobs.length) {
+      const job = this.jobs[0];
+      if (mergeNext(job)) {
+        this.jobs.shift();
+        const mesh = new THREE.Mesh(finishJob(job), vcMat);
+        this.scene.add(mesh);
+        this.items.push({ mesh, zFar: job.zFar, own: true });
+      }
+      if (performance.now() - t0 > budgetMs) break;
+    }
+  }
+
+  update(dt, pz, speed, instant = false) {
+    const ahead = pz - 250;
+    while (this.chunkCursor > ahead) {
+      this.buildChunk(this.chunkCursor);
+      this.chunkCursor -= CHUNK;
+    }
+    // au démarrage tout est construit d'un coup ; en course, 2 ms par image au maximum
+    this.processJobs(instant ? Infinity : 2);
     while (this.toriiCursor > ahead) {
       const mesh = new THREE.Mesh(this.special.bigTorii, vcMat);
       mesh.position.set(0, 0, this.toriiCursor);
@@ -140,7 +222,7 @@ export class World {
     const limit = pz + 30;
     let j = 0;
     for (const it of this.items) {
-      if (it.zFar > limit) this.scene.remove(it.mesh);
+      if (it.zFar > limit) { this.scene.remove(it.mesh); if (it.own) it.mesh.geometry.dispose(); }
       else this.items[j++] = it;
     }
     this.items.length = j;

@@ -89,7 +89,7 @@ function makeSky() {
 
 // ---------- Mont Fuji ----------
 function makeFuji() {
-  const R = 640, H = 264, RC = 22, NR = 110, NA = 520;
+  const R = 640, H = 264, RC = 22, NR = 92, NA = 420;
   const pos = [], col = [], idx = [];
   const c = new THREE.Color();
   const forest = new THREE.Color('#2c5a52'), rockLow = new THREE.Color('#4b5370'), rock = new THREE.Color('#6a5262');

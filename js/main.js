@@ -668,7 +668,7 @@ window.addEventListener('resize', () => {
 
 // Accès de test : ouvrir la page avec #debug
 if (location.hash === '#debug') {
-  window.__onima = { player, obstacles, camera, candies, addCandies: (n) => collectCandies(n), fx, renderer, get candyCount() { return candyCount; }, get state() { return state; }, get dist() { return dist; }, get speed() { return speed; } };
+  window.__onima = { player, obstacles, camera, world, candies, addCandies: (n) => collectCandies(n), fx, renderer, get candyCount() { return candyCount; }, get state() { return state; }, get dist() { return dist; }, get speed() { return speed; } };
 }
 
 // Préchauffage : compile tous les shaders et envoie toutes les textures au GPU dès le chargement,
