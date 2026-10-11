@@ -232,7 +232,6 @@ function collectCandies(n) {
       const level = candyCount / 10;
       sound.candy(9);
       fx.start({
-        onBolt: () => sound.thunder(),
         onPeak: () => {
           const p = girl.levelUp(level);
           sound.levelUp();
@@ -417,10 +416,8 @@ const scoreEl = $('score');
 const distEl = $('hud-dist');
 function frame(now) {
   requestAnimationFrame(frame);
-  const realDt = Math.min(0.05, (now - last) / 1000);
+  const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  // ralenti pendant le level up (le temps du jeu est ralenti, pas l'effet)
-  const dt = state === 'running' ? realDt * fx.timeScale : realDt;
 
   if (state === 'running') {
     runTime += dt;
@@ -450,12 +447,12 @@ function frame(now) {
     girl.root.position.set(player.x, player.y, player.z);
     girl.root.rotation.y = state === 'running' ? (LANES[player.lane] - player.x) * -0.12 : 0;
     world.setShadow(player.x, obstacles.groundAt(player.x, player.z), player.y, player.z);
-    updateCamera(realDt);
+    updateCamera(dt);
     world.scenery.update(dt, player.z, camera, renderer.getPixelRatio());
 
     if (fx.active) {
       _sp.set(player.x, player.y + 1.0, player.z).project(camera);
-      fx.update(realDt, (_sp.x + 1) / 2 * window.innerWidth, (1 - _sp.y) / 2 * window.innerHeight);
+      fx.update(dt, (_sp.x + 1) / 2 * window.innerWidth, (1 - _sp.y) / 2 * window.innerHeight);
     }
     const glow = fx.glow;
     if (glow !== lastGlow) { girl.setGlow(glow); lastGlow = glow; }
