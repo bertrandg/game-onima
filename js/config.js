@@ -24,5 +24,5 @@ export const DESPAWN_BEHIND = 25;
 
 // La vitesse augmente avec la distance, sans limite de niveau (plafond MAX_SPEED)
 export function speedAt(dist) {
-  return BASE_SPEED + (MAX_SPEED - BASE_SPEED) * (1 - Math.exp(-dist / 3200));
+  return BASE_SPEED + (MAX_SPEED - BASE_SPEED) * (1 - Math.exp(-dist / 2300));
 }
