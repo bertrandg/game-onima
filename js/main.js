@@ -10,6 +10,7 @@ import { LevelUpFx } from './fx.js';
 import { Input } from './input.js';
 import { Sound } from './audio.js';
 import * as Scores from './scores.js';
+import { LEVELS, levelById } from './levels/index.js';
 
 // ---------- Rendu ----------
 const container = document.getElementById('game');
@@ -21,11 +22,48 @@ container.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1500);
 
-const world = new World(scene);
+scene.fog = new THREE.Fog('#ffffff', 80, 270);
 const sound = new Sound();
-const candies = new Candies(scene);
-const obstacles = new Obstacles(scene, { onHorn: () => sound.horn(), candies });
 const girl = new Girl();
+
+// ---------- Niveaux ----------
+// Chaque niveau chargé a son propre groupe d'objets (monde, obstacles, objets à ramasser).
+// Un niveau n'est téléchargé et construit qu'au moment où on le choisit.
+const contexts = {};
+let ctx = null;                       // niveau actif
+let world, obstacles, candies;        // raccourcis vers le niveau actif
+
+function activate(c) {
+  for (const k of Object.keys(contexts)) contexts[k].root.visible = contexts[k] === c;
+  ctx = c;
+  world = c.world;
+  obstacles = c.obstacles;
+  candies = c.candies;
+  scene.fog.color.set(c.def.fog);
+}
+
+async function loadLevel(id) {
+  if (contexts[id]) return contexts[id];
+  const meta = levelById(id);
+  const def = (await meta.load()).default;
+  const root = new THREE.Group();
+  scene.add(root);
+  const c = { id: meta.id, meta, def, root };
+  c.world = new World(root, def.world);
+  c.candies = new Candies(root, def.items());
+  c.obstacles = new Obstacles(root, { onHorn: () => sound.horn(), candies: c.candies, kit: def.obstacleKit() });
+  contexts[meta.id] = c;
+  const prev = ctx;
+  activate(c);
+  resetWorld();
+  warmUp();
+  if (prev) activate(prev);
+  return c;
+}
+
+const isUnlocked = (meta) => !meta.unlock || Scores.bestOnLevel(meta.unlock.level) >= meta.unlock.score;
+let selectedLevel = Scores.getLevel();
+if (!isUnlocked(levelById(selectedLevel))) selectedLevel = 'japon';
 scene.add(girl.root);
 
 // ---------- État ----------
@@ -72,8 +110,19 @@ function show(name) {
   document.body.classList.toggle('in-run', inRun);
 }
 
+let scoresLevel = 'japon';
 function renderScores() {
-  const list = Scores.loadScores().slice(0, 10);
+  // onglets : un tableau par niveau
+  const tabs = $('scores-tabs');
+  tabs.innerHTML = '';
+  for (const L of LEVELS) {
+    const b = document.createElement('button');
+    b.className = 'tab' + (L.id === scoresLevel ? ' on' : '');
+    b.textContent = `${L.icon} ${L.name}`;
+    b.addEventListener('click', () => { scoresLevel = L.id; renderScores(); });
+    tabs.appendChild(b);
+  }
+  const list = Scores.loadScores(scoresLevel).slice(0, 10);
   const body = $('scores-body');
   body.innerHTML = '';
   if (!list.length) {
@@ -92,6 +141,7 @@ function renderScores() {
 
 function openScores(from) {
   scoresBack = from;
+  scoresLevel = from === 'over' && ctx ? ctx.id : selectedLevel;
   renderScores();
   show('scores');
 }
@@ -125,6 +175,39 @@ document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
 window.addEventListener('keydown', (e) => {
   if ((e.key === 'f' || e.key === 'F') && !(e.target instanceof HTMLInputElement) && canFullscreen) toggleFullscreen();
 });
+
+// Sélecteur de niveau de l'écran d'accueil (cartes avec cadenas)
+function renderLevels() {
+  const box = $('level-list');
+  box.innerHTML = '';
+  for (const L of LEVELS) {
+    const open = isUnlocked(L);
+    const b = document.createElement('button');
+    b.className = 'level-card' + (L.id === selectedLevel ? ' selected' : '') + (open ? '' : ' locked');
+    const best = Scores.bestOnLevel(L.id);
+    const sub = open
+      ? (best ? `Record : ${best.toLocaleString('fr-FR')}` : L.subtitle)
+      : `${L.unlock.score.toLocaleString('fr-FR')} pts au ${levelById(L.unlock.level).name}`;
+    b.innerHTML = `<span class="lv-icon">${open ? L.icon : '🔒'}</span><span class="lv-text"><b></b><small></small></span>`;
+    b.querySelector('b').textContent = L.name;
+    b.querySelector('small').textContent = sub;
+    b.addEventListener('click', () => {
+      if (!open) {
+        b.classList.remove('shake');
+        void b.offsetWidth;
+        b.classList.add('shake');
+        $('name-error').textContent = `🔒 Fais ${L.unlock.score.toLocaleString('fr-FR')} points au ${levelById(L.unlock.level).name} pour débloquer ${L.name}`;
+        return;
+      }
+      $('name-error').textContent = '';
+      selectedLevel = L.id;
+      Scores.setLevel(L.id);
+      renderLevels();
+    });
+    box.appendChild(b);
+  }
+}
+renderLevels();
 
 $('name-input').value = playerName;
 $('btn-play').addEventListener('click', () => {
@@ -169,7 +252,26 @@ function toast(text) {
 }
 
 // ---------- Déroulement ----------
-function startRun(fromMenu) {
+let loading = false;
+async function startRun(fromMenu) {
+  if (loading) return;
+  const id = fromMenu ? selectedLevel : ctx.id;
+  if (!contexts[id]) {
+    loading = true;
+    $('level-loading-name').textContent = levelById(id).name;
+    $('level-loading').classList.remove('hidden');
+    try {
+      await loadLevel(id);
+    } catch (e) {
+      $('level-loading').classList.add('hidden');
+      $('name-error').textContent = 'Impossible de charger ce niveau, vérifie ta connexion.';
+      loading = false;
+      return;
+    }
+    $('level-loading').classList.add('hidden');
+    loading = false;
+  }
+  activate(contexts[id]);
   fx.stop();
   blood.reset();
   $('death-dim').classList.remove('on');
@@ -178,13 +280,14 @@ function startRun(fromMenu) {
   state = 'running';
   camAngle = Math.PI;
   snapCamera();
-  $('hud-best').textContent = Scores.bestFor(playerName).toLocaleString('fr-FR');
+  $('hud-best').textContent = Scores.bestFor(ctx.id, playerName).toLocaleString('fr-FR');
+  $('hud-item-ico').textContent = ctx.meta.item;
   $('hud-name').textContent = playerName;
   hudScore = -1; hudDist = -1;
   $('hud-candies').textContent = '0';
   $('hud-candybar').style.width = '0%';
   show(null);
-  sound.startMusic();
+  sound.startMusic(ctx.def.music);
 }
 
 function pause() {
@@ -206,9 +309,11 @@ function toMenu() {
   blood.reset();
   $('death-dim').classList.remove('on');
   sound.stopMusic();
+  activate(contexts.japon);
   resetWorld();
   state = 'menu';
   camAngle = Math.PI;
+  renderLevels();
   show('menu');
 }
 
@@ -228,17 +333,20 @@ function die() {
 function gameOver() {
   state = 'over';
   const score = totalScore();
-  const prevBest = Scores.bestFor(playerName);
-  const { entry, rank } = Scores.addScore(playerName, score);
+  const before = LEVELS.filter(isUnlocked).length;
+  const prevBest = Scores.bestFor(ctx.id, playerName);
+  const { entry, rank } = Scores.addScore(ctx.id, playerName, score);
+  const newly = LEVELS.filter(isUnlocked).length > before
+    ? LEVELS.find((L) => L.unlock && L.unlock.level === ctx.id && isUnlocked(L)) : null;
   highlightId = entry.id;
   $('over-score').textContent = score.toLocaleString('fr-FR');
-  $('over-detail').textContent = `${Math.floor(dist).toLocaleString('fr-FR')} m  +  ${candyCount} 🍡 × ${CANDY_POINTS}`;
+  $('over-detail').textContent = `${Math.floor(dist).toLocaleString('fr-FR')} m  +  ${candyCount} ${ctx.meta.item} × ${CANDY_POINTS}`;
   $('over-best').textContent = Math.max(prevBest, score).toLocaleString('fr-FR');
   const msg = score > prevBest && prevBest > 0 ? 'Nouveau record personnel ! ✨'
     : rank === 1 ? 'Meilleur score du tableau ! 👑'
     : rank <= 10 ? `Tu entres dans le top 10 (n°${rank}) !`
     : 'Courage, tu peux aller plus loin !';
-  $('over-msg').textContent = msg;
+  $('over-msg').textContent = newly ? `🔓 Nouveau niveau débloqué : ${newly.name} !` : msg;
   show('over');
 }
 
@@ -668,7 +776,7 @@ window.addEventListener('resize', () => {
 
 // Accès de test : ouvrir la page avec #debug
 if (location.hash === '#debug') {
-  window.__onima = { player, obstacles, camera, world, candies, addCandies: (n) => collectCandies(n), fx, renderer, get candyCount() { return candyCount; }, get state() { return state; }, get dist() { return dist; }, get speed() { return speed; } };
+  window.__onima = { player, get obstacles() { return obstacles; }, camera, get world() { return world; }, get candies() { return candies; }, loadLevel, get level() { return ctx && ctx.id; }, addCandies: (n) => collectCandies(n), fx, renderer, get candyCount() { return candyCount; }, get state() { return state; }, get dist() { return dist; }, get speed() { return speed; } };
 }
 
 // Préchauffage : compile tous les shaders et envoie toutes les textures au GPU dès le chargement,
@@ -691,8 +799,8 @@ function warmUp() {
   sparkles.points.visible = false;
 }
 
+activate(await loadLevel('japon'));
 resetWorld();
-warmUp();
 snapCamera();
 show('menu');
 document.body.classList.add('ready');

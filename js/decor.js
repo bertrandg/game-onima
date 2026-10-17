@@ -738,14 +738,14 @@ export const DECOR = {
 // Thèmes : sol, positions des bandes (distance à la voie) et éléments pondérés par bande (null = vide)
 export const THEMES = {
   campagne: {
-    ground: 'path', x: { edge: 4.9, near: 6.7, mid: 8.8, far: 22 },
+    ground: 'path', gateEvery: [450, 700], x: { edge: 4.9, near: 6.7, mid: 8.8, far: 22 },
     edge: [['tufts', 3], ['ajisai', 1], [null, 1]],
     near: [['bambooFence', 2], ['hasakake', 1.5], ['scarecrow', 0.6], ['jizo', 0.6], ['hokora', 0.4], ['rocks', 1], ['kaki', 0.8], [null, 1]],
     mid: [['paddy', 4], ['field', 2], ['minka', 1.5], ['kaki', 1.2], ['sakura', 1], ['suisha', 0.5], ['pond', 0.5], ['pine', 0.6]],
     far: [['hill', 2], ['cedarGroup', 1.5], ['minka', 1], ['sakuraBig', 0.6], ['kaki', 0.5]],
   },
   village: {
-    ground: 'street', dense: 0.8, x: { edge: 0, near: 8.1, mid: 9.6, far: 22 },
+    ground: 'street', dense: 0.8, garland: 0.45, x: { edge: 0, near: 8.1, mid: 9.6, far: 22 },
     edge: [],
     near: [['woodFence', 1.5], ['lantern', 1.2], ['nobori', 1], ['chaya', 0.8], ['well', 0.5], ['yatai', 1.2], ['pots', 1.5], ['stoneWall', 0.8], ['ajisai', 0.6]],
     mid: [['machiya', 5], ['kura', 1.6], ['minka', 0.6], ['sakura', 0.8], ['pagoda', 0.3], ['shrineTorii', 0.4]],
@@ -781,5 +781,5 @@ export function prebuildDecor() {
   const gate = b.build();
   b = new Builder();
   garland(b);
-  return { bigTorii: gate, garland: b.build() };
+  return { gate, garland: b.build() };
 }

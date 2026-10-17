@@ -31,6 +31,11 @@
   <div id="fx-layer"></div>
   <div id="levelup"><div class="lu-title">LEVEL UP !</div><div class="lu-name" id="levelup-name"></div></div>
 
+  <div id="level-loading" class="hidden">
+    <div class="spinner"></div>
+    <div>Chargement de <b id="level-loading-name"></b>…</div>
+  </div>
+
   <div id="loading">Chargement… ✿</div>
 
   <!-- HUD en jeu -->
@@ -40,7 +45,7 @@
       <div class="score"><span id="score">0</span><small> pts</small></div>
       <div class="hud-line"><span id="hud-dist">0</span> m</div>
       <div class="candy-row">
-        <span class="candy-ico">🍡</span><span id="hud-candies">0</span>
+        <span class="candy-ico" id="hud-item-ico">🍡</span><span id="hud-candies">0</span>
         <div class="candy-bar"><div id="hud-candybar"></div></div>
       </div>
       <div class="best">Record : <span id="hud-best">0</span></div>
@@ -59,6 +64,8 @@
       <p class="subtitle">おにま ・ ラン</p>
       <label for="name-input">Ton prénom</label>
       <input id="name-input" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Ex : Yuki">
+      <div class="level-label">Niveau</div>
+      <div id="level-list" class="level-list"></div>
       <div id="name-error" class="error"></div>
       <button id="btn-play" class="btn primary">Jouer ▶</button>
       <div class="row">
@@ -77,8 +84,9 @@
         <li><span class="keys">↑</span><span>ou swipe vers le haut : sauter</span></li>
         <li><span class="keys">↓</span><span>ou swipe vers le bas : roulade (et retomber vite)</span></li>
         <li><span class="keys">Échap</span><span>pause</span></li>
-        <li><span class="keys">🐡</span><span>Attention aux fugus ! Les toucher fait perdre : change de voie ou saute par-dessus.</span></li>
-        <li><span class="keys">🍡</span><span>+10 points par friandise (dango, feuille de shiso, lanterne). Toutes les 10 : level up et nouvelle tenue !</span></li>
+        <li><span class="keys">🐡</span><span>Évite les malus (fugu au Japon, absinthe à Paris) : les toucher fait perdre ! Change de voie ou saute par-dessus.</span></li>
+        <li><span class="keys">🍡</span><span>+10 points par gourmandise (dango, shiso, lanterne au Japon ; croissant, macaron, raisin à Paris). Toutes les 10 : level up et nouvelle tenue !</span></li>
+        <li><span class="keys">🗼</span><span>Fais 1 500 points au Japon pour débloquer Paris 1900. À Paris, saute par-dessus les chevaux des fiacres !</span></li>
       </ul>
       <p class="tip">Saute sur le toit des trains ou prends les rampes en bois pour y monter.
         Les trains blancs <b>roulent vers toi</b> ! Le moindre choc et c’est perdu.
@@ -91,6 +99,7 @@
   <section id="screen-scores" class="screen hidden">
     <div class="panel">
       <h2>🏆 Tableau des scores</h2>
+      <div id="scores-tabs" class="tabs"></div>
       <table class="scores">
         <thead><tr><th>#</th><th>Nom</th><th>Points</th></tr></thead>
         <tbody id="scores-body"></tbody>

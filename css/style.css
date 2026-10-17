@@ -250,6 +250,49 @@ body.in-run #btn-pause { display: grid; }
 body.is-muted .ico-muted, body.is-fullscreen .ico-exit { display: block; }
 body.no-fullscreen #btn-fs { display: none; }
 
+/* ---------- Choix du niveau ---------- */
+.level-label { font-size: 14px; color: var(--muted); text-align: left; margin-bottom: -6px; padding-left: 6px; }
+.level-list { display: flex; gap: 8px; }
+.level-card {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 16px;
+  border: 3px solid var(--pink-light); background: #fff;
+  color: var(--ink); text-align: left;
+  transition: transform 0.1s, border-color 0.15s;
+}
+.level-card .lv-icon { font-size: 24px; line-height: 1; }
+.level-card .lv-text { display: flex; flex-direction: column; min-width: 0; }
+.level-card b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.level-card small { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.level-card.selected { border-color: var(--pink); background: #fff3f8; box-shadow: 0 3px 0 #f6bfd4; }
+.level-card.locked { opacity: 0.6; background: #f6f0f2; }
+.level-card.locked b { color: var(--muted); }
+.level-card:active { transform: scale(0.97); }
+.level-card.shake { animation: shake 0.4s; }
+
+/* chargement d'un niveau */
+#level-loading {
+  position: fixed; inset: 0; z-index: 40;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  background: rgba(255, 240, 246, 0.85); backdrop-filter: blur(4px);
+  font-weight: 800; color: var(--pink-dark); font-size: 18px;
+}
+.spinner {
+  width: 48px; height: 48px; border-radius: 50%;
+  border: 5px solid var(--pink-light); border-top-color: var(--pink);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* onglets du tableau des scores */
+.tabs { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.tab {
+  border: 0; border-radius: 999px; padding: 6px 12px;
+  font-weight: 800; font-size: 13px; color: var(--pink-dark); background: var(--pink-light);
+}
+.tab.on { background: var(--pink); color: #fff; }
+
 /* ---------- Aide ---------- */
 .help { list-style: none; padding: 0; margin: 0; text-align: left; display: flex; flex-direction: column; gap: 10px; }
 .help li { display: flex; gap: 12px; align-items: center; font-size: 15px; }

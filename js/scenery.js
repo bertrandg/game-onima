@@ -12,12 +12,12 @@ export const SKY = {
 };
 export const FOG_COLOR = SKY.horizon;
 
-const SUN_DIR = new THREE.Vector3(0.62, 0.11, -1).normalize();
+export const SUN_DIR = new THREE.Vector3(0.62, 0.11, -1).normalize();
 const FUJI_POS = new THREE.Vector3(-150, -62, -800);
 
 // petit bruit déterministe
-function hash(n) { const s = Math.sin(n * 127.1) * 43758.5453; return s - Math.floor(s); }
-function fbmAngle(theta, seed, octaves = 5) {
+export function hash(n) { const s = Math.sin(n * 127.1) * 43758.5453; return s - Math.floor(s); }
+export function fbmAngle(theta, seed, octaves = 5) {
   let v = 0, a = 1, f = 3, norm = 0;
   for (let i = 0; i < octaves; i++) {
     v += a * Math.sin(theta * f + hash(seed + i) * 6.283);
@@ -27,19 +27,19 @@ function fbmAngle(theta, seed, octaves = 5) {
   }
   return v / norm;
 }
-const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+export const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 // ---------- Ciel ----------
-function makeSky() {
+export function makeSky(sky = SKY, sunDir = SUN_DIR) {
   const mat = new THREE.ShaderMaterial({
     uniforms: {
-      top: { value: new THREE.Color(SKY.top) },
-      pink: { value: new THREE.Color(SKY.pink) },
-      mid: { value: new THREE.Color(SKY.mid) },
-      horizon: { value: new THREE.Color(SKY.horizon) },
-      low: { value: new THREE.Color(SKY.low) },
-      sunColor: { value: new THREE.Color(SKY.sun) },
-      sunDir: { value: SUN_DIR },
+      top: { value: new THREE.Color(sky.top) },
+      pink: { value: new THREE.Color(sky.pink) },
+      mid: { value: new THREE.Color(sky.mid) },
+      horizon: { value: new THREE.Color(sky.horizon) },
+      low: { value: new THREE.Color(sky.low) },
+      sunColor: { value: new THREE.Color(sky.sun) },
+      sunDir: { value: sunDir },
       time: { value: 0 },
     },
     vertexShader: /* glsl */`
@@ -209,9 +209,9 @@ function makeRidges() {
 }
 
 // Brume au pied des montagnes : anneau dégradé transparent
-function makeMist(radius, height, opacity) {
+export function makeMist(radius, height, opacity, color = SKY.mist) {
   const mat = new THREE.ShaderMaterial({
-    uniforms: { color: { value: new THREE.Color(SKY.mist) }, opacity: { value: opacity } },
+    uniforms: { color: { value: new THREE.Color(color) }, opacity: { value: opacity } },
     vertexShader: `varying float vY; void main(){ vY = uv.y; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
     fragmentShader: `uniform vec3 color; uniform float opacity; varying float vY;
       void main(){ gl_FragColor = vec4(color, opacity * pow(1.0 - vY, 1.6));
@@ -278,7 +278,7 @@ function lensCloudTexture() {
   return t;
 }
 
-function makeClouds() {
+export function makeClouds(fujiCap = true) {
   const group = new THREE.Group();
   const texs = [1, 2, 3, 4].map((s) => cloudTexture(s * 17));
   const clouds = [];
@@ -299,12 +299,12 @@ function makeClouds() {
   const cap = new THREE.Sprite(new THREE.SpriteMaterial({ map: lensCloudTexture(), fog: false, depthWrite: false, transparent: true, opacity: 0.95 }));
   cap.scale.set(150, 30, 1);
   cap.position.set(FUJI_POS.x + 4, FUJI_POS.y + 268, FUJI_POS.z + 30);
-  group.add(cap);
+  if (fujiCap) group.add(cap);
   return { group, clouds };
 }
 
 // Halo du soleil (sprite additif)
-function makeSunGlow() {
+export function makeSunGlow(sunDir = SUN_DIR) {
   const c = document.createElement('canvas');
   c.width = c.height = 256;
   const g = c.getContext('2d');
@@ -319,12 +319,12 @@ function makeSunGlow() {
   t.colorSpace = THREE.SRGBColorSpace;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, fog: false, depthWrite: false, transparent: true, blending: THREE.AdditiveBlending }));
   s.scale.set(320, 320, 1);
-  s.position.copy(SUN_DIR).multiplyScalar(1000);
+  s.position.copy(sunDir).multiplyScalar(1000);
   return s;
 }
 
 // Arc-en-ciel léger
-function makeRainbow() {
+export function makeRainbow() {
   const inner = 300, outer = 335;
   const mat = new THREE.ShaderMaterial({
     uniforms: { inner: { value: inner }, outer: { value: outer } },
@@ -347,10 +347,10 @@ function makeRainbow() {
 }
 
 // ---------- Lucioles / poussière de fée le long de la voie ----------
-function makeFireflies() {
+export function makeFireflies(colors = ['#fff3a8', '#ffc2e2', '#bfe9ff', '#ffe0a0', '#e2c8ff']) {
   const N = 170;
   const pos = new Float32Array(N * 3), phase = new Float32Array(N), color = new Float32Array(N * 3);
-  const cols = ['#fff3a8', '#ffc2e2', '#bfe9ff', '#ffe0a0', '#e2c8ff'].map((h) => new THREE.Color(h));
+  const cols = colors.map((h) => new THREE.Color(h));
   for (let i = 0; i < N; i++) {
     const side = Math.random() < 0.5 ? -1 : 1;
     const overTrack = Math.random() < 0.15;
@@ -402,20 +402,26 @@ function makeFireflies() {
   return pts;
 }
 
+// Lointain du Japon : mont Fuji, chaînes en couches, brume, soleil, arc-en-ciel
+export function japanFar() {
+  return [makeFuji(), makeRidges(), makeMist(560, 70, 0.75), makeMist(380, 45, 0.55), makeSunGlow(), makeRainbow()];
+}
+
+// Ciel + lointain + nuages + lucioles. Chaque niveau fournit ses couleurs et ses objets lointains.
 export class Scenery {
-  constructor(scene) {
-    this.sky = makeSky();
-    scene.add(this.sky);
+  constructor(root, { sky = SKY, far = japanFar, fujiCap = true, sunDir = SUN_DIR, fireflyColors } = {}) {
+    this.sky = makeSky(sky, sunDir);
+    root.add(this.sky);
 
     this.far = new THREE.Group();
-    this.far.add(makeFuji(), makeRidges(), makeMist(560, 70, 0.75), makeMist(380, 45, 0.55), makeSunGlow(), makeRainbow());
-    const { group, clouds } = makeClouds();
+    this.far.add(...far());
+    const { group, clouds } = makeClouds(fujiCap);
     this.clouds = clouds;
     this.far.add(group);
-    scene.add(this.far);
+    root.add(this.far);
 
-    this.fireflies = makeFireflies();
-    scene.add(this.fireflies);
+    this.fireflies = makeFireflies(fireflyColors);
+    root.add(this.fireflies);
   }
 
   update(dt, pz, camera, pixelRatio) {

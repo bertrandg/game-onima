@@ -118,23 +118,34 @@ function fuguGeo() {
   return b.build();
 }
 
-// Friandises à ramasser (dango, shiso, lanternes) : sur les voies, les toits, en arc au-dessus des barrières
-export class Candies {
-  constructor(scene) {
-    this.scene = scene;
-    const grad = new THREE.DataTexture(new Uint8Array([150, 210, 255]), 3, 1, THREE.RedFormat);
-    grad.minFilter = grad.magFilter = THREE.NearestFilter;
-    grad.needsUpdate = true;
-    const mat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: grad, emissive: '#2a1a24' });
-    // la lanterne brille doucement
-    const glowMat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: grad, emissive: '#6a4a22' });
-    this.kinds = [
+// Matériaux "toon" à couleurs de sommets partagés par les objets à ramasser de tous les niveaux
+const _grad = new THREE.DataTexture(new Uint8Array([150, 210, 255]), 3, 1, THREE.RedFormat);
+_grad.minFilter = _grad.magFilter = THREE.NearestFilter;
+_grad.needsUpdate = true;
+export function itemMaterial(emissive = '#2a1a24') {
+  return new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: _grad, emissive });
+}
+
+// Objets du Japon : dango, feuille de shiso, lanterne ; malus : fugu
+export function japanItems() {
+  const mat = itemMaterial();
+  return {
+    kinds: [
       { geo: dangoGeo(), mat, spin: true },
       { geo: shisoGeo(), mat, spin: false },   // la feuille se balance face au joueur
-      { geo: lanternGeo(), mat: glowMat, spin: true },
-    ];
+      { geo: lanternGeo(), mat: itemMaterial('#6a4a22'), spin: true },   // la lanterne brille doucement
+    ],
+    hazard: { geo: fuguGeo(), mat },
+  };
+}
+
+// Objets à ramasser et malus (moteur commun) : sur les voies, les toits, en arc au-dessus des barrières
+export class Candies {
+  constructor(scene, { kinds, hazard }) {
+    this.scene = scene;
+    this.kinds = kinds;
     this.list = [];
-    this.fugu = { geo: fuguGeo(), mat };
+    this.fugu = hazard;
     this.fugus = [];
   }
 

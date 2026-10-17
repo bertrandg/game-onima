@@ -88,7 +88,8 @@ export class Sound {
 
   // la note monte à chaque bonbon jusqu'au 10e
   candy(step) {
-    const f = SCALE[step % SCALE.length] * 2;
+    const sc = (this.style && this.style.scale) || SCALE;
+    const f = sc[step % sc.length] * 2;
     const t = this.ctx?.currentTime || 0;
     this.tone(f, 0.12, { type: 'triangle', vol: 0.14, at: t });
     this.tone(f * 1.5, 0.15, { type: 'sine', vol: 0.08, at: t + 0.05 });
@@ -110,25 +111,67 @@ export class Sound {
     this.tone(freq * 2, 0.35, { vol: vol * 0.35, at: t, out: this.music });
   }
 
-  startMusic() {
+  // accordéon : deux ondes carrées légèrement désaccordées, filtrées
+  squeeze(freq, t, dur, vol = 0.05) {
+    if (!this.ctx) return;
+    const f = this.ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = 2200;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.03);
+    g.gain.setValueAtTime(vol, t + dur * 0.7);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    f.connect(g).connect(this.music);
+    for (const d of [-4, 4]) {
+      const o = this.ctx.createOscillator();
+      o.type = 'square';
+      o.frequency.value = freq;
+      o.detune.value = d;
+      o.connect(f);
+      o.start(t);
+      o.stop(t + dur + 0.05);
+    }
+  }
+
+  // style = { scale, meter, bpm, voice } fourni par le niveau ('koto' en 4/4 ou 'musette' en valse à 3 temps)
+  startMusic(style) {
     if (!this.ctx || this.musicOn) return;
+    if (style) this.style = style;
+    const st = this.style || { scale: SCALE, meter: 4, bpm: 104, voice: 'koto' };
+    const SC = st.scale;
     this.musicOn = true;
     this.step = 0;
     this.note = 3;
     this.next = this.ctx.currentTime + 0.1;
-    const eighth = 60 / 104 / 2;
+    const eighth = 60 / st.bpm / 2;
+    const bar = st.meter * 2;
+    // valse : grille d'accords (fondamentale = degré de la gamme) I - V - I - IV
+    const chords = [[0, 2, 4], [4, 6, 8], [0, 2, 4], [3, 5, 7]];
     this.timer = setInterval(() => {
       while (this.next < this.ctx.currentTime + 0.15) {
-        const t = this.next, s = this.step % 16;
-        if (s % 8 === 0) {
-          this.tone(90, 0.35, { vol: 0.35, to: 45, at: t, out: this.music });
-          this.noise(0.12, { vol: 0.1, freq: 200, at: t, out: this.music });
-        }
-        if (s % 4 === 2) this.noise(0.05, { vol: 0.05, freq: 3000, q: 2, at: t, out: this.music });
-        if (s === 0) this.tone(SCALE[0] / 2, 1.8, { type: 'sine', vol: 0.12, at: t, out: this.music });
-        if (Math.random() > 0.35) {
-          this.note = Math.max(0, Math.min(SCALE.length - 1, this.note + ((Math.random() * 5) | 0) - 2));
-          this.pluck(SCALE[this.note], t);
+        const t = this.next, s = this.step % bar;
+        if (st.voice === 'musette') {
+          const ch = chords[Math.floor(this.step / bar) % chords.length];
+          if (s === 0) this.tone(SC[ch[0]] / 2, 0.45, { type: 'triangle', vol: 0.2, at: t, out: this.music });
+          if (s === 2 || s === 4) {
+            for (const k of ch.slice(1)) this.squeeze(SC[k % SC.length], t, 0.16, 0.022);
+          }
+          if (s % 2 === 0 || Math.random() > 0.55) {
+            this.note = Math.max(0, Math.min(SC.length - 1, this.note + ((Math.random() * 5) | 0) - 2));
+            if (Math.random() > 0.2) this.squeeze(SC[this.note] * 2, t, eighth * (s % 2 ? 0.9 : 1.8), 0.045);
+          }
+        } else {
+          if (s % 8 === 0) {
+            this.tone(90, 0.35, { vol: 0.35, to: 45, at: t, out: this.music });
+            this.noise(0.12, { vol: 0.1, freq: 200, at: t, out: this.music });
+          }
+          if (s % 4 === 2) this.noise(0.05, { vol: 0.05, freq: 3000, q: 2, at: t, out: this.music });
+          if (s === 0) this.tone(SC[0] / 2, 1.8, { type: 'sine', vol: 0.12, at: t, out: this.music });
+          if (Math.random() > 0.35) {
+            this.note = Math.max(0, Math.min(SC.length - 1, this.note + ((Math.random() * 5) | 0) - 2));
+            this.pluck(SC[this.note], t);
+          }
         }
         this.next += eighth;
         this.step++;

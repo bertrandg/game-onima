@@ -10,7 +10,8 @@ const STEP = 0.5;            // tolérance pour monter sur un toit
 const P_HALF_X = 0.32;
 const P_HALF_Z = 0.35;
 
-function buildShared() {
+// Kit d'obstacles du Japon : tramways rétro, rampe en bois, tonneaux/tawara/bambou, petit torii
+export function japanObstacleKit() {
   const s = {};
   s.trains = buildTrainKit();
   let b;
@@ -132,24 +133,42 @@ function buildShared() {
     b.add(U.box, VER2, [sx * 1.4, 2.53, 0], [0.7, 0.06, 0.24], [0, 0, sx * 0.14]);
   }
   s.highGeo = b.build();
-  return s;
+
+  const T = s.trains;
+  return {
+    rampGeo: s.rampGeo,
+    low: s.low.map((l) => ({ ...l, h: 1.0 })),
+    highGeo: s.highGeo,
+    hitch: null,   // pas d'attelage devant les trains
+    buildVehicle: (cars, moving) => buildTrainMesh(T, moving ? T.express : pick(T.liveries), cars, moving),
+    warmup() {
+      const g = new THREE.Group();
+      [...T.liveries, T.express].forEach((l, i) => {
+        const m = buildTrainMesh(T, l, 2, l === T.express);
+        m.position.x = i * 3;
+        g.add(m);
+      });
+      return g;
+    },
+  };
 }
 
 const randInt = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 
+// Moteur d'obstacles commun à tous les niveaux ; le contenu visuel vient du kit du niveau
 export class Obstacles {
-  constructor(scene, { onHorn, candies } = {}) {
+  constructor(scene, { onHorn, candies, kit } = {}) {
     this.scene = scene;
     this.onHorn = onHorn || (() => {});
     this.candies = candies;
     this.trainTop = TRAIN_TOP;
-    this.S = buildShared();
+    this.S = kit;
     this.list = [];
     this.reset(0);
   }
 
   reset(startZ) {
-    for (const o of this.list) this.scene.remove(o.mesh);
+    for (const o of this.list) if (o.mesh) this.scene.remove(o.mesh);
     this.list = [];
     this.cursor = startZ - 70;
     this.busy = [startZ, startZ, startZ];   // z le plus lointain occupé par voie
@@ -158,20 +177,14 @@ export class Obstacles {
   }
 
   buildTrain(cars, moving, ramp) {
-    const T = this.S.trains;
-    const g = buildTrainMesh(T, moving ? T.express : pick(T.liveries), cars, moving);
+    const g = this.S.buildVehicle(cars, moving);
     if (ramp) g.add(new THREE.Mesh(this.S.rampGeo, vcMat));
     return g;
   }
 
   // Un exemplaire de chaque objet, pour précompiler les shaders et charger les textures au démarrage
   warmupGroup() {
-    const S = this.S, T = S.trains, g = new THREE.Group();
-    [...T.liveries, T.express].forEach((l, i) => {
-      const m = buildTrainMesh(T, l, 2, l === T.express);
-      m.position.x = i * 3;
-      g.add(m);
-    });
+    const S = this.S, g = S.warmup();
     g.add(new THREE.Mesh(S.rampGeo, vcMat));
     for (const l of S.low) g.add(new THREE.Mesh(l.geo, vcMat));
     g.add(new THREE.Mesh(S.highGeo, vcMat));
@@ -192,17 +205,25 @@ export class Obstacles {
     };
     this.list.push(o);
     this.busy[lane] = o.zFar;
+    // attelage (chevaux) devant un véhicule qui roule vers le joueur : obstacle bas qui avance avec lui
+    const H = this.S.hitch;
+    if (moving && H) {
+      this.list.push({
+        kind: 'low', hitch: true, h: H.h, lane, x: LANES[lane], halfW: H.halfW || 0.9,
+        zNear: front + H.len, zFar: front, moving: true, v: o.v, mesh: null,
+      });
+    }
     return o;
   }
 
   addBarrier(lane, z, kind) {
-    let geo, depth;
-    if (kind === 'low') ({ geo, depth } = pick(this.S.low));
+    let geo, depth, h = 1.0;
+    if (kind === 'low') ({ geo, depth, h = 1.0 } = pick(this.S.low));
     else { geo = this.S.highGeo; depth = 0.32; }
     const mesh = new THREE.Mesh(geo, vcMat);
     mesh.position.set(LANES[lane], 0, z - depth / 2);
     this.scene.add(mesh);
-    this.list.push({ kind, lane, x: LANES[lane], halfW: 1.1, zNear: z, zFar: z - depth, mesh });
+    this.list.push({ kind, h, lane, x: LANES[lane], halfW: 1.1, zNear: z, zFar: z - depth, mesh });
     this.busy[lane] = z - depth;
   }
 
@@ -233,7 +254,7 @@ export class Obstacles {
   barrierNear(lane, z) {
     let best = null;
     for (const o of this.list) {
-      if (o.lane !== lane || (o.kind !== 'low' && o.kind !== 'high')) continue;
+      if (o.lane !== lane || o.hitch || (o.kind !== 'low' && o.kind !== 'high')) continue;
       const d = Math.abs(z - (o.zNear + o.zFar) / 2);
       if (!best || d < best.d) best = { kind: o.kind, d };
     }
@@ -298,7 +319,9 @@ export class Obstacles {
     for (const o of this.list) {
       if (!o.moving) continue;
       const d = o.v * dt;
-      o.zNear += d; o.zFar += d; o.trainFront += d;
+      o.zNear += d; o.zFar += d;
+      if (o.kind !== 'train') continue;   // attelage : suit son véhicule, sans maillage propre
+      o.trainFront += d;
       o.mesh.position.z = o.trainFront;
       if (this.candies) this.candies.eatBy(o);
     }
@@ -308,12 +331,12 @@ export class Obstacles {
     while (this.cursor > pz - SPAWN_AHEAD) this.cursor -= this.spawnRow(this.cursor, speed, dist);
 
     for (const o of this.list) {
-      if (o.moving && !o.horned && o.trainFront > pz - 110) { o.horned = true; this.onHorn(); }
+      if (o.moving && o.kind === 'train' && !o.horned && o.trainFront > pz - 110) { o.horned = true; this.onHorn(); }
     }
     const limit = pz + DESPAWN_BEHIND;
     let j = 0;
     for (const o of this.list) {
-      if (o.zFar > limit) this.scene.remove(o.mesh);
+      if (o.zFar > limit) { if (o.mesh) this.scene.remove(o.mesh); }
       else this.list[j++] = o;
     }
     this.list.length = j;
@@ -336,7 +359,7 @@ export class Obstacles {
           else crash = o;
         }
       } else if (o.kind === 'low') {
-        if (p.y < 1.0) crash = o;
+        if (p.y < (o.h || 1.0)) crash = o;
       } else if (o.kind === 'high') {
         if (p.y + p.h > 1.32 && p.y < 2.75) crash = o;   // nuki basse : passer en roulade
       }
