@@ -266,7 +266,7 @@ $('btn-play').addEventListener('click', () => {
   }
   const L = levelById(selectedLevel);
   if (!isUnlocked(L)) {
-    $('name-error').textContent = `🔒 Fais ${L.unlock.score.toLocaleString('fr-FR')} points au ${levelById(L.unlock.level).name} pour débloquer ${L.name}`;
+    $('name-error').textContent = '';   // la carte grisée et le bouton « Verrouillé » suffisent : on secoue juste la carte
     const card = $('level-card');
     card.classList.remove('shake', 'slide-l', 'slide-r');
     void card.offsetWidth;
