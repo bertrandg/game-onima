@@ -252,6 +252,29 @@ function toast(text) {
   t.classList.add('show');
 }
 
+// ---------- Déblocage d'un niveau en cours de partie ----------
+let pendingUnlock = null;   // niveau qui se débloquera si on atteint son score pendant cette partie
+function celebrateUnlock(L) {
+  const el = $('unlock');
+  $('unlock-icon').textContent = L.icon;
+  $('unlock-name').textContent = L.name;
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+  sound.unlock();
+  if (navigator.vibrate) navigator.vibrate([40, 50, 40, 50, 120]);
+  // pluie de confettis et d'étoiles
+  const cols = ['#ff7fb0', '#ffd23f', '#7fe0b0', '#6fc3ff', '#c39bff', '#ffffff'];
+  for (let i = 0; i < 70; i++) {
+    const c = fxEl('confetti', Math.random() * window.innerWidth, -20, 2600, i % 5 === 0 ? '✦' : '');
+    c.style.setProperty('--c', cols[i % cols.length]);
+    c.style.setProperty('--dx', `${(Math.random() - 0.5) * 220}px`);
+    c.style.setProperty('--r', `${(Math.random() - 0.5) * 1080}deg`);
+    c.style.setProperty('--d', `${1.6 + Math.random() * 1.0}s`);
+    c.style.animationDelay = `${Math.random() * 0.5}s`;
+  }
+}
+
 // ---------- Déroulement ----------
 let loading = false;
 async function startRun(fromMenu) {
@@ -283,6 +306,7 @@ async function startRun(fromMenu) {
   snapCamera();
   $('hud-best').textContent = Scores.bestFor(ctx.id, playerName).toLocaleString('fr-FR');
   $('hud-item-ico').textContent = ctx.meta.item;
+  pendingUnlock = LEVELS.find((L) => L.unlock && L.unlock.level === ctx.id && !isUnlocked(L)) || null;
   $('hud-name').textContent = playerName;
   hudScore = -1; hudDist = -1;
   $('hud-candies').textContent = '0';
@@ -733,6 +757,10 @@ function frame(now) {
     const sc = totalScore(), dm = Math.floor(dist);
     if (sc !== hudScore) { hudScore = sc; scoreEl.textContent = sc.toLocaleString('fr-FR'); }
     if (dm !== hudDist) { hudDist = dm; distEl.textContent = dm.toLocaleString('fr-FR'); }
+    if (pendingUnlock && sc >= pendingUnlock.unlock.score) {
+      celebrateUnlock(pendingUnlock);
+      pendingUnlock = null;
+    }
     if (dist >= nextMilestone) {
       toast(`${nextMilestone} m ! Plus vite ✿`);
       sound.milestone();

@@ -414,7 +414,10 @@ export class Scenery {
     root.add(this.sky);
 
     this.far = new THREE.Group();
-    this.far.add(...far());
+    const objs = far();
+    this.far.add(...objs);
+    // objets lointains animés (ex. scintillement des lumières) : userData.tick(t, pixelRatio)
+    this.tickers = objs.filter((o) => o.userData && o.userData.tick);
     const { group, clouds } = makeClouds(fujiCap);
     this.clouds = clouds;
     this.far.add(group);
@@ -438,5 +441,6 @@ export class Scenery {
     u.uScroll.value = -pz * 0.45;
     u.uScale.value = window.innerHeight * pixelRatio;
     this.fireflies.position.z = pz;
+    for (const o of this.tickers) o.userData.tick(t, pixelRatio);
   }
 }

@@ -44,29 +44,59 @@ function grapes() {
   return b.build();
 }
 
-// Absinthe : bouteille verte, verre et petite fée verte lumineuse
-function absinthe() {
+// Absinthe néfaste : verre à pied rempli d'un vert luisant, sucre sur la cuillère percée,
+// pied noirci aux ronces flétries, fumée noire et petite tête de mort qui flotte au-dessus.
+function absintheParts() {
+  // verre (transparent)
+  const glassPts = [[0, -0.44], [0.17, -0.44], [0.17, -0.425], [0.04, -0.41], [0.024, -0.32], [0.022, -0.02],
+    [0.06, 0.02], [0.15, 0.08], [0.205, 0.2], [0.215, 0.32], [0.2, 0.43]].map(([x, y]) => new THREE.Vector2(x, y));
+  const glass = new THREE.LatheGeometry(glassPts, 28);
+  const glassMat = new THREE.MeshLambertMaterial({ color: '#e8fff0', transparent: true, opacity: 0.3, depthWrite: false, side: THREE.DoubleSide });
+  // liquide vert qui luit
+  const liqPts = [[0, 0.03], [0.055, 0.035], [0.14, 0.085], [0.19, 0.2], [0.2, 0.3], [0, 0.3]].map(([x, y]) => new THREE.Vector2(x, y));
+  const liquid = new THREE.LatheGeometry(liqPts, 28);
+  const liqMat = new THREE.MeshLambertMaterial({ color: '#46ff5c', emissive: '#18b030' });
+  // pièces opaques
   const b = new Builder();
-  b.add(U.cyl, '#2f8a3a', [0, 0.05, 0], [0.16, 0.5, 0.16]);
-  b.add(U.cone8, '#2f8a3a', [0, 0.36, 0], [0.16, 0.14, 0.16]);
-  b.add(U.cyl, '#2f8a3a', [0, 0.5, 0], [0.05, 0.18, 0.05]);
-  b.add(U.cyl, '#6a4a2a', [0, 0.61, 0], [0.055, 0.05, 0.055]);
-  b.add(U.cyl, '#f4ecd8', [0, 0.05, 0], [0.165, 0.22, 0.165]);   // étiquette
-  b.add(U.cyl, '#c8302a', [0, 0.05, 0], [0.167, 0.05, 0.167]);
-  // verre à absinthe avec cuillère
-  b.add(U.cyl, '#bfe8c0', [0.3, -0.12, 0.05], [0.07, 0.14, 0.07]);
-  b.add(U.cone8, '#9ad8a0', [0.3, 0.03, 0.05], [0.09, 0.16, 0.09], [Math.PI, 0, 0]);
-  b.add(U.box, '#c8ccd0', [0.3, 0.12, 0.05], [0.22, 0.01, 0.04]);
-  // fée verte : petit corps, tête, deux paires d'ailes translucides
-  const fx = -0.2, fy = 0.55;
-  b.add(BALL, '#7cff8a', [fx, fy, 0], [0.05, 0.08, 0.05]);
-  b.add(BALL, '#c8ffd0', [fx, fy + 0.11, 0], [0.04, 0.04, 0.04]);
-  for (const s of [-1, 1]) {
-    b.add(BALL, '#b8ffcc', [fx + s * 0.09, fy + 0.04, -0.02], [0.08, 0.04, 0.01], [0, 0, s * 0.6]);
-    b.add(BALL, '#9af0b0', [fx + s * 0.07, fy - 0.04, -0.02], [0.05, 0.03, 0.01], [0, 0, -s * 0.5]);
+  b.add(U.box, '#f4fff4', [0.02, 0.37, 0.0], [0.13, 0.11, 0.13], [0.2, 0.5, 0.15]);   // morceau de sucre
+  b.add(U.box, '#c8ccd0', [0.08, 0.435, 0], [0.62, 0.012, 0.12], [0, 0.35, 0.18]);    // cuillère percée
+  for (let i = 0; i < 4; i++) b.add(U.box, '#2a2e32', [-0.06 + i * 0.05, 0.442, 0.0], [0.02, 0.006, 0.07], [0, 0.35, 0.18]);
+  b.add(U.box, '#b8bcc0', [0.42, 0.5, 0.12], [0.3, 0.012, 0.03], [0, 0.35, 0.3]);       // manche
+  // pied noirci et ronces flétries qui s'enroulent autour de la jambe
+  b.add(U.cyl, '#141016', [0, -0.435, 0], [0.18, 0.02, 0.18]);
+  for (let i = 0; i < 9; i++) {
+    const a = i * 1.3, y = -0.4 + i * 0.045;
+    b.add(U.cyl6, '#1a1218', [Math.cos(a) * 0.035, y, Math.sin(a) * 0.035], [0.012, 0.09, 0.012], [Math.sin(a) * 1.1, 0, -Math.cos(a) * 1.1]);
+    b.add(U.cone4, '#2a1a22', [Math.cos(a) * 0.07, y + 0.02, Math.sin(a) * 0.07], [0.012, 0.05, 0.012], [Math.sin(a) * 1.6, 0, -Math.cos(a) * 1.6]);
   }
-  for (let i = 0; i < 5; i++) b.add(BALL, '#d8ffb0', [fx + Math.cos(i * 1.3) * 0.15, fy + Math.sin(i * 2.1) * 0.15, 0.02], [0.015, 0.015, 0.015]);
-  return b.build();
+  for (let i = 0; i < 5; i++) {   // feuilles mortes recroquevillées sur le pied
+    const a = i * 1.25;
+    b.add(BALL, '#2a2018', [Math.cos(a) * 0.14, -0.42, Math.sin(a) * 0.14], [0.045, 0.012, 0.025], [0, -a, 0.3]);
+  }
+  // tête de mort qui fait face au joueur (côté +z)
+  const sy = 0.92;
+  b.add(BALL, '#ece4d4', [0, sy, 0], [0.12, 0.115, 0.105]);
+  b.add(U.box, '#e2d8c6', [0, sy - 0.1, 0.02], [0.12, 0.07, 0.09]);   // mâchoire
+  for (const sx of [-1, 1]) b.add(BALL, '#0c080a', [sx * 0.045, sy + 0.005, 0.088], [0.034, 0.038, 0.02]);
+  b.add(U.cone4, '#0c080a', [0, sy - 0.045, 0.1], [0.016, 0.032, 0.01], [Math.PI, 0, 0]);
+  for (let i = 0; i < 5; i++) b.add(U.box, '#0c080a', [-0.04 + i * 0.02, sy - 0.11, 0.066], [0.005, 0.03, 0.005]);
+  b.add(U.box, '#0c080a', [0, sy - 0.098, 0.066], [0.11, 0.005, 0.005]);
+  // fumée : volutes grises et noires translucides, étirées et irrégulières
+  const sm = new Builder();
+  for (let k = 0; k < 3; k++) {
+    for (let i = 0; i < 9; i++) {
+      const a = i * 0.8 + k * 2.1, r = 0.03 + i * 0.012, sz = 0.03 + i * 0.006;
+      sm.add(U.sph0, ['#141012', '#2a2628', '#3c3638'][(i + k) % 3], [Math.cos(a) * r, 0.44 + i * 0.07, Math.sin(a) * r - 0.04],
+        [sz, sz * 2.2, sz * 0.8], [0, a, 0.5 * Math.sin(a)]);
+    }
+  }
+  const smokeMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.55, depthWrite: false });
+  return [
+    { geo: liquid, mat: liqMat },
+    { geo: b.build(), mat: itemMaterial('#0e0a0c') },
+    { geo: sm.build(), mat: smokeMat },
+    { geo: glass, mat: glassMat },
+  ];
 }
 
 export function parisItems() {
@@ -85,7 +115,7 @@ export function parisItems() {
       { geo: grapes(), mat, spin: false },
       { geo: grapes(), mat, spin: false },
     ],
-    // la fée verte brille : matériau émissif vert
-    hazard: { geo: absinthe(), mat: itemMaterial('#1f6a26') },
+    // absinthe néfaste : verre, liquide luisant et éléments noirs en pièces séparées
+    hazard: { parts: absintheParts() },
   };
 }

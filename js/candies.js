@@ -152,7 +152,16 @@ export class Candies {
   warmupGroup() {
     const g = new THREE.Group();
     this.kinds.forEach((k, i) => { const m = new THREE.Mesh(k.geo, k.mat); m.position.x = i; g.add(m); });
-    g.add(new THREE.Mesh(this.fugu.geo, this.fugu.mat));
+    g.add(this.makeHazard());
+    return g;
+  }
+
+  // malus : un seul maillage, ou plusieurs pièces aux matériaux différents (verre, liquide lumineux…)
+  makeHazard() {
+    const H = this.fugu;
+    if (!H.parts) return new THREE.Mesh(H.geo, H.mat);
+    const g = new THREE.Group();
+    for (const p of H.parts) g.add(new THREE.Mesh(p.geo, p.mat));
     return g;
   }
 
@@ -171,7 +180,7 @@ export class Candies {
     const b = obstacles.barrierNear(lane, z);
     if (b && b.d < 4) return false;
     const y = g + 0.95;
-    const mesh = new THREE.Mesh(this.fugu.geo, this.fugu.mat);
+    const mesh = this.makeHazard();
     mesh.position.set(x, y, z);
     this.scene.add(mesh);
     this.fugus.push({ mesh, x, y, z, lane, phase: Math.random() * 6 });

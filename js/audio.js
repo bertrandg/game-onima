@@ -94,6 +94,15 @@ export class Sound {
     this.tone(f, 0.12, { type: 'triangle', vol: 0.14, at: t });
     this.tone(f * 1.5, 0.15, { type: 'sine', vol: 0.08, at: t + 0.05 });
   }
+  // fanfare de déblocage d'un niveau : arpège montant puis accord tenu
+  unlock() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    [392, 523.25, 659.25, 783.99, 1046.5].forEach((f, i) => this.tone(f, 0.22, { type: 'square', vol: 0.06, at: t + i * 0.1 }));
+    for (const f of [523.25, 659.25, 783.99, 1046.5]) this.tone(f, 1.2, { type: 'triangle', vol: 0.1, at: t + 0.55 });
+    this.tone(2093, 1.0, { type: 'sine', vol: 0.06, at: t + 0.6, to: 3136 });
+    this.noise(0.8, { vol: 0.05, freq: 7000, q: 0.7, at: t + 0.55 });
+  }
   levelUp() {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
