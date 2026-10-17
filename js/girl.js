@@ -424,10 +424,16 @@ export class Girl {
   }
 
   setPalette(i) {
-    const p = PALETTES[i % PALETTES.length];
+    const list = this.palettes || PALETTES;
+    const p = list[i % list.length];
     for (const k of ['top', 'cuff', 'sash', 'skirt', 'ribbon']) this.palMats[k].color.set(p[k]);
     this.palMats.skirtDark.color.set(p.skirt).multiplyScalar(0.7);
     return p;
+  }
+
+  // tenues propres au niveau (null = tenues du Japon)
+  setPalettes(list) {
+    this.palettes = list || PALETTES;
   }
 
   // halo lumineux (0 = normal, 1 = toute blanche)

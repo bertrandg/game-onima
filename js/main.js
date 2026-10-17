@@ -40,6 +40,7 @@ function activate(c) {
   obstacles = c.obstacles;
   candies = c.candies;
   scene.fog.color.set(c.def.fog);
+  girl.setPalettes(c.def.palettes);
 }
 
 async function loadLevel(id) {

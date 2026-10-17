@@ -75,6 +75,19 @@ export default {
     particles: { texture: leafTexture, size: 0.3 },
     scenery: parisScenery,
   },
+  // tenues débloquées tous les 10 objets à Paris (la première est la tenue de départ)
+  palettes: [
+    { name: 'Jade', top: '#62a86c', cuff: '#b4dc84', sash: '#2f7350', skirt: '#7d2a4c', ribbon: '#4a7fd0' },
+    { name: 'Moulin Rouge', top: '#d8303a', cuff: '#ffd6dc', sash: '#1c1a1e', skirt: '#2a1a24', ribbon: '#ffd23f' },
+    { name: 'Macaron Framboise', top: '#f7a8c4', cuff: '#fff0f4', sash: '#d85a8a', skirt: '#b8dc8a', ribbon: '#ffffff' },
+    { name: 'Fée Verte', top: '#8ad84a', cuff: '#e0ffc0', sash: '#2f8a3a', skirt: '#1f4a2a', ribbon: '#c8ffd0' },
+    { name: 'Montmartre', top: '#f4ecd8', cuff: '#bcd6f0', sash: '#2c4a8a', skirt: '#2c4a8a', ribbon: '#c8302a' },
+    { name: 'Café Crème', top: '#c8a070', cuff: '#f4e6cc', sash: '#6a4426', skirt: '#4a2e1c', ribbon: '#f4ecd8' },
+    { name: 'Tour Eiffel', top: '#9a6a4a', cuff: '#e8c890', sash: '#5e4436', skirt: '#3a2a22', ribbon: '#d8b04a' },
+    { name: 'Lavande de Provence', top: '#b48ae0', cuff: '#efe2ff', sash: '#6a4bb8', skirt: '#f4ecd8', ribbon: '#8ad84a' },
+    { name: 'Nuit Parisienne', top: '#1f2a5a', cuff: '#d8b04a', sash: '#d8b04a', skirt: '#14183a', ribbon: '#f2d24a' },
+    { name: 'Champagne', top: '#f2dc9a', cuff: '#fff8e0', sash: '#c8a040', skirt: '#f4ecd8', ribbon: '#e8b0c0' },
+  ],
   obstacleKit: parisVehicleKit,
   items: parisItems,
 };
