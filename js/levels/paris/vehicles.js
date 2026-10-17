@@ -28,45 +28,141 @@ function roundTop(g, x, y, w, h, r) {
   g.quadraticCurveTo(x + w, y, x + w, y + r); g.lineTo(x + w, y + h);
   g.closePath();
 }
-function glass(g, x, y, w, h) {
+// fenêtre : cadre en bois verni, vitre sombre, rideaux noués, parfois un voyageur, reflet
+function glass(g, x, y, w, h, l, seed = 0) {
+  g.fillStyle = '#3a2618';
+  roundTop(g, x - 6, y - 6, w + 12, h + 12, 14);
+  g.fill();
+  g.strokeStyle = l.line; g.lineWidth = 2;
+  roundTop(g, x - 3, y - 3, w + 6, h + 6, 12);
+  g.stroke();
   const grd = g.createLinearGradient(x, y, x, y + h);
-  grd.addColorStop(0, '#3a4a58'); grd.addColorStop(1, '#1a222a');
+  grd.addColorStop(0, '#4a5a66'); grd.addColorStop(1, '#1c242c');
   g.fillStyle = grd;
   roundTop(g, x, y, w, h, 10);
   g.fill();
-  g.fillStyle = 'rgba(255,240,210,0.18)';
-  g.fillRect(x + w * 0.15, y + 6, w * 0.12, h - 12);
+  // voyageur en silhouette (chapeau haut-de-forme ou capeline à fleurs)
+  if (seed % 3 !== 2) {
+    const px = x + w * (0.4 + 0.2 * ((seed * 7) % 3) / 2), py = y + h;
+    g.fillStyle = seed % 2 ? '#2a2026' : '#3a2a3a';
+    g.beginPath(); g.ellipse(px, py, w * 0.26, h * 0.34, 0, Math.PI, 0); g.fill();
+    g.fillStyle = '#e8c4a8';
+    g.beginPath(); g.arc(px, py - h * 0.44, w * 0.12, 0, Math.PI * 2); g.fill();
+    if (seed % 2) { g.fillStyle = '#141014'; g.fillRect(px - w * 0.1, py - h * 0.8, w * 0.2, h * 0.24); g.fillRect(px - w * 0.17, py - h * 0.57, w * 0.34, 4); }
+    else {
+      g.fillStyle = ['#c84a6a', '#6a4ab8', '#e8a040'][seed % 3];
+      g.beginPath(); g.ellipse(px, py - h * 0.54, w * 0.26, h * 0.06, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#f4e0ec'; g.beginPath(); g.arc(px + w * 0.12, py - h * 0.58, 4, 0, Math.PI * 2); g.fill();
+    }
+  }
+  // rideaux crème noués de chaque côté
+  for (const sx of [0, 1]) {
+    const cx = x + (sx ? w : 0), d = sx ? -1 : 1;
+    g.fillStyle = '#f2e6c8';
+    g.beginPath();
+    g.moveTo(cx, y + 4);
+    g.lineTo(cx + d * w * 0.3, y + 4);
+    g.quadraticCurveTo(cx + d * w * 0.08, y + h * 0.5, cx + d * w * 0.16, y + h);
+    g.lineTo(cx, y + h);
+    g.closePath(); g.fill();
+    g.fillStyle = '#c8302a'; g.fillRect(cx + d * w * 0.04 - (sx ? 8 : 0), y + h * 0.48, 8, 5);
+  }
+  g.fillStyle = 'rgba(255,240,210,0.2)';
+  g.beginPath(); g.moveTo(x + w * 0.55, y + 4); g.lineTo(x + w * 0.72, y + 4); g.lineTo(x + w * 0.4, y + h); g.lineTo(x + w * 0.24, y + h); g.fill();
+}
+// volute dorée (ornement d'angle)
+function scroll(g, x, y, s, flip, col) {
+  g.save(); g.translate(x, y); g.scale(flip ? -s : s, s);
+  g.strokeStyle = col; g.lineWidth = 2.4 / s;
+  g.beginPath(); g.moveTo(0, 0); g.bezierCurveTo(14, -2, 22, 8, 16, 14); g.bezierCurveTo(10, 18, 6, 10, 12, 8); g.stroke();
+  g.beginPath(); g.moveTo(0, 0); g.bezierCurveTo(-2, 14, 8, 22, 14, 16); g.stroke();
+  g.restore();
+}
+// blason de la Ville de Paris (nef sur fond rouge, chef d'azur fleurdelisé)
+function crest(g, x, y, r) {
+  g.fillStyle = '#d8b04a';
+  g.beginPath(); g.moveTo(x - r - 3, y - r - 3); g.lineTo(x + r + 3, y - r - 3); g.lineTo(x + r + 3, y + 2); g.quadraticCurveTo(x + r, y + r + 6, x, y + r * 1.4 + 3); g.quadraticCurveTo(x - r, y + r + 6, x - r - 3, y + 2); g.fill();
+  g.fillStyle = '#c8302a';
+  g.beginPath(); g.moveTo(x - r, y - r); g.lineTo(x + r, y - r); g.lineTo(x + r, y); g.quadraticCurveTo(x + r, y + r + 2, x, y + r * 1.4); g.quadraticCurveTo(x - r, y + r + 2, x - r, y); g.fill();
+  g.fillStyle = '#2c4a8a'; g.fillRect(x - r, y - r, r * 2, r * 0.6);
+  g.fillStyle = '#f2d24a';
+  for (const k of [-0.5, 0, 0.5]) { g.beginPath(); g.arc(x + k * r, y - r * 0.7, 2.5, 0, Math.PI * 2); g.fill(); }
+  g.fillStyle = '#f4ecd8';
+  g.beginPath(); g.moveTo(x - r * 0.6, y + r * 0.1); g.lineTo(x + r * 0.6, y + r * 0.1); g.lineTo(x + r * 0.4, y + r * 0.45); g.lineTo(x - r * 0.4, y + r * 0.45); g.fill();
+  g.fillRect(x - 1.5, y - r * 0.3, 3, r * 0.42);
+  g.beginPath(); g.moveTo(x + 2, y - r * 0.28); g.lineTo(x + r * 0.45, y + r * 0.05); g.lineTo(x + 2, y + r * 0.05); g.fill();
 }
 
 function drawAtlas(l) {
   const c = document.createElement('canvas');
   c.width = 1024; c.height = 512;
   const g = c.getContext('2d');
-  // côté : caisse colorée, panneau crème, rangée de fenêtres, filets dorés, réclames
+  // côté : caisse vernie, rangée de fenêtres, bandeau de destination, panneau bas armorié
+  const bg = g.createLinearGradient(0, 0, 0, 256);
+  bg.addColorStop(0, l.body); bg.addColorStop(0.55, l.body); bg.addColorStop(1, 'rgba(0,0,0,0.5)');
   g.fillStyle = l.body; g.fillRect(0, 0, 1024, 256);
-  g.fillStyle = l.panel; g.fillRect(0, 150, 1024, 70);
-  g.strokeStyle = l.line; g.lineWidth = 4;
-  g.strokeRect(14, 154, 996, 62);
-  g.fillStyle = l.body;
-  g.font = 'bold 34px serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText(l.name, 512, 186);
-  for (let i = 0; i < 8; i++) glass(g, 40 + i * 122, 30, 96, 104);
-  g.strokeStyle = l.line; g.lineWidth = 3;
-  g.beginPath(); g.moveTo(0, 22); g.lineTo(1024, 22); g.moveTo(0, 142); g.lineTo(1024, 142); g.stroke();
-  g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(0, 232, 1024, 24);
-  // avant : grande vitre, lanternes peintes, numéro
+  g.fillStyle = bg; g.fillRect(0, 0, 1024, 256);
+  g.fillStyle = 'rgba(255,255,255,0.12)'; g.fillRect(0, 4, 1024, 6);   // reflet du vernis
+  if (l.lit) {
+    // fiacre : deux portières à fenêtre, lanterne peinte, monogramme doré
+    for (const [x0, w] of [[90, 330], [604, 330]]) {
+      g.strokeStyle = l.line; g.lineWidth = 3;
+      roundTop(g, x0, 18, w, 222, 22); g.stroke();
+      glass(g, x0 + 40, 34, w - 80, 104, l, x0 > 300 ? 1 : 4);
+      g.strokeStyle = l.line; g.lineWidth = 2;
+      g.strokeRect(x0 + 24, 156, w - 48, 70);
+      scroll(g, x0 + 30, 162, 1.2, false, l.line); scroll(g, x0 + w - 30, 162, 1.2, true, l.line);
+      g.fillStyle = l.line; g.font = 'italic bold 40px serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText('F', x0 + w / 2, 192);
+      g.fillRect(x0 + w - 40, 150, 22, 6);   // poignée
+    }
+    g.fillStyle = '#2a2730'; g.fillRect(470, 20, 84, 220);
+    g.fillStyle = '#fff2b0'; g.fillRect(492, 60, 40, 60);
+    g.strokeStyle = l.line; g.strokeRect(492, 60, 40, 60);
+  } else {
+    for (let i = 0; i < 8; i++) glass(g, 40 + i * 122, 30, 96, 100, l, i);
+    g.strokeStyle = l.line; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(0, 16); g.lineTo(1024, 16); g.moveTo(0, 144); g.lineTo(1024, 144); g.stroke();
+    // bandeau crème avec la ligne
+    g.fillStyle = l.panel; g.fillRect(0, 150, 1024, 46);
+    g.strokeStyle = l.line; g.lineWidth = 3; g.strokeRect(10, 154, 1004, 38);
+    g.fillStyle = l.body; g.font = 'bold 30px serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(l.name, 512, 174);
+    // panneaux bas moulurés avec volutes et blason au centre
+    for (let i = 0; i < 4; i++) {
+      const x0 = 14 + i * 252;
+      g.strokeStyle = l.line; g.lineWidth = 2;
+      g.strokeRect(x0, 202, 240, 44);
+      scroll(g, x0 + 6, 206, 1, false, l.line); scroll(g, x0 + 234, 206, 1, true, l.line);
+    }
+    crest(g, 512, 222, 14);
+    g.fillStyle = l.line; g.font = 'bold 15px serif';
+    g.fillText('COMPAGNIE GÉNÉRALE DES OMNIBUS', 256, 226);
+    g.fillText('N° ' + (100 + l.name.length * 7), 790, 226);
+  }
+  // rivets dorés le long des arêtes
+  g.fillStyle = l.line;
+  for (let x = 8; x < 1024; x += 24) { g.fillRect(x, 1, 4, 4); g.fillRect(x, 250, 4, 4); }
+
+  // avant : grande vitre encadrée, plaque de destination, lanternes peintes
   const F = 256;
   g.fillStyle = l.body; g.fillRect(0, F, F, F);
-  glass(g, 40, F + 30, 176, 110);
-  g.fillStyle = l.panel; g.fillRect(20, F + 160, 216, 60);
-  g.strokeStyle = l.line; g.lineWidth = 3; g.strokeRect(24, F + 164, 208, 52);
-  g.fillStyle = l.body; g.font = 'bold 30px serif'; g.fillText(l.lit ? '★' : 'B', 128, F + 191);
-  // arrière : escalier vers l'impériale, petite vitre
+  glass(g, 46, F + 28, 164, 104, l, 1);
+  g.fillStyle = l.panel; g.fillRect(20, F + 156, 216, 64);
+  g.strokeStyle = l.line; g.lineWidth = 3; g.strokeRect(24, F + 160, 208, 56);
+  scroll(g, 30, F + 166, 1, false, l.line); scroll(g, 226, F + 166, 1, true, l.line);
+  if (l.lit) { g.fillStyle = l.line; g.font = 'bold 34px serif'; g.textAlign = 'center'; g.fillText('★', 128, F + 189); }
+  else crest(g, 128, F + 186, 13);
+  g.fillStyle = 'rgba(0,0,0,0.4)'; g.fillRect(0, F + 232, F, 24);
+  // arrière : petite vitre, plaque, feux rouges
   g.fillStyle = l.body; g.fillRect(256, F, F, F);
-  glass(g, 330, F + 30, 108, 100);
-  g.fillStyle = l.panel; g.fillRect(276, F + 160, 216, 60);
-  g.fillStyle = '#c8302a';
-  g.beginPath(); g.arc(296, F + 230, 9, 0, Math.PI * 2); g.arc(472, F + 230, 9, 0, Math.PI * 2); g.fill();
+  glass(g, 330, F + 30, 108, 96, l, 5);
+  g.fillStyle = l.panel; g.fillRect(276, F + 156, 216, 64);
+  g.strokeStyle = l.line; g.strokeRect(280, F + 160, 208, 56);
+  g.fillStyle = l.body; g.font = 'bold 26px serif'; g.textAlign = 'center';
+  g.fillText(l.lit ? 'PARIS' : 'COMPLET', 384, F + 189);
+  g.fillStyle = '#e83a2a';
+  g.beginPath(); g.arc(296, F + 232, 9, 0, Math.PI * 2); g.arc(472, F + 232, 9, 0, Math.PI * 2); g.fill();
   // aplat
   g.fillStyle = l.body; g.fillRect(560, 340, 100, 60);
   const t = new THREE.CanvasTexture(c);
@@ -95,13 +191,27 @@ function wheel(b, x, z, r, col) {
   const n = 16;
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2;
-    b.add(U.box, '#1a1a1c', [x, r + Math.sin(a) * r, z + Math.cos(a) * r], [0.08, 0.07, (Math.PI * 2 * r) / n + 0.02], [-a, 0, 0]);
+    b.add(U.box, '#1a1a1c', [x, r + Math.sin(a) * r, z + Math.cos(a) * r], [0.08, 0.07, (Math.PI * 2 * r) / n + 0.02], [Math.PI / 2 - a, 0, 0]);
   }
   for (let i = 0; i < 8; i++) {
     const a = (i / 8) * Math.PI;
     b.add(U.box, col, [x, r, z], [0.04, r * 1.9, 0.035], [a, 0, 0]);
   }
-  b.add(U.cyl, col, [x, r, z], [0.1, 0.12, 0.1], [0, 0, Math.PI / 2]);
+  for (let i = 0; i < n; i++) {   // jante intérieure dorée
+    const a = (i / n) * Math.PI * 2, rr = r * 0.86;
+    b.add(U.box, col, [x, r + Math.sin(a) * rr, z + Math.cos(a) * rr], [0.06, 0.03, (Math.PI * 2 * rr) / n + 0.01], [Math.PI / 2 - a, 0, 0]);
+  }
+  b.add(U.cyl, col, [x, r, z], [0.13, 0.12, 0.13], [0, 0, Math.PI / 2]);
+  b.add(U.cyl, '#1a1a1c', [x + Math.sign(x) * 0.08, r, z], [0.07, 0.08, 0.07], [0, 0, Math.PI / 2]);
+}
+
+// ressort à lames (demi-ellipse) au-dessus d'un essieu
+function spring(b, x, y, z) {
+  for (let k = 0; k < 4; k++) {
+    const w = 0.9 - k * 0.18;
+    b.add(U.box, '#1a1a1c', [x, y - k * 0.035, z], [0.08, 0.03, w]);
+  }
+  b.add(U.box, '#2a2522', [x, y - 0.18, z], [0.07, 0.24, 0.07]);
 }
 
 // détails fusionnés d'une voiture : impériale à garde-corps et réclames, roues, marchepied, cocher
@@ -130,7 +240,41 @@ function detailGeo(lead, l) {
   // marchepied et escalier arrière vers l'impériale
   b.add(U.box, '#2a2522', [0, 0.35, zc - L / 2 - 0.2], [1.0, 0.06, 0.4]);
   for (let i = 0; i < 5; i++) b.add(U.box, '#3a2e26', [0.6, 0.7 + i * 0.4, zc - L / 2 - 0.12], [0.6, 0.05, 0.22]);
+  // ressorts, essieux, garde-boue en arc au-dessus des roues
+  for (const [zz, r] of [[zc + L / 2 - 1.3, 0.55], [zc - L / 2 + 1.4, 0.7]]) {
+    b.add(U.cyl6, '#1a1a1c', [0, r, zz], [0.06, W + 0.1, 0.06], [0, 0, Math.PI / 2]);
+    for (const sx of [-1, 1]) {
+      spring(b, sx * (W / 2 - 0.25), r + 0.2, zz);
+      for (let i = 0; i <= 6; i++) {
+        const a = -1.2 + (i / 6) * 2.4, rr = r + 0.12;
+        b.add(U.box, '#1c1a1e', [sx * (W / 2 + 0.06), r + Math.cos(a) * rr, zz + Math.sin(a) * rr], [0.2, 0.025, 0.24], [a, 0, 0]);
+      }
+    }
+  }
+  // baguettes moulurées et lampes d'angle sous la corniche
+  for (const sx of [-1, 1]) {
+    b.add(U.box, l.line, [sx * (W / 2 + 0.01), Y0 + 0.04, zc], [0.03, 0.04, L]);
+    for (const zz of [zc + L / 2 - 0.05, zc - L / 2 + 0.05]) b.add(U.box, l.line, [sx * (W / 2 + 0.01), (Y0 + Y1) / 2, zz], [0.04, H, 0.05]);
+  }
+  // plateforme arrière à rampe et receveur en képi
+  b.add(U.box, '#1a1a1c', [-0.7, 1.15, zc - L / 2 - 0.35], [0.04, 1.1, 0.04]);
+  b.add(U.box, '#1a1a1c', [-0.7, 1.7, zc - L / 2 - 0.2], [0.04, 0.04, 0.32]);
+  if (!l.lit) {
+    const cz = zc - L / 2 - 0.25;
+    b.add(U.box, '#2c3a5a', [-0.25, 0.85, cz], [0.32, 0.6, 0.22]);
+    b.add(BALL, '#f2d2b8', [-0.25, 1.32, cz], [0.13, 0.14, 0.13]);
+    b.add(U.cyl, '#2c3a5a', [-0.25, 1.46, cz], [0.13, 0.1, 0.13]);
+    b.add(U.box, '#1a1a1c', [-0.25, 1.42, cz - 0.1], [0.24, 0.02, 0.08]);
+    b.add(U.box, '#d8b04a', [-0.25, 0.95, cz - 0.12], [0.14, 0.12, 0.02]);   // sacoche à billets
+  }
   if (lead) {
+    if (!l.lit) {
+      // tableau de destination sur le garde-corps avant de l'impériale
+      b.add(U.box, '#1a1a1c', [0, TRAIN_TOP + 0.45, -0.05], [1.6, 0.42, 0.06]);
+      b.add(U.box, l.panel, [0, TRAIN_TOP + 0.45, -0.01], [1.48, 0.3, 0.04]);
+      b.add(U.box, l.body, [0, TRAIN_TOP + 0.45, 0.015], [1.1, 0.08, 0.02]);
+      for (const sx of [-1, 1]) b.add(BALL, l.line, [sx * 0.8, TRAIN_TOP + 0.7, -0.05], [0.06, 0.06, 0.06]);
+    }
     // siège du cocher et lanternes
     b.add(U.box, '#2a2522', [0, Y1 + 0.05, 0.15], [1.4, 0.12, 0.6]);
     b.add(U.box, '#2a2522', [0, Y1 - 0.4, 0.42], [1.2, 0.8, 0.08]);
@@ -172,6 +316,16 @@ function horses(b) {
     b.add(U.box, '#2a1a10', [x, 1.45, z + 0.1], [0.68, 0.08, 0.5]);   // harnais
     b.add(U.box, '#c8302a', [x, 1.62, z + 0.1], [0.5, 0.06, 0.3]);
     b.add(U.box, '#d8b04a', [x, 1.98, z + 1.22], [0.28, 0.04, 0.04]);
+    // œillères, museau, panache, collier et rênes
+    for (const s2 of [-1, 1]) b.add(U.box, '#1a1a1c', [x + s2 * 0.14, 2.0, z + 1.2], [0.02, 0.1, 0.12]);
+    b.add(BALL, c2, [x, 1.86, z + 1.45], [0.1, 0.1, 0.12]);
+    b.add(U.cone4, '#c8302a', [x, 2.25, z + 1.12], [0.06, 0.2, 0.06]);
+    b.add(BALL, '#2a1a10', [x, 1.58, z + 0.62], [0.2, 0.24, 0.12], [-0.6, 0, 0]);
+    b.add(U.box, '#2a1a10', [x, 1.55, z + 0.1 - 0.9], [0.02, 0.02, 2.2], [0.25, 0, 0]);
+    for (const [dx, dz] of [[-0.15, 0.5], [0.15, 0.5], [-0.15, -0.5], [0.15, -0.5]]) {
+      b.add(BALL, c1, [x + dx, 0.82, z + dz], [0.09, 0.2, 0.1]);   // cuisse
+      b.add(BALL, '#f4f0ea', [x + dx, 0.14, z + dz], [0.08, 0.06, 0.08]);   // balzane
+    }
   }
   for (const sx of [-1, 1]) b.add(U.box, '#3a2a1c', [sx * 0.9, 1.1, 1.2], [0.05, 0.05, 2.4]);   // brancards
 }

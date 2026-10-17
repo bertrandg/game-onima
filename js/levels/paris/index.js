@@ -39,8 +39,30 @@ function cobbles(base, light, dark) {
   });
 }
 
-// voie de tramway noyée dans les pavés : pas de traverses visibles
-const noSleepers = () => canvasTex(4, 4, (g) => g.clearRect(0, 0, 4, 4));
+// usure des pavés dans chaque voie : deux ornières lustrées par le passage des roues (fond transparent)
+const wornRuts = () => canvasTex(128, 128, (g, w, h) => {
+  g.clearRect(0, 0, w, h);
+  for (const cx of [0.2 * w, 0.8 * w]) {
+    const grd = g.createLinearGradient(cx - 14, 0, cx + 14, 0);
+    grd.addColorStop(0, 'rgba(40,34,30,0)');
+    grd.addColorStop(0.5, 'rgba(40,34,30,0.42)');
+    grd.addColorStop(1, 'rgba(40,34,30,0)');
+    g.fillStyle = grd;
+    g.fillRect(cx - 14, 0, 28, h);
+    // reflets polis sur les pavés usés
+    for (let i = 0; i < 10; i++) {
+      g.fillStyle = `rgba(255,240,220,${0.08 + Math.random() * 0.1})`;
+      g.fillRect(cx - 6 + Math.random() * 12, Math.random() * h, 2, 6 + Math.random() * 10);
+    }
+  }
+  // léger assombrissement au centre de la voie (traces de sabots)
+  const mid = g.createLinearGradient(w * 0.35, 0, w * 0.65, 0);
+  mid.addColorStop(0, 'rgba(40,34,30,0)');
+  mid.addColorStop(0.5, 'rgba(40,34,30,0.16)');
+  mid.addColorStop(1, 'rgba(40,34,30,0)');
+  g.fillStyle = mid;
+  g.fillRect(w * 0.35, 0, w * 0.3, h);
+});
 
 // feuilles de platane dorées qui tombent
 const leafTexture = () => canvasTex(32, 32, (g) => {
@@ -69,8 +91,8 @@ export default {
     track: {
       ground: cobbles([176, 168, 156], 'rgba(255,255,255,0.18)', '#7a746a'), groundTile: 6,
       bed: cobbles([140, 132, 122], 'rgba(255,255,255,0.12)', '#5e5850'),
-      sleepers: noSleepers,
-      rail: '#6a6e72', railTop: '#c4c8cc', curb: '#9a968c',
+      sleepers: wornRuts, rails: false,
+      dividers: '#b4ada0', dividerEdge: '#8e887c', curb: '#9a968c',
     },
     particles: { texture: leafTexture, size: 0.3 },
     scenery: parisScenery,

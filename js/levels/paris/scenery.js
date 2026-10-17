@@ -15,19 +15,41 @@ export const SKY = {
 };
 export const FOG_COLOR = SKY.horizon;
 const SUN_DIR = new THREE.Vector3(-0.55, 0.12, -1).normalize();
-const TOWER = { x: 38, z: -720, base: -12, h: 300, w: 165 };   // au bout du boulevard, visible entre les immeubles
+const TOWER = { x: 38, z: -720, base: -10, h: 300, w: 150 };   // au bout du boulevard, visible entre les immeubles
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
-// ---------- Tour Eiffel peinte ----------
-const TW = 1024, TH = 2048, CX = 512, TOP = 190;
-// demi-largeur de la silhouette (v = 0 en haut, 1 au pied)
-const hw = (v) => 16 + 440 * Math.pow(v, 2.5);
-const yAt = (v) => TOP + v * (TH - TOP);
+// ---------- Tour Eiffel dessinée (style illustration : bronze doré, contours foncés, treillis) ----------
+const TW = 1024, TH = 2048, CX = 512, BASE = TH - 8, TIP = 30;
+const yAt = (f) => BASE - f * (BASE - TIP);            // f : fraction de hauteur (0 au pied, 1 à la pointe)
+const F1 = 0.25, F2 = 0.43, F3 = 0.87;                  // 1er, 2e et 3e étages
+// demi-largeur de la silhouette selon la hauteur
+function hw(f) {
+  if (f <= F1) return 285 + 185 * Math.pow(1 - f / F1, 1.5);
+  if (f <= F2) return 150 + 135 * Math.pow(1 - (f - F1) / (F2 - F1), 1.3);
+  if (f <= F3) return 30 + 120 * Math.pow(1 - (f - F2) / (F3 - F2), 1.7);
+  return 30 - 10 * Math.min(1, (f - F3) / 0.05);
+}
 
-function towerPath(g) {
+function silhouette(g) {
   g.beginPath();
-  for (let i = 0; i <= 60; i++) { const v = i / 60; g.lineTo(CX - hw(v), yAt(v)); }
-  for (let i = 60; i >= 0; i--) { const v = i / 60; g.lineTo(CX + hw(v), yAt(v)); }
+  for (let i = 0; i <= 120; i++) { const f = (i / 120) * 0.92; g.lineTo(CX - hw(f), yAt(f)); }
+  for (let i = 120; i >= 0; i--) { const f = (i / 120) * 0.92; g.lineTo(CX + hw(f), yAt(f)); }
+  g.closePath();
+}
+function archPath(g) {   // grande arche entre les pieds
+  const x0 = 300, top = yAt(0.205);
+  g.beginPath();
+  g.moveTo(CX - x0, BASE);
+  g.bezierCurveTo(CX - x0, top + 40, CX - 150, top, CX, top);
+  g.bezierCurveTo(CX + 150, top, CX + x0, top + 40, CX + x0, BASE);
+  g.closePath();
+}
+function windowPath(g) {   // vide entre le 1er et le 2e étage
+  g.beginPath();
+  g.moveTo(CX - 118, yAt(F1 + 0.035));
+  g.lineTo(CX + 118, yAt(F1 + 0.035));
+  g.lineTo(CX + 36, yAt(F2 - 0.025));
+  g.lineTo(CX - 36, yAt(F2 - 0.025));
   g.closePath();
 }
 
@@ -35,84 +57,120 @@ function drawTower() {
   const c = document.createElement('canvas');
   c.width = TW; c.height = TH;
   const g = c.getContext('2d');
-  // silhouette en dégradé lavande, plus claire vers le haut (voile de brume)
-  const grd = g.createLinearGradient(0, TOP, 0, TH);
-  grd.addColorStop(0, '#d6c8f4');
-  grd.addColorStop(0.45, '#a8a2d6');
-  grd.addColorStop(1, '#8e8cc4');
-  g.fillStyle = grd;
-  towerPath(g);
+  const INK = '#3a2210';
+  g.lineJoin = 'round';
+  g.lineCap = 'round';
+  // corps : bronze doré, éclairé à gauche, dans l'ombre à droite
+  const body = g.createLinearGradient(CX - 470, 0, CX + 470, 0);
+  body.addColorStop(0, '#f2bf6a');
+  body.addColorStop(0.42, '#d29548');
+  body.addColorStop(0.62, '#b8783a');
+  body.addColorStop(1, '#7e4c22');
+  g.fillStyle = body;
+  silhouette(g);
   g.fill();
 
-  // treillis : croisillons clairs dans la silhouette
+  // treillis : croisillons et traverses, limités à la silhouette
   g.save();
-  towerPath(g);
+  silhouette(g);
   g.clip();
-  g.strokeStyle = 'rgba(255,248,255,0.28)';
+  g.strokeStyle = 'rgba(70,38,16,0.55)';
   g.lineWidth = 3;
-  for (let k = -TH; k < TH * 2; k += 30) {
-    g.beginPath(); g.moveTo(CX - 500, k); g.lineTo(CX + 500, k + 520); g.stroke();
-    g.beginPath(); g.moveTo(CX + 500, k); g.lineTo(CX - 500, k + 520); g.stroke();
+  for (let k = -TH; k < TH * 2; k += 26) {
+    g.beginPath(); g.moveTo(CX - 520, k); g.lineTo(CX + 520, k + 380); g.stroke();
+    g.beginPath(); g.moveTo(CX + 520, k); g.lineTo(CX - 520, k + 380); g.stroke();
   }
-  g.strokeStyle = 'rgba(80,70,140,0.25)';
-  g.lineWidth = 4;
-  for (let v = 0.06; v < 1; v += 0.045) { g.beginPath(); g.moveTo(CX - hw(v), yAt(v)); g.lineTo(CX + hw(v), yAt(v)); g.stroke(); }
+  g.strokeStyle = 'rgba(60,32,14,0.75)';
+  g.lineWidth = 5;
+  for (let f = 0.02; f < 0.9; f += 0.022) { g.beginPath(); g.moveTo(CX - hw(f), yAt(f)); g.lineTo(CX + hw(f), yAt(f)); g.stroke(); }
+  // arêtiers intérieurs des quatre piliers
+  g.lineWidth = 7;
+  g.strokeStyle = INK;
+  for (const s of [-1, 1]) {
+    g.beginPath();
+    for (let i = 0; i <= 40; i++) { const f = (i / 40) * F3; g.lineTo(CX + s * hw(f) * 0.42, yAt(f)); }
+    g.stroke();
+  }
+  // reflets dorés côté lumière
+  g.strokeStyle = 'rgba(255,230,160,0.55)';
+  g.lineWidth = 5;
+  g.beginPath();
+  for (let i = 0; i <= 60; i++) { const f = (i / 60) * F3; g.lineTo(CX - hw(f) + 10, yAt(f)); }
+  g.stroke();
   g.restore();
 
-  // ajours : grande arche entre les pieds et vide sous le premier étage
+  // ajours : arche et vide entre les étages
   g.globalCompositeOperation = 'destination-out';
-  g.beginPath();
-  const v1 = 0.8;
-  g.moveTo(CX - (hw(v1) - hw(v1) * 0.42), yAt(v1) + 30);
-  for (let i = 0; i <= 20; i++) { const v = v1 + (i / 20) * (1 - v1); g.lineTo(CX - (hw(v) - hw(v) * 0.36), yAt(v)); }
-  for (let i = 20; i >= 0; i--) { const v = v1 + (i / 20) * (1 - v1); g.lineTo(CX + (hw(v) - hw(v) * 0.36), yAt(v)); }
-  g.closePath();
-  g.fill();
+  archPath(g); g.fill();
+  windowPath(g); g.fill();
   g.globalCompositeOperation = 'source-over';
-  // arche festonnée claire
-  g.strokeStyle = '#efe6ff';
-  g.lineWidth = 7;
+  g.strokeStyle = INK;
+  g.lineWidth = 9;
+  archPath(g); g.stroke();
+  windowPath(g); g.stroke();
+  // frise intérieure de l'arche
+  g.strokeStyle = 'rgba(242,191,106,0.9)';
+  g.lineWidth = 4;
   g.beginPath();
-  g.ellipse(CX, TH - 8, hw(1) * 0.6, (TH - yAt(v1)) * 0.78, 0, Math.PI, 0);
+  g.moveTo(CX - 280, BASE);
+  g.bezierCurveTo(CX - 280, yAt(0.19) + 46, CX - 140, yAt(0.19) + 8, CX, yAt(0.19) + 8);
+  g.bezierCurveTo(CX + 140, yAt(0.19) + 8, CX + 280, yAt(0.19) + 46, CX + 280, BASE);
+  g.stroke();
+  // contour de la silhouette
+  g.strokeStyle = INK;
+  g.lineWidth = 9;
+  silhouette(g);
   g.stroke();
 
-  // étages : plateformes claires avec rambarde dorée
-  for (const [v, h, ext] of [[0.8, 30, 34], [0.53, 22, 24], [0.11, 16, 14]]) {
-    const y = yAt(v), w = hw(v) + ext;
-    g.fillStyle = '#efe6ff';
-    g.fillRect(CX - w, y - h / 2, w * 2, h);
-    g.fillStyle = 'rgba(90,80,150,0.35)';
-    g.fillRect(CX - w, y + h / 2 - 6, w * 2, 6);
-    g.fillStyle = '#f4d27a';
-    for (let x = CX - w + 6; x < CX + w - 6; x += 14) g.fillRect(x, y - h / 2 - 8, 4, 8);
-  }
-  // arête éclairée (côté soleil) et arête dans l'ombre
-  g.lineWidth = 5;
-  g.strokeStyle = 'rgba(255,245,255,0.7)';
-  g.beginPath();
-  for (let i = 0; i <= 60; i++) { const v = i / 60; g.lineTo(CX - hw(v), yAt(v)); }
-  g.stroke();
-  g.strokeStyle = 'rgba(70,60,130,0.45)';
-  g.beginPath();
-  for (let i = 0; i <= 60; i++) { const v = i / 60; g.lineTo(CX + hw(v), yAt(v)); }
-  g.stroke();
-  // flèche et phare
-  g.strokeStyle = '#c8bce8';
-  g.lineWidth = 10;
-  g.beginPath(); g.moveTo(CX, TOP + 4); g.lineTo(CX, 40); g.stroke();
-  const beacon = g.createRadialGradient(CX, 50, 0, CX, 50, 70);
+  // étages : plateformes avec frise d'arcades et garde-corps
+  const platform = (f, h, ext, arches) => {
+    const y = yAt(f), w = hw(f) + ext;
+    const pg = g.createLinearGradient(0, y - h, 0, y);
+    pg.addColorStop(0, '#f0b860'); pg.addColorStop(1, '#a8682e');
+    g.fillStyle = pg;
+    g.fillRect(CX - w, y - h, w * 2, h);
+    g.strokeStyle = INK; g.lineWidth = 7;
+    g.strokeRect(CX - w, y - h, w * 2, h);
+    if (arches) {
+      g.lineWidth = 4;
+      const n = Math.floor((w * 2) / 34);
+      for (let i = 0; i < n; i++) {
+        const x = CX - w + 17 + i * ((w * 2 - 34) / (n - 1));
+        g.beginPath(); g.arc(x, y - 6, 12, Math.PI, 0); g.stroke();
+      }
+    }
+    // garde-corps clair
+    g.fillStyle = '#f6d48a';
+    g.fillRect(CX - w + 4, y - h - 12, w * 2 - 8, 6);
+    g.fillStyle = INK;
+    for (let x = CX - w + 6; x < CX + w - 6; x += 16) g.fillRect(x, y - h - 12, 3, 12);
+  };
+  platform(F1, 62, 34, true);
+  platform(F2, 40, 22, true);
+  platform(F3, 26, 14, false);
+  // campanile, dôme et antenne
+  g.fillStyle = '#c4843c';
+  g.fillRect(CX - 20, yAt(0.93), 40, yAt(F3) - yAt(0.93) - 26);
+  g.strokeStyle = INK; g.lineWidth = 6;
+  g.strokeRect(CX - 20, yAt(0.93), 40, yAt(F3) - yAt(0.93) - 26);
+  g.fillStyle = '#d89a48';
+  g.beginPath(); g.ellipse(CX, yAt(0.93), 26, 20, 0, Math.PI, 0); g.fill(); g.stroke();
+  g.lineWidth = 8;
+  g.beginPath(); g.moveTo(CX, yAt(0.935)); g.lineTo(CX, TIP); g.stroke();
+  // phare
+  const beacon = g.createRadialGradient(CX, TIP + 20, 0, CX, TIP + 20, 80);
   beacon.addColorStop(0, 'rgba(255,248,210,1)');
   beacon.addColorStop(0.3, 'rgba(255,224,150,0.6)');
   beacon.addColorStop(1, 'rgba(255,210,170,0)');
   g.fillStyle = beacon;
-  g.fillRect(CX - 70, 0, 140, 130);
-  // pied fondu dans la brume
+  g.fillRect(CX - 80, 0, 160, 130);
+  // pied légèrement voilé par la brume du lointain
   g.globalCompositeOperation = 'source-atop';
-  const fog = g.createLinearGradient(0, TH * 0.72, 0, TH);
+  const fog = g.createLinearGradient(0, TH * 0.82, 0, TH);
   fog.addColorStop(0, 'rgba(242,216,204,0)');
-  fog.addColorStop(1, 'rgba(242,216,204,0.85)');
+  fog.addColorStop(1, 'rgba(242,216,204,0.55)');
   g.fillStyle = fog;
-  g.fillRect(0, TH * 0.7, TW, TH * 0.3);
+  g.fillRect(0, TH * 0.8, TW, TH * 0.2);
   g.globalCompositeOperation = 'source-over';
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
@@ -125,15 +183,11 @@ function towerSparkles() {
   const pts = [];
   const toWorld = (px, py) => [((px - CX) / TW) * TOWER.w, (1 - py / TH) * TOWER.h - TOWER.h / 2];
   for (let i = 0; i < 70; i++) {
-    const v = 0.04 + (i / 70) * 0.92;
-    for (const s of [-1, 1]) pts.push(toWorld(CX + s * hw(v) * 0.96, yAt(v)));
+    const f = (i / 70) * 0.9;
+    for (const s of [-1, 1]) pts.push(toWorld(CX + s * hw(f) * 0.97, yAt(f)));
   }
-  for (const v of [0.8, 0.53, 0.11]) {
-    for (let k = -8; k <= 8; k++) pts.push(toWorld(CX + (k / 8) * (hw(v) + 20), yAt(v) - 12));
-  }
-  for (let i = 0; i < 40; i++) {
-    const v = Math.random() * 0.78;
-    pts.push(toWorld(CX + (Math.random() * 2 - 1) * hw(v) * 0.8, yAt(v)));
+  for (const [f, ext] of [[F1, 34], [F2, 22], [F3, 14]]) {
+    for (let k = -8; k <= 8; k++) pts.push(toWorld(CX + (k / 8) * (hw(f) + ext), yAt(f) - 12));
   }
   const pos = new Float32Array(pts.length * 3), ph = new Float32Array(pts.length);
   pts.forEach(([x, y], i) => { pos.set([x, y, 0.5], i * 3); ph[i] = Math.random() * 100; });
@@ -149,8 +203,8 @@ function towerSparkles() {
       void main() {
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
         float tw = pow(0.5 + 0.5 * sin(uTime * (2.0 + mod(aPhase, 3.0)) + aPhase), 3.0);
-        vA = 0.25 + 0.75 * tw;
-        gl_PointSize = uScale * (1.6 + tw * 2.4) / -mv.z;
+        vA = 0.2 + 0.8 * tw;
+        gl_PointSize = uScale * (1.4 + tw * 2.2) / -mv.z;
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: /* glsl */`

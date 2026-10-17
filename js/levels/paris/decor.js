@@ -79,16 +79,49 @@ function haussmann(b) {
   }
 }
 
-// Immeuble lointain simplifié : bandeaux de fenêtres au lieu de fenêtres détaillées
+// Immeuble de l'autre rive : fenêtres, balcons filants, boutiques et mansardes, avec platanes du quai d'en face
 function haussmannFar(b) {
-  const W = 8, L = rand(10, 13), floors = ri(4, 5), Hb = 4.2 + floors * 3.1;
-  b.add(U.box, pick(STONE), [0, Hb / 2, 0], [W, Hb, L]);
-  b.add(U.box, pick(['#2c5a3a', '#6e1c2c', '#1f3157']), [W / 2 + 0.05, 1.8, 0], [0.1, 3.2, L - 1]);
-  for (let f = 0; f < floors; f++) {
-    b.add(U.box, '#3a4450', [W / 2 + 0.04, 5.4 + f * 3.1, 0], [0.06, 1.6, L - 1]);
-    if (f === 0 || f === 3) b.add(U.box, '#1a1a1c', [W / 2 + 0.3, 4.7 + f * 3.1, 0], [0.5, 0.12, L]);
+  const W = 8, L = rand(10, 13), floors = ri(4, 6), G = 4.2, F = 3.1, Hb = G + floors * F;
+  const fx = W / 2, stone = pick(STONE);
+  b.add(U.box, stone, [0, Hb / 2, 0], [W, Hb, L]);
+  for (let f = 0; f <= floors; f++) b.add(U.box, '#d2c3a6', [fx + 0.08, G + f * F - 0.05, 0], [0.16, 0.16, L]);
+  b.add(U.box, '#cbbb9c', [fx + 0.2, Hb - 0.1, 0], [0.4, 0.32, L + 0.1]);   // corniche
+  // rez-de-chaussée : boutiques colorées sous stores
+  for (let k = 0; k < 2; k++) {
+    const zc = (k - 0.5) * (L / 2), sw = L / 2 - 0.6;
+    b.add(U.box, pick(['#2c5a3a', '#6e1c2c', '#1f3157', '#3a2a20', '#7a5a20']), [fx + 0.05, 1.8, zc], [0.1, 3.2, sw]);
+    b.add(U.box, '#2a3440', [fx + 0.08, 1.5, zc], [0.04, 2.0, sw - 0.6]);
+    b.add(U.box, pick(['#c8302a', '#2c5a3a', '#d8a830', '#1f3157']), [fx + 0.7, 3.45, zc], [1.4, 0.06, sw], [0, 0, -0.35]);
   }
+  // fenêtres hautes, balcons filants au 2e et au dernier étage
+  const nw = Math.floor(L / 1.8);
+  for (let f = 0; f < floors; f++) {
+    const y = G + f * F + 1.25;
+    for (let i = 0; i < nw; i++) {
+      const z = -L / 2 + (i + 0.5) * (L / nw);
+      b.add(U.box, '#efe6d2', [fx + 0.04, y + 0.05, z], [0.06, 1.85, 0.9]);
+      b.add(U.box, Math.random() < 0.15 ? '#f2d890' : '#2f3a46', [fx + 0.07, y, z], [0.03, 1.65, 0.7]);
+      b.add(U.box, '#d8cab0', [fx + 0.1, y + 1.0, z], [0.12, 0.1, 0.95]);
+    }
+    if (f === 0 || f === floors - 1) {
+      b.add(U.box, '#d8cab0', [fx + 0.35, y - 0.9, 0], [0.7, 0.12, L]);
+      b.add(U.box, '#1a1a1c', [fx + 0.68, y - 0.45, 0], [0.04, 0.8, L]);
+    }
+  }
+  // toit mansardé, lucarnes, cheminées
   b.add(U.roof, ZINC, [0, Hb, 0], [W + 0.3, 3.6, L]);
+  for (let i = 0; i < nw; i++) {
+    const z = -L / 2 + (i + 0.5) * (L / nw);
+    b.add(U.box, '#e8e0cc', [fx - 1.2, Hb + 1.3, z], [0.9, 1.2, 0.7]);
+    b.add(U.box, '#2a3440', [fx - 0.74, Hb + 1.25, z], [0.03, 0.8, 0.45]);
+  }
+  for (const z of [-L / 2 + 1, L / 2 - 1]) b.add(U.box, '#b8644a', [rand(-1.5, 0.5), Hb + 3.5, z], [0.7, 1.3, 0.5]);
+  // quai d'en face : platanes devant les façades
+  if (Math.random() < 0.7) {
+    const z = rand(-L / 3, L / 3), tx = fx + rand(3, 5);
+    b.add(U.cyl6, '#8a8268', [tx, 2, z], [0.22, 4, 0.22]);
+    for (let i = 0; i < 4; i++) b.add(BALL, pick(['#7aa04a', '#8ab458', '#6a9040']), [tx + rand(-1, 1), 4.6 + rand(0, 1.4), z + rand(-1.2, 1.2)], [rand(1.4, 2), rand(1.1, 1.5), rand(1.4, 2)]);
+  }
 }
 
 // ---------- Mobilier urbain ----------
@@ -309,20 +342,78 @@ function bouquiniste(b) {   // boîte verte de bouquiniste ouverte sur le parape
   }
 }
 
-function seine(b) {   // la Seine, quai bas et péniche
-  const Lr = 32, Wr = 26;
-  b.add(U.box, '#c8bca0', [Wr / 2 - 0.5, 0.3, 0], [1.0, 0.6, Lr]);     // mur du quai
-  b.add(U.box, '#5f8fa0', [0, 0.04, 0], [Wr - 1.8, 0.05, Lr]);            // eau
-  for (let i = 0; i < 26; i++) b.add(U.box, '#a8d0dc', [rand(-Wr / 2 + 1.5, Wr / 2 - 2), 0.07, rand(-15, 15)], [rand(0.2, 0.6), 0.01, rand(1, 3)]);
-  b.add(U.box, '#c8bca0', [-Wr / 2 + 0.5, 0.3, 0], [1.0, 0.6, Lr]);    // quai d'en face
-  if (Math.random() < 0.5) {   // péniche
-    const z = rand(-8, 8), x = rand(-4, 4);
-    b.add(U.box, '#3a3a44', [x, 0.3, z], [2.4, 0.6, 11]);
-    b.add(U.box, '#c8302a', [x, 0.62, z], [2.42, 0.1, 11.02]);
-    b.add(U.box, '#f4ecd8', [x, 1.1, z - 3.5], [1.8, 0.9, 2.4]);
-    b.add(U.box, '#2a3440', [x + 0.91, 1.15, z - 3.5], [0.02, 0.4, 1.6]);
-    for (let i = 0; i < 6; i++) b.add(BALL, pick(['#ff8fb6', '#ffd23f', '#7ab83a']), [x + rand(-0.8, 0.8), 0.75, z + rand(-1, 4)], [0.15, 0.12, 0.15]);
+// péniche : coque noire à proue pointue, bâches de cale, timonerie, linge qui sèche, fleurs et drapeau
+function peniche(b, x, z) {
+  const Lb = rand(10, 13), Wb = 2.4, half = Lb / 2;
+  const hull = pick(['#2a2a32', '#1f2c3a', '#3a2a24']);
+  b.add(U.box, hull, [x, 0.35, z], [Wb, 0.7, Lb - 1.6]);
+  b.add(U.box, hull, [x, 0.35, z + half - 0.8], [Wb * 0.72, 0.7, 1.0], [0, Math.PI / 4, 0]);   // proue
+  b.add(U.box, hull, [x, 0.35, z - half + 0.8], [Wb, 0.7, 1.6]);
+  b.add(U.box, '#f4ecd8', [x, 0.12, z], [Wb + 0.02, 0.08, Lb - 1.6]);   // ligne de flottaison
+  b.add(U.box, '#c8302a', [x, 0.72, z], [Wb + 0.04, 0.08, Lb - 1.6]);   // plat-bord
+  b.add(U.box, '#c8302a', [x, 0.72, z + half - 0.8], [Wb * 0.74, 0.08, 1.02], [0, Math.PI / 4, 0]);
+  for (const sx of [-1, 1]) for (let i = 0; i < 4; i++) b.add(U.cyl6, '#8a6a3a', [x + sx * (Wb / 2 + 0.05), 0.45, z - 3 + i * 2.2], [0.12, 0.3, 0.12], [0, 0, Math.PI / 2]);   // défenses
+  // nom peint à la proue
+  for (const sx of [-1, 1]) b.add(U.box, '#f4ecd8', [x + sx * (Wb / 2 + 0.01), 0.45, z + half - 2.4], [0.02, 0.14, 1.2]);
+  if (Math.random() < 0.55) {   // péniche de charge : cale bâchée
+    for (let i = 0; i < 4; i++) {
+      const cz = z + half - 3.2 - i * 1.5;
+      b.add(U.box, '#4a5a3a', [x, 0.95, cz], [Wb - 0.4, 0.4, 1.4]);
+      b.add(U.roof, '#5a6a44', [x, 1.15, cz], [Wb - 0.4, 0.25, 1.4], [0, Math.PI / 2, 0]);
+    }
+  } else {   // péniche habitée : jardinières et chaises longues
+    for (let i = 0; i < 10; i++) {
+      const cz = z + half - 2.5 - i * 0.6;
+      for (const sx of [-1, 1]) {
+        b.add(U.box, '#8a5a32', [x + sx * 0.95, 0.85, cz], [0.3, 0.25, 0.5]);
+        b.add(BALL, pick(['#ff8fb6', '#ffd23f', '#e8501c', '#ffffff', '#7ab83a']), [x + sx * 0.95, 1.05, cz], [0.18, 0.13, 0.22]);
+      }
+    }
+    b.add(U.box, '#f4ecd8', [x, 0.95, z + 0.5], [0.6, 0.06, 1.2], [0.3, 0, 0]);
   }
+  // timonerie à l'arrière
+  const wz = z - half + 2;
+  b.add(U.box, '#f4ecd8', [x, 1.25, wz], [1.9, 1.1, 2.2]);
+  b.add(U.box, '#2c5a3a', [x, 0.8, wz], [1.92, 0.15, 2.22]);
+  for (const sx of [-1, 1]) for (const dz of [-0.55, 0.55]) b.add(U.box, '#2a3440', [x + sx * 0.96, 1.35, wz + dz], [0.02, 0.45, 0.6]);
+  b.add(U.box, '#2a3440', [x, 1.35, wz + 1.11], [1.3, 0.45, 0.02]);
+  b.add(U.box, '#2c5a3a', [x, 1.85, wz], [2.1, 0.1, 2.4]);   // toit
+  b.add(U.cyl6, '#1a1a1c', [x + 0.5, 2.3, wz - 0.6], [0.12, 0.8, 0.12]);   // cheminée
+  b.add(U.cyl6, '#c8302a', [x + 0.5, 2.6, wz - 0.6], [0.13, 0.1, 0.13]);
+  b.add(BALL, '#c8c4c0', [x + 0.5, 3.0, wz - 0.8], [0.2, 0.16, 0.2]);   // petit panache de fumée
+  // gouvernail et pavillon tricolore
+  b.add(U.box, '#3a2a20', [x, 0.5, z - half - 0.05], [0.08, 0.7, 0.5]);
+  b.add(U.cyl6, '#3a2a20', [x - 0.7, 1.6, z - half + 0.3], [0.03, 1.8, 0.03]);
+  [['#1f3a8a', 0], ['#f4ecd8', 1], ['#c8302a', 2]].forEach(([col, k]) => b.add(U.box, col, [x - 0.7, 2.3, z - half + 0.45 + k * 0.18], [0.01, 0.38, 0.18]));
+  // corde à linge entre la timonerie et un mât
+  if (Math.random() < 0.6) {
+    const mz = wz + 4;
+    b.add(U.cyl6, '#3a2a20', [x, 1.5, mz], [0.03, 1.4, 0.03]);
+    b.add(U.box, '#e8e0d0', [x, 2.1, (wz + 1.1 + mz) / 2], [0.01, 0.01, mz - wz - 1.1]);
+    for (let i = 0; i < 4; i++) b.add(U.box, pick(['#f4ecd8', '#5a7ac8', '#e8a0b0', '#f2d24a']), [x, 1.88, wz + 1.5 + i * 0.6], [0.02, 0.4, 0.4]);
+  }
+  // sillage
+  for (const sx of [-1, 1]) b.add(U.box, '#d8ecf0', [x + sx * 1.35, 0.075, z + half - 1.2], [0.12, 0.01, 2.2], [0, sx * 0.3, 0]);
+}
+
+function seine(b) {   // la Seine : murs de quai à anneaux, escalier, reflets, péniches
+  const Lr = 32, Wr = 26;
+  for (const sx of [1, -1]) {
+    const x = sx * (Wr / 2 - 0.5);
+    b.add(U.box, '#c8bca0', [x, 0.3, 0], [1.0, 0.6, Lr]);
+    b.add(U.box, '#b4a888', [x, 0.62, 0], [1.1, 0.06, Lr]);   // margelle
+    for (let i = 0; i < 4; i++) {   // anneaux d'amarrage et bittes
+      const z = -12 + i * 8;
+      b.add(U.box, '#2a2522', [x - sx * 0.52, 0.32, z], [0.04, 0.2, 0.2]);
+      b.add(U.cyl6, '#2a2522', [x - sx * 0.25, 0.75, z + 2], [0.1, 0.25, 0.1]);
+    }
+    b.add(U.box, '#7a8a6a', [x - sx * 0.51, 0.12, 0], [0.02, 0.14, Lr]);   // mousse au ras de l'eau
+  }
+  b.add(U.box, '#5f8fa0', [0, 0.04, 0], [Wr - 1.8, 0.05, Lr]);
+  for (let i = 0; i < 30; i++) b.add(U.box, pick(['#a8d0dc', '#c8e4ec', '#7aa8b8']), [rand(-Wr / 2 + 1.5, Wr / 2 - 2), 0.07, rand(-15, 15)], [rand(0.2, 0.6), 0.01, rand(1, 3)]);
+  const r = Math.random();
+  if (r < 0.65) peniche(b, rand(-5, -1), rand(-6, 6));
+  if (r < 0.25) peniche(b, rand(2, 5), rand(-6, 6));
 }
 
 // ---------- Sols (bandes de 32 m le long de la voie, côté +x vers la voie) ----------

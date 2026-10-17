@@ -109,9 +109,17 @@ export class World {
       s.rotation.x = -Math.PI / 2;
       s.position.set(x, 0.02, 0);
       this.trackGroup.add(s);
+      if (T.rails === false) continue;   // ex. Paris : pas de rails, seulement l'usure des pavés
       for (const dx of [-0.72, 0.72]) {
         b.add(U.box, T.rail || '#7d8288', [x + dx, 0.08, 0], [0.12, 0.12, TRACK_LEN]);
         b.add(U.box, T.railTop || '#c9ced3', [x + dx, 0.145, 0], [0.08, 0.02, TRACK_LEN]);
+      }
+    }
+    // bandes de pierre qui séparent les voies (optionnel)
+    if (T.dividers) {
+      for (const x of [-1.3, 1.3]) {
+        b.add(U.box, T.dividers, [x, 0.012, 0], [0.28, 0.024, TRACK_LEN]);
+        b.add(U.box, T.dividerEdge || '#8a857c', [x, 0.026, 0], [0.32, 0.004, TRACK_LEN]);
       }
     }
     for (const x of [-4.6, 4.6]) b.add(U.box, T.curb || '#a9a397', [x, 0.08, 0], [0.35, 0.16, TRACK_LEN]);

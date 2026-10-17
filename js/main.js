@@ -307,6 +307,9 @@ async function startRun(fromMenu) {
   $('hud-best').textContent = Scores.bestFor(ctx.id, playerName).toLocaleString('fr-FR');
   $('hud-item-ico').textContent = ctx.meta.item;
   pendingUnlock = LEVELS.find((L) => L.unlock && L.unlock.level === ctx.id && !isUnlocked(L)) || null;
+  // efface le bandeau de la partie précédente : sinon son animation se rejoue quand le HUD réapparaît
+  $('toast').classList.remove('show');
+  $('toast').textContent = '';
   $('hud-name').textContent = playerName;
   hudScore = -1; hudDist = -1;
   $('hud-candies').textContent = '0';
