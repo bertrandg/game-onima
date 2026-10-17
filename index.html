@@ -74,7 +74,15 @@
       <label for="name-input">Ton prénom</label>
       <input id="name-input" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Ex : Yuki">
       <div class="level-label">Niveau</div>
-      <div id="level-list" class="level-list"></div>
+      <div class="level-picker">
+        <button id="lv-prev" class="lv-arrow" aria-label="Niveau précédent"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <div id="level-card" class="level-card">
+          <span class="lv-icon"><span id="lv-icon"></span><span id="lv-lock" class="lv-lock">🔒</span></span>
+          <span class="lv-text"><b id="lv-name"></b><small id="lv-sub"></small></span>
+        </div>
+        <button id="lv-next" class="lv-arrow" aria-label="Niveau suivant"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+      <div id="level-dots" class="level-dots"></div>
       <div id="name-error" class="error"></div>
       <button id="btn-play" class="btn primary">Jouer ▶</button>
       <div class="row">

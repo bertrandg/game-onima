@@ -157,13 +157,6 @@ function drawTower() {
   g.beginPath(); g.ellipse(CX, yAt(0.93), 26, 20, 0, Math.PI, 0); g.fill(); g.stroke();
   g.lineWidth = 8;
   g.beginPath(); g.moveTo(CX, yAt(0.935)); g.lineTo(CX, TIP); g.stroke();
-  // phare
-  const beacon = g.createRadialGradient(CX, TIP + 20, 0, CX, TIP + 20, 80);
-  beacon.addColorStop(0, 'rgba(255,248,210,1)');
-  beacon.addColorStop(0.3, 'rgba(255,224,150,0.6)');
-  beacon.addColorStop(1, 'rgba(255,210,170,0)');
-  g.fillStyle = beacon;
-  g.fillRect(CX - 80, 0, 160, 130);
   // pied légèrement voilé par la brume du lointain
   g.globalCompositeOperation = 'source-atop';
   const fog = g.createLinearGradient(0, TH * 0.82, 0, TH);
@@ -220,6 +213,57 @@ function towerSparkles() {
   return new THREE.Points(g, mat);
 }
 
+// faisceau laser électrique qui part de la pointe vers le ciel : cœur blanc, halo bleu-violet,
+// deux arcs en zigzag qui changent de forme plusieurs fois par seconde, petite boule d'énergie à la pointe
+const LASER_H = 520, LASER_W = 48;
+function towerLaser() {
+  const geo = new THREE.PlaneGeometry(LASER_W, LASER_H);
+  geo.translate(0, LASER_H / 2 - 14, 0);   // démarre un peu sous la pointe pour la boule d'énergie
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 } },
+    vertexShader: /* glsl */`
+      varying vec2 vUv;
+      void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: /* glsl */`
+      uniform float uTime;
+      varying vec2 vUv;
+      float hash(float n) { return fract(sin(n) * 43758.5453); }
+      // ligne brisée : décalage aléatoire par segment, renouvelé à chaque « tic » électrique
+      float bolt(float y, float seed, float tick, float amp) {
+        float seg = y * 38.0;
+        float i = floor(seg), f = fract(seg);
+        float a = hash(i + seed + tick * 13.1) - 0.5;
+        float b = hash(i + 1.0 + seed + tick * 13.1) - 0.5;
+        return mix(a, b, f) * amp;
+      }
+      void main() {
+        float x = (vUv.x - 0.5) * ${LASER_W.toFixed(1)};   // en unités du monde
+        float y = vUv.y;
+        float tick = floor(uTime * 14.0);
+        float flick = 0.82 + 0.18 * hash(tick);
+        float wob = sin(y * 40.0 + uTime * 9.0) * 0.4;
+        float core = exp(-pow((x - wob) / 1.1, 2.0));
+        float glow = exp(-pow((x - wob) / 5.5, 2.0)) * 0.5;
+        float amp = 5.0 + 9.0 * (1.0 - y);
+        float b1 = exp(-pow((x - bolt(y, 1.7, tick, amp)) / 0.55, 2.0));
+        float b2 = exp(-pow((x - bolt(y, 9.3, tick + 0.5, amp * 0.8)) / 0.4, 2.0)) * step(0.5, hash(tick * 3.7));
+        float tipY = y * ${LASER_H.toFixed(1)} - 14.0;
+        float fade = smoothstep(-0.5, 2.0, tipY) * pow(1.0 - y, 1.6);
+        float orb = exp(-(x * x + tipY * tipY) / (30.0 + 10.0 * flick));
+        vec3 col = vec3(1.0) * core + vec3(0.45, 0.7, 1.0) * glow + vec3(0.75, 0.85, 1.0) * (b1 + b2) * 0.9;
+        col *= fade * flick;
+        col += vec3(0.85, 0.9, 1.0) * orb * 1.4;
+        float a = clamp(max(max(col.r, col.g), col.b), 0.0, 1.0);
+        gl_FragColor = vec4(col, a);
+        #include <colorspace_fragment>
+      }`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+  });
+  const m = new THREE.Mesh(geo, mat);
+  m.frustumCulled = false;
+  return m;
+}
+
 function makeEiffel() {
   const group = new THREE.Group();
   const plane = new THREE.Mesh(
@@ -230,24 +274,14 @@ function makeEiffel() {
   const sparkles = towerSparkles();
   sparkles.frustumCulled = false;
   group.add(sparkles);
-  // halo doré autour du sommet
-  const c = document.createElement('canvas');
-  c.width = c.height = 128;
-  const g = c.getContext('2d');
-  const r = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-  r.addColorStop(0, 'rgba(255,240,200,0.9)');
-  r.addColorStop(1, 'rgba(255,220,200,0)');
-  g.fillStyle = r;
-  g.fillRect(0, 0, 128, 128);
-  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), fog: false, depthWrite: false, transparent: true, blending: THREE.AdditiveBlending }));
-  halo.scale.set(60, 60, 1);
-  halo.position.set(0, TOWER.h / 2 - 12, 1);
-  group.add(halo);
+  const laser = towerLaser();
+  laser.position.set(0, TOWER.h / 2 - (TIP / TH) * TOWER.h, 0.8);
+  group.add(laser);
   group.position.set(TOWER.x, TOWER.base + TOWER.h / 2, TOWER.z);
   group.userData.tick = (t, pr) => {
     sparkles.material.uniforms.uTime.value = t;
     sparkles.material.uniforms.uScale.value = window.innerHeight * pr;
-    halo.material.opacity = 0.75 + 0.25 * Math.sin(t * 1.7);
+    laser.material.uniforms.uTime.value = t;
   };
   return group;
 }

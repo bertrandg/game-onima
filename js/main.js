@@ -43,8 +43,13 @@ function activate(c) {
   girl.setPalettes(c.def.palettes);
 }
 
-async function loadLevel(id) {
-  if (contexts[id]) return contexts[id];
+// un même niveau demandé deux fois pendant son chargement (flèches puis Jouer) n'est construit qu'une fois
+const pendingLoads = {};
+function loadLevel(id) {
+  if (contexts[id]) return Promise.resolve(contexts[id]);
+  return (pendingLoads[id] ||= buildLevel(id).finally(() => { delete pendingLoads[id]; }));
+}
+async function buildLevel(id) {
   const meta = levelById(id);
   const def = (await meta.load()).default;
   const root = new THREE.Group();
@@ -177,39 +182,77 @@ window.addEventListener('keydown', (e) => {
   if ((e.key === 'f' || e.key === 'F') && !(e.target instanceof HTMLInputElement) && canFullscreen) toggleFullscreen();
 });
 
-// Sélecteur de niveau de l'écran d'accueil (cartes avec cadenas)
+// Sélecteur de niveau de l'écran d'accueil : le niveau courant entre deux flèches,
+// le décor 3D derrière le menu est celui du niveau affiché (même verrouillé)
 function renderLevels() {
-  const box = $('level-list');
-  box.innerHTML = '';
-  for (const L of LEVELS) {
-    const open = isUnlocked(L);
-    const b = document.createElement('button');
-    b.className = 'level-card' + (L.id === selectedLevel ? ' selected' : '') + (open ? '' : ' locked');
-    const best = Scores.bestOnLevel(L.id);
-    const sub = open
-      ? (best ? `Record : ${best.toLocaleString('fr-FR')}` : L.subtitle)
-      : `${L.unlock.score.toLocaleString('fr-FR')} pts au ${levelById(L.unlock.level).name}`;
-    b.innerHTML = `<span class="lv-icon">${open ? L.icon : '🔒'}</span><span class="lv-text"><b></b><small></small></span>`;
-    b.querySelector('b').textContent = L.name;
-    b.querySelector('small').textContent = sub;
-    b.addEventListener('click', () => {
-      if (!open) {
-        b.classList.remove('shake');
-        void b.offsetWidth;
-        b.classList.add('shake');
-        $('name-error').textContent = `🔒 Fais ${L.unlock.score.toLocaleString('fr-FR')} points au ${levelById(L.unlock.level).name} pour débloquer ${L.name}`;
-        return;
-      }
-      $('name-error').textContent = '';
-      selectedLevel = L.id;
-      Scores.setLevel(L.id);
-      renderLevels();
-    });
-    box.appendChild(b);
-  }
+  const i = Math.max(0, LEVELS.findIndex((L) => L.id === selectedLevel));
+  const L = LEVELS[i];
+  const open = isUnlocked(L);
+  const card = $('level-card');
+  card.classList.toggle('locked', !open);
+  const best = Scores.bestOnLevel(L.id);
+  $('lv-icon').textContent = L.icon;
+  $('lv-lock').hidden = open;
+  $('lv-name').textContent = L.name;
+  $('lv-sub').textContent = open
+    ? (best ? `Record : ${best.toLocaleString('fr-FR')}` : L.subtitle)
+    : `${L.unlock.score.toLocaleString('fr-FR')} pts au ${levelById(L.unlock.level).name}`;
+  $('level-dots').innerHTML = LEVELS.map((_, k) => `<i${k === i ? ' class="on"' : ''}></i>`).join('');
+  const hasMany = LEVELS.length > 1;
+  $('lv-prev').hidden = $('lv-next').hidden = !hasMany;
+  $('btn-play').classList.toggle('locked', !open);
+  $('btn-play').textContent = open ? 'Jouer ▶' : '🔒 Verrouillé';
 }
+
+function stepLevel(dir) {
+  const i = LEVELS.findIndex((L) => L.id === selectedLevel);
+  const L = LEVELS[(i + dir + LEVELS.length) % LEVELS.length];
+  selectedLevel = L.id;
+  if (isUnlocked(L)) Scores.setLevel(L.id);
+  $('name-error').textContent = '';
+  const card = $('level-card');
+  card.classList.remove('slide-l', 'slide-r');
+  void card.offsetWidth;
+  card.classList.add(dir > 0 ? 'slide-r' : 'slide-l');
+  renderLevels();
+  showMenuLevel();
+}
+
+// affiche derrière le menu le décor du niveau choisi (téléchargé à ce moment-là s'il ne l'est pas encore)
+async function showMenuLevel() {
+  const id = selectedLevel;
+  if (!contexts[id]) {
+    $('level-card').classList.add('loading');
+    try {
+      await loadLevel(id);
+    } catch (e) {
+      if (selectedLevel === id) $('name-error').textContent = 'Impossible de charger ce niveau, vérifie ta connexion.';
+      return;
+    } finally {
+      if (selectedLevel === id) $('level-card').classList.remove('loading');
+    }
+  }
+  if (state !== 'menu') return;
+  if (selectedLevel === id && ctx !== contexts[id]) {
+    activate(contexts[id]);
+    resetWorld();
+  }
+  camAngle = Math.PI;
+  snapCamera();   // le préchauffage du chargement a déplacé la caméra
+}
+
+$('lv-prev').addEventListener('click', () => stepLevel(-1));
+$('lv-next').addEventListener('click', () => stepLevel(1));
+window.addEventListener('keydown', (e) => {
+  if (state !== 'menu' || $('screen-menu').classList.contains('hidden') || e.target instanceof HTMLInputElement) return;
+  if (e.key === 'ArrowLeft') stepLevel(-1);
+  else if (e.key === 'ArrowRight') stepLevel(1);
+});
 renderLevels();
 
+// prénom par défaut tant que le joueur n'a pas écrit le sien
+const DEFAULT_NAMES = ['Sakura', 'Momo', 'Yuzu', 'Hanami', 'Mochi'];
+if (!playerName) playerName = DEFAULT_NAMES[Math.floor(Math.random() * DEFAULT_NAMES.length)];
 $('name-input').value = playerName;
 $('btn-play').addEventListener('click', () => {
   const n = $('name-input').value.trim().slice(0, 12);
@@ -219,6 +262,15 @@ $('btn-play').addEventListener('click', () => {
     void $('name-input').offsetWidth;
     $('name-input').classList.add('shake');
     $('name-input').focus();
+    return;
+  }
+  const L = levelById(selectedLevel);
+  if (!isUnlocked(L)) {
+    $('name-error').textContent = `🔒 Fais ${L.unlock.score.toLocaleString('fr-FR')} points au ${levelById(L.unlock.level).name} pour débloquer ${L.name}`;
+    const card = $('level-card');
+    card.classList.remove('shake', 'slide-l', 'slide-r');
+    void card.offsetWidth;
+    card.classList.add('shake');
     return;
   }
   $('name-error').textContent = '';
@@ -263,17 +315,37 @@ function celebrateUnlock(L) {
   el.classList.add('show');
   sound.unlock();
   if (navigator.vibrate) navigator.vibrate([40, 50, 40, 50, 120]);
-  // pluie de confettis et d'étoiles
+  // pluie de confettis : éléments créés une seule fois au démarrage, on relance juste leur animation
+  const box = $('confetti-box');
+  box.classList.remove('go');
+  void box.offsetWidth;
+  box.classList.add('go');
+  clearTimeout(celebrateUnlock.t);
+  celebrateUnlock.t = setTimeout(() => box.classList.remove('go'), 3400);
+}
+(function buildConfetti() {
+  const box = document.createElement('div');
+  box.id = 'confetti-box';
   const cols = ['#ff7fb0', '#ffd23f', '#7fe0b0', '#6fc3ff', '#c39bff', '#ffffff'];
-  for (let i = 0; i < 70; i++) {
-    const c = fxEl('confetti', Math.random() * window.innerWidth, -20, 2600, i % 5 === 0 ? '✦' : '');
+  for (let i = 0; i < 40; i++) {
+    const c = document.createElement('i');
+    c.className = i % 4 === 0 ? 'confetti star' : 'confetti';
+    c.style.left = `${Math.random() * 100}%`;
     c.style.setProperty('--c', cols[i % cols.length]);
     c.style.setProperty('--dx', `${(Math.random() - 0.5) * 220}px`);
     c.style.setProperty('--r', `${(Math.random() - 0.5) * 1080}deg`);
     c.style.setProperty('--d', `${1.6 + Math.random() * 1.0}s`);
     c.style.animationDelay = `${Math.random() * 0.5}s`;
+    box.appendChild(c);
   }
-}
+  $('fx-layer').appendChild(box);
+  // dessine une première fois les icônes des niveaux (emoji en grand) pour éviter l'à-coup à l'affichage
+  const warm = document.createElement('div');
+  warm.className = 'glyph-warm';
+  warm.textContent = LEVELS.map((L) => L.icon).join('');
+  document.body.appendChild(warm);
+  setTimeout(() => warm.remove(), 1500);
+})();
 
 // ---------- Déroulement ----------
 let loading = false;
@@ -337,12 +409,13 @@ function toMenu() {
   blood.reset();
   $('death-dim').classList.remove('on');
   sound.stopMusic();
-  activate(contexts.japon);
+  activate(contexts[selectedLevel] || ctx);
   resetWorld();
   state = 'menu';
   camAngle = Math.PI;
   renderLevels();
   show('menu');
+  showMenuLevel();
 }
 
 function die() {
@@ -808,7 +881,7 @@ window.addEventListener('resize', () => {
 
 // Accès de test : ouvrir la page avec #debug
 if (location.hash === '#debug') {
-  window.__onima = { player, get obstacles() { return obstacles; }, camera, get world() { return world; }, get candies() { return candies; }, loadLevel, get level() { return ctx && ctx.id; }, addCandies: (n) => collectCandies(n), fx, renderer, get candyCount() { return candyCount; }, get state() { return state; }, get dist() { return dist; }, get speed() { return speed; } };
+  window.__onima = { player, get obstacles() { return obstacles; }, camera, get world() { return world; }, get candies() { return candies; }, loadLevel, get level() { return ctx && ctx.id; }, addCandies: (n) => collectCandies(n), fx, renderer, get candyCount() { return candyCount; }, get state() { return state; }, get dist() { return dist; }, get speed() { return speed; }, celebrate: (id) => celebrateUnlock(levelById(id)) };
 }
 
 // Préchauffage : compile tous les shaders et envoie toutes les textures au GPU dès le chargement,
@@ -831,7 +904,13 @@ function warmUp() {
   sparkles.points.visible = false;
 }
 
-activate(await loadLevel('japon'));
+try {
+  activate(await loadLevel(selectedLevel));
+} catch (e) {
+  selectedLevel = 'japon';
+  renderLevels();
+  activate(await loadLevel('japon'));
+}
 resetWorld();
 snapCamera();
 show('menu');
