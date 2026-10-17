@@ -67,7 +67,7 @@ async function buildLevel(id) {
   return c;
 }
 
-const isUnlocked = (meta) => !meta.unlock || Scores.bestOnLevel(meta.unlock.level) >= meta.unlock.score;
+const isUnlocked = (meta) => !meta.unlock || Scores.allUnlocked() || Scores.bestOnLevel(meta.unlock.level) >= meta.unlock.score;
 let selectedLevel = Scores.getLevel();
 if (!isUnlocked(levelById(selectedLevel))) selectedLevel = 'japon';
 scene.add(girl.root);
@@ -250,6 +250,27 @@ window.addEventListener('keydown', (e) => {
 });
 renderLevels();
 
+// code secret : 10 tapes d'affilée sur l'héroïne de l'accueil débloquent tous les niveaux
+let charaTaps = 0, charaLastTap = 0;
+$('menu-chara').querySelector('img').addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  const img = e.currentTarget;
+  img.classList.remove('boop');
+  void img.offsetWidth;
+  img.classList.add('boop');
+  const now = performance.now();
+  charaTaps = now - charaLastTap < 700 ? charaTaps + 1 : 1;
+  charaLastTap = now;
+  sound.init();
+  sound.lane();
+  if (charaTaps < 10) return;
+  charaTaps = 0;
+  if (LEVELS.every(isUnlocked)) return;
+  Scores.setAllUnlocked();
+  renderLevels();
+  celebrateUnlock({ icon: '🔓', name: 'Tous les niveaux' }, '✨ Code secret !', 'Tous les niveaux sont débloqués');
+});
+
 // prénom par défaut tant que le joueur n'a pas écrit le sien
 const DEFAULT_NAMES = ['Sakura', 'Momo', 'Yuzu', 'Hanami', 'Mochi'];
 if (!playerName) playerName = DEFAULT_NAMES[Math.floor(Math.random() * DEFAULT_NAMES.length)];
@@ -306,10 +327,12 @@ function toast(text) {
 
 // ---------- Déblocage d'un niveau en cours de partie ----------
 let pendingUnlock = null;   // niveau qui se débloquera si on atteint son score pendant cette partie
-function celebrateUnlock(L) {
+function celebrateUnlock(L, title = '🔓 Nouveau niveau débloqué !', hint = "À choisir sur l'écran d'accueil") {
   const el = $('unlock');
   $('unlock-icon').textContent = L.icon;
   $('unlock-name').textContent = L.name;
+  $('unlock-title').textContent = title;
+  $('unlock-hint').textContent = hint;
   el.classList.remove('show');
   void el.offsetWidth;
   el.classList.add('show');
@@ -342,7 +365,7 @@ function celebrateUnlock(L) {
   // dessine une première fois les icônes des niveaux (emoji en grand) pour éviter l'à-coup à l'affichage
   const warm = document.createElement('div');
   warm.className = 'glyph-warm';
-  warm.textContent = LEVELS.map((L) => L.icon).join('');
+  warm.textContent = LEVELS.map((L) => L.icon).join('') + '🔓';
   document.body.appendChild(warm);
   setTimeout(() => warm.remove(), 1500);
 })();

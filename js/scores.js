@@ -50,6 +50,15 @@ export function getLevel() {
   try { return localStorage.getItem(LEVEL_KEY) || 'japon'; } catch { return 'japon'; }
 }
 
+// code secret de l'écran d'accueil : tous les niveaux débloqués
+const ALL_KEY = 'onima.unlockAll';
+export function allUnlocked() {
+  try { return localStorage.getItem(ALL_KEY) === '1'; } catch { return false; }
+}
+export function setAllUnlocked() {
+  try { localStorage.setItem(ALL_KEY, '1'); } catch { /* stockage indisponible */ }
+}
+
 export function setLevel(id) {
   try { localStorage.setItem(LEVEL_KEY, id); } catch { /* stockage indisponible */ }
 }
