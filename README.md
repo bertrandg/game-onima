@@ -4,6 +4,15 @@ Jeu de course infinie en 3D dans le Japon traditionnel (inspiré de Subway Surfe
 
 **▶ Jouer en ligne : https://bertrandg.github.io/game-onima/**
 
+<table>
+  <tr>
+    <td align="center"><img src="img/screenshots/japon.jpg" width="200" alt="Niveau Japon"><br><sub>🗻 Japon : village et tramways</sub></td>
+    <td align="center"><img src="img/screenshots/paris-boulevard.jpg" width="200" alt="Paris, boulevard haussmannien"><br><sub>🗼 Paris 1900 : boulevard</sub></td>
+    <td align="center"><img src="img/screenshots/paris-marche.jpg" width="200" alt="Paris, marché"><br><sub>🗼 Paris 1900 : marché</sub></td>
+    <td align="center"><img src="img/screenshots/paris-quais.jpg" width="200" alt="Paris, quais de Seine"><br><sub>🗼 Paris 1900 : quais de Seine</sub></td>
+  </tr>
+</table>
+
 ## Lancer le jeu
 
 ```bash
@@ -30,7 +39,7 @@ Aucune installation nécessaire : Three.js est chargé depuis un CDN. Le jeu doi
 | 🗻 Japon | Campagne, villages et forêt du Japon traditionnel, mont Fuji | dès le départ |
 | 🗼 Paris 1900 | Boulevards haussmanniens, marché, quais de Seine, tour Eiffel | 1 500 points au Japon |
 
-Chaque niveau a son propre tableau des scores. L'accueil garde le décor du Japon.
+Chaque niveau a son propre tableau des scores. Sur l'accueil, les flèches font défiler les niveaux, avec le décor 3D du niveau choisi.
 Un niveau n'est téléchargé qu'au moment où on le choisit.
 
 ### Ajouter un niveau
