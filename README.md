@@ -8,7 +8,6 @@ Jeu de course infinie en 3D dans le Japon traditionnel (inspiré de Subway Surfe
   <tr>
     <td align="center"><img src="img/screenshots/japon.jpg" width="200" alt="Niveau Japon"><br><sub>🗻 Japon : village et tramways</sub></td>
     <td align="center"><img src="img/screenshots/paris-boulevard.jpg" width="200" alt="Paris, boulevard haussmannien"><br><sub>🗼 Paris 1900 : boulevard</sub></td>
-    <td align="center"><img src="img/screenshots/paris-marche.jpg" width="200" alt="Paris, marché"><br><sub>🗼 Paris 1900 : marché</sub></td>
     <td align="center"><img src="img/screenshots/paris-quais.jpg" width="200" alt="Paris, quais de Seine"><br><sub>🗼 Paris 1900 : quais de Seine</sub></td>
   </tr>
 </table>
