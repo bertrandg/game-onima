@@ -97,3 +97,17 @@ export const state = (page) => page.evaluate(() => {
   const o = window.__onima, p = o.player;
   return { state: o.state, dist: o.dist, lane: p.lane, x: p.x, y: p.y, z: p.z, under: p.under, grounded: p.grounded, candies: o.candyCount };
 });
+
+// Relance une partie dans la même page (évite de recharger le niveau : très lent sans carte graphique)
+export async function restart(page) {
+  const st = await page.evaluate(() => window.__onima.state);
+  if (st === 'dying') await page.waitForFunction(() => window.__onima.state === 'over', null, { timeout: 30000 });
+  if (st === 'running' || st === 'paused') {
+    if (st === 'running') await page.evaluate(() => window.__t.press('Escape'));
+    await page.waitForFunction(() => window.__onima.state === 'paused');
+    await page.click('#btn-restart');
+  } else {
+    await page.click('#btn-again');
+  }
+  await page.waitForFunction(() => window.__onima.state === 'running' && window.__onima.dist < 10);
+}

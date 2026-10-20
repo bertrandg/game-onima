@@ -68,14 +68,23 @@ Les tests n'ont besoin que de Node (22 ou plus) et de Google Chrome installé ; 
 
 ```bash
 npm install
-npm test            # rapide (moins d'une seconde) : règles du jeu, scores, déblocage, imports
-npm run test:e2e    # dans Chrome (environ 1 min) : chaque niveau se charge et se joue sans erreur
+npm test            # quelques secondes : règles du jeu, génération des parcours, scores, déblocage, imports
+npm run test:e2e    # dans Chrome (quelques minutes) : chargement, parcours joués, budgets de performance
 ```
 
 - `tests/unit/` : tests lancés dans Node. Les modules du jeu y sont chargés tels quels, avec un faux
   `localStorage`, un faux `document` (les textures sur canvas sont dessinées « à vide ») et un hasard
   rejouable (`seed(n)` dans `tests/helpers/env.mjs`).
-- `tests/e2e/` : tests dans le navigateur (Playwright), sur la page ouverte avec `#debug`.
+  - `generation.test.mjs` génère des parcours de 4 km avec plusieurs graines et vérifie qu'ils restent
+    jouables : jamais trois voies fermées, assez d'espace entre deux obstacles, friandises et malus bien
+    placés, un seul taxi qui roule, bouches d'égout sur les côtés, décor hors de la chaussée…
+  - `sewer.test.mjs` : chute, boue, rats, échelles (y compris le saut un peu trop tôt).
+- `tests/e2e/` : tests dans Chrome (Playwright), sur la page ouverte avec `#debug`.
+  - `scenarios.test.mjs` : de vraies parties sans invincibilité ; la route est vidée, on y pose les
+    obstacles voulus et on appuie sur les touches au bon moment (saut, roulade, rampe, égouts aller-retour,
+    déblocage de New York…). Les outils de pilotage sont dans `tests/helpers/game.mjs`.
+  - `perf.test.mjs` : chaque niveau se joue 700 m sans erreur ni fichier manquant ; budgets d'appels de dessin et de triangles par niveau, et pas de fuite de mémoire
+    graphique. Si un ajout de décor les dépasse, alléger le décor ou relever le budget en connaissance de cause.
 - Sur GitHub, chaque envoi lance les tests ; le site n'est mis en ligne que s'ils passent.
 
 À chaque nouvelle règle (« un seul taxi qui roule », « rats immobiles »…), ajouter le test qui la vérifie.

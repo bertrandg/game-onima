@@ -1,4 +1,5 @@
-// Budgets de performance : nombre d'appels de dessin et de triangles par image (maximum relevé sur
+// Chaque niveau se charge et se joue 700 m (joueur invincible) sans erreur ni fichier manquant, et
+// reste dans ses budgets de performance : nombre d'appels de dessin et de triangles par image (maximum relevé sur
 // 600 m de course), et mémoire graphique stable dans la durée (pas de fuite de géométries/textures).
 // Les budgets sont environ 15 % au-dessus des valeurs mesurées en octobre 2026 : un dépassement
 // signale un décor ou un effet devenu trop lourd pour les téléphones. À relever en connaissance de cause.
@@ -41,12 +42,13 @@ const within = (name, got) => {
 };
 
 for (const id of ['japon', 'paris', 'newyork']) {
-  test(`${id} : dans le budget de dessin, sans fuite de mémoire graphique`, async () => {
+  test(`${id} : se joue sans erreur, dans le budget de dessin, sans fuite de mémoire graphique`, async () => {
     const { page, ctx, problems } = await startLevel(B.browser, B.server, id, { invincible: true });
     try {
       // la rue seule (à New York, pas de bouche ouverte pendant la mesure)
       await page.evaluate(() => { const ob = window.__onima.obstacles; if ('nextHole' in ob) ob.nextHole = -1e9; });
       await runUntil(page, 100);
+      assert.ok(await page.evaluate(() => window.__onima.obstacles.list.length > 0), 'des obstacles sont générés');
       const m0 = await memory(page);
       await startProbe(page);
       await runUntil(page, 700, 180000);

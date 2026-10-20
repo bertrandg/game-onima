@@ -2,23 +2,27 @@
 // y pose exactement les obstacles voulus ; les touches sont envoyées depuis la page, à l'image près.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { openBrowser, startLevel, runUntil, state } from '../helpers/game.mjs';
+import { openBrowser, startLevel, restart, runUntil, state } from '../helpers/game.mjs';
 
 let B;
+const sessions = new Map();
 before(async () => { B = await openBrowser(); });
-after(async () => { await B?.close(); });
+after(async () => {
+  for (const s of sessions.values()) await s.ctx.close();
+  await B?.close();
+});
 
-// lance un niveau, laisse partir le joueur puis vide la route ; fn(page) joue le scénario
+// Chaque niveau n'est chargé qu'une fois : les scénarios suivants relancent une partie dans la même page.
+// fn(page) joue le scénario, après un départ de 20 m et une route vidée devant le joueur.
 async function scenario(id, fn, opts) {
-  const { page, ctx, problems } = await startLevel(B.browser, B.server, id, opts);
-  try {
-    await runUntil(page, 20);
-    await page.evaluate(() => window.__t.clearAhead());
-    await fn(page);
-    assert.deepEqual(problems, []);
-  } finally {
-    await ctx.close();
-  }
+  const key = opts ? `${id} ${JSON.stringify(opts)}` : id;
+  let s = sessions.get(key);
+  if (!s) sessions.set(key, (s = await startLevel(B.browser, B.server, id, opts)));
+  else await restart(s.page);
+  await runUntil(s.page, 20);
+  await s.page.evaluate(() => window.__t.clearAhead());
+  await fn(s.page);
+  assert.deepEqual(s.problems, []);
 }
 // pose un obstacle à `ahead` mètres devant le joueur ; renvoie son z le plus proche
 const put = (page, code, ahead = 40) => page.evaluate(([code, ahead]) => {
