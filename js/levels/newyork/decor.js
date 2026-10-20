@@ -404,31 +404,32 @@ function gantry(b) {
   for (let i = 0; i < 12; i++) b.add(U.box, '#f2f0e8', [-4 + i * 0.72, 0.032, 2.2], [0.42, 0.012, 3.2]);
 }
 
-// porte chinoise (paifang) : piliers rouges, toits verts à bords relevés, plaque dorée, lanternes
+// porte chinoise (paifang) : piliers rouges sur les trottoirs (rien sur la chaussée), toits verts à
+// bords relevés au-dessus de la rue, plaque dorée, lanternes
 function paifang(b) {
-  for (const x of [-5.6, 5.6, -3.0, 3.0]) {
-    const big = Math.abs(x) > 5;
+  for (const [x, big] of [[-5.6, true], [5.6, true], [-7.5, false], [7.5, false]]) {
     b.add(U.box, '#d8d0c0', [x, 0.35, 0], [0.9, 0.7, 0.9]);
-    b.add(U.cyl, '#c8202a', [x, big ? 4.2 : 3.4, 0], [0.26, big ? 7.6 : 6.0, 0.26]);
+    b.add(U.cyl, '#c8202a', [x, big ? 4.2 : 2.8, 0], [0.26, big ? 7.6 : 4.8, 0.26]);
   }
-  const roof = (y, w, d) => {
-    b.add(U.box, '#c8202a', [0, y - 0.45, 0], [w - 0.6, 0.5, 0.5]);
-    b.add(U.box, GOLD, [0, y - 0.45, 0.26], [w - 1.2, 0.18, 0.02]);
-    b.add(U.roof, '#2c7a4a', [0, y, 0], [d, 1.0, w], [0, Math.PI / 2, 0]);
-    for (const s of [-1, 1]) b.add(U.cone4, '#2c7a4a', [s * (w / 2 + 0.2), y + 0.25, 0], [0.4, 0.9, 0.5], [0, 0, s * -0.9]);   // bords relevés
-    b.add(U.box, '#24603a', [0, y + 1.02, 0], [w * 0.92, 0.18, 0.2]);
+  const roof = (x, y, w, d) => {
+    b.add(U.box, '#c8202a', [x, y - 0.45, 0], [w - 0.6, 0.5, 0.5]);
+    b.add(U.box, GOLD, [x, y - 0.45, 0.26], [w - 1.2, 0.18, 0.02]);
+    b.add(U.roof, '#2c7a4a', [x, y, 0], [d, 1.0, w], [0, Math.PI / 2, 0]);
+    for (const s of [-1, 1]) b.add(U.cone4, '#2c7a4a', [x + s * (w / 2 + 0.2), y + 0.25, 0], [0.4, 0.9, 0.5], [0, 0, s * -0.9]);   // bords relevés
+    b.add(U.box, '#24603a', [x, y + 1.02, 0], [w * 0.92, 0.18, 0.2]);
   };
-  roof(8.4, 13, 2.2);
-  roof(6.6, 6.8, 1.8);
-  b.add(U.box, GOLD, [0, 5.4, 0.1], [2.6, 1.0, 0.12]);
-  b.add(U.box, '#c8202a', [0, 5.4, 0.18], [2.3, 0.8, 0.04]);
-  for (let i = 0; i < 3; i++) b.add(U.box, GOLD, [-0.7 + i * 0.7, 5.4, 0.21], [0.4, 0.5, 0.02]);
+  roof(0, 8.4, 13, 2.2);              // grand toit au-dessus de la rue
+  for (const s of [-1, 1]) roof(s * 6.55, 5.6, 3.2, 1.6);   // petits toits latéraux, au-dessus des trottoirs
+  b.add(U.box, '#c8202a', [0, 7.4, 0], [11.2, 0.35, 0.4]);   // linteau entre les grands piliers
+  b.add(U.box, GOLD, [0, 6.75, 0.1], [2.6, 1.0, 0.12]);
+  b.add(U.box, '#c8202a', [0, 6.75, 0.18], [2.3, 0.8, 0.04]);
+  for (let i = 0; i < 3; i++) b.add(U.box, GOLD, [-0.7 + i * 0.7, 6.75, 0.21], [0.4, 0.5, 0.02]);
   for (const x of [-4.3, 4.3]) {
-    b.add(U.cyl6, '#2a2a2e', [x, 7.2, 0], [0.02, 0.8, 0.02]);
-    b.add(BALL, '#e8202a', [x, 6.5, 0], [0.4, 0.5, 0.4]);
-    b.add(U.cyl, GOLD, [x, 7.0, 0], [0.18, 0.08, 0.18]);
-    b.add(U.cyl, GOLD, [x, 5.98, 0], [0.18, 0.06, 0.18]);
-    b.add(U.cyl6, '#f2c230', [x, 5.7, 0], [0.03, 0.5, 0.03]);
+    b.add(U.cyl6, '#2a2a2e', [x, 7.0, 0], [0.02, 0.5, 0.02]);
+    b.add(BALL, '#e8202a', [x, 6.4, 0], [0.4, 0.5, 0.4]);
+    b.add(U.cyl, GOLD, [x, 6.9, 0], [0.18, 0.08, 0.18]);
+    b.add(U.cyl, GOLD, [x, 5.88, 0], [0.18, 0.06, 0.18]);
+    b.add(U.cyl6, '#f2c230', [x, 5.6, 0], [0.03, 0.5, 0.03]);
   }
 }
 

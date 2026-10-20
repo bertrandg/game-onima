@@ -232,10 +232,10 @@ export function nyVehicleKit() {
     low: lowBarriers(),
     highGeo: scaffoldGate(),
     hitch: null,
-    // rampe : toujours un bus (assez haut pour la rampe) ; sinon parfois une file de taxis à l'arrêt
+    // un seul taxi quand il roule ; à l'arrêt, une file de 1 à 3 taxis ; avec rampe, toujours un bus
     buildVehicle: (cars, moving, ramp) => {
-      if (moving) return buildTaxis(Math.min(cars, 2), true);
-      if (!ramp && Math.random() < 0.3) return buildTaxis(cars + 1, false);
+      if (moving) return buildTaxis(1, true);
+      if (!ramp && Math.random() < 0.3) return buildTaxis(Math.min(cars + 1, 3), false);
       return buildBuses(cars);
     },
     warmup() {
