@@ -177,7 +177,7 @@ export class Obstacles {
   }
 
   buildTrain(cars, moving, ramp) {
-    const g = this.S.buildVehicle(cars, moving);
+    const g = this.S.buildVehicle(cars, moving, ramp);
     if (ramp) g.add(new THREE.Mesh(this.S.rampGeo, vcMat));
     return g;
   }
@@ -192,14 +192,16 @@ export class Obstacles {
   }
 
   addTrain(lane, z, cars, ramp, moving) {
-    const len = cars * CAR_LEN + (cars - 1) * CAR_GAP;
+    const mesh = this.buildTrain(cars, moving, ramp);
+    // un kit peut fournir des véhicules d'autres tailles (ex. taxis plus bas et plus courts)
+    const len = mesh.userData.len || cars * CAR_LEN + (cars - 1) * CAR_GAP;
+    const top = mesh.userData.top || TRAIN_TOP;
     const rampLen = ramp ? RAMP_LEN : 0;
     const front = z - rampLen;
-    const mesh = this.buildTrain(cars, moving, ramp);
     mesh.position.set(LANES[lane], 0, front);
     this.scene.add(mesh);
     const o = {
-      kind: 'train', lane, x: LANES[lane], halfW: TRAIN_HALF_W, top: TRAIN_TOP,
+      kind: 'train', lane, x: LANES[lane], halfW: TRAIN_HALF_W, top,
       trainFront: front, zNear: z, zFar: front - len, rampLen, moving,
       v: moving ? MOVING_TRAIN_SPEED : 0, horned: false, mesh,
     };

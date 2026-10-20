@@ -40,6 +40,8 @@ function activate(c) {
   obstacles = c.obstacles;
   candies = c.candies;
   scene.fog.color.set(c.def.fog);
+  scene.fog.near = 80;
+  scene.fog.far = 270;
   girl.setPalettes(c.def.palettes);
 }
 
@@ -57,7 +59,9 @@ async function buildLevel(id) {
   const c = { id: meta.id, meta, def, root };
   c.world = new World(root, def.world);
   c.candies = new Candies(root, def.items());
-  c.obstacles = new Obstacles(root, { onHorn: () => sound.horn(), candies: c.candies, kit: def.obstacleKit() });
+  // un niveau peut fournir son propre moteur d'obstacles (ex. New York et ses égouts)
+  const opts = { onHorn: () => sound.horn(), candies: c.candies, kit: def.obstacleKit(), world: c.world, sound, fog: scene.fog, fogColor: def.fog };
+  c.obstacles = def.obstacles ? def.obstacles(root, opts) : new Obstacles(root, opts);
   contexts[meta.id] = c;
   const prev = ctx;
   activate(c);
@@ -85,7 +89,7 @@ const camLook = new THREE.Vector3(0, 1.2, 0);
 
 function resetPlayer() {
   Object.assign(player, {
-    lane: 1, x: 0, y: 0, z: 0, vy: 0, h: PLAYER_H, grounded: true, coyote: 0,
+    lane: 1, x: 0, y: 0, z: 0, vy: 0, h: PLAYER_H, grounded: true, coyote: 0, under: false,
     jumpBuf: 0, slideT: 0, slideQueued: false,
   });
   girl.reset();
@@ -441,10 +445,10 @@ function toMenu() {
   showMenuLevel();
 }
 
-function die() {
+function die(crash) {
   fx.stop();
   state = 'dying';
-  blood.start(player.x, player.y, player.z, obstacles.groundAt(player.x, player.z));
+  blood.start(player.x, player.y, player.z, obstacles.groundAt(player.x, player.z, 0, player.under), crash && crash.kind === 'sludge' ? SLUDGE : null);
   $('death-dim').classList.add('on');
   fxEl('hit-flash', 0, 0, 500);
   deathT = 0;
@@ -476,9 +480,17 @@ function gameOver() {
 
 // ---------- Contrôles ----------
 const active = () => state === 'running';
+// un niveau peut changer la voie visée (ex. au-dessus du canal des égouts, on saute de 2 voies)
+function moveLane(d) {
+  const to = obstacles.laneTarget ? obstacles.laneTarget(player, d) : player.lane + d;
+  if (to < 0 || to > 2 || to === player.lane) return;
+  player.lane = to;
+  sound.lane();
+  laneFx(d);
+}
 new Input({
-  left() { if (player.lane > 0) { player.lane--; sound.lane(); laneFx(-1); } },
-  right() { if (player.lane < 2) { player.lane++; sound.lane(); laneFx(1); } },
+  left() { moveLane(-1); },
+  right() { moveLane(1); },
   up() { player.jumpBuf = 0.15; },
   down() {
     if (!player.grounded) { player.vy = Math.min(player.vy, FAST_DROP_V); player.slideQueued = true; }
@@ -618,6 +630,7 @@ function laneFx(dir) {
 }
 
 // ---------- Défaite : jets de sang, flaque, écran qui s'assombrit ----------
+const SLUDGE = { drops: ['#5a7a1a', '#7a9a2a', '#4a3a14', '#8aa83a'].map((h) => new THREE.Color(h)), pool: '#3a4a12' };
 const blood = (() => {
   const N = 600;
   const pos = new Float32Array(N * 3).fill(-1000), vel = new Float32Array(N * 3), col = new Float32Array(N * 3);
@@ -656,6 +669,7 @@ const blood = (() => {
   puddle.visible = false;
   scene.add(puddle);
   const reds = ['#b00818', '#d0101e', '#8a0412', '#e01a2a'].map((h) => new THREE.Color(h));
+  let drops = reds;
   let emitT = 0, ground = 0, idx = 0, poolS = 0, poolShown = 0, t = 0;
   const origin = new THREE.Vector3();
 
@@ -670,12 +684,15 @@ const blood = (() => {
       vel[j] = Math.cos(a) * r;
       vel[j + 1] = (3 + Math.random() * 4.5) * strength;
       vel[j + 2] = Math.sin(a) * r + 0.8;
-      const cl = reds[(Math.random() * reds.length) | 0];
+      const cl = drops[(Math.random() * drops.length) | 0];
       col[j] = cl.r; col[j + 1] = cl.g; col[j + 2] = cl.b;
     }
   }
   return {
-    start(x, y, z, gY) {
+    // palette : { drops, pool } pour une autre couleur que le sang (ex. éclaboussure de boue)
+    start(x, y, z, gY, palette) {
+      drops = palette ? palette.drops : reds;
+      pmat.color.set(palette ? palette.pool : '#6e0610');
       origin.set(x, y + 0.9, z + 0.05);
       ground = gY;
       emitT = 1.15;
@@ -744,7 +761,8 @@ function step(dt) {
   if (player.slideT > 0) player.slideT -= dt;
 
   if (player.jumpBuf > 0 && (player.grounded || player.coyote > 0)) {
-    player.vy = JUMP_V;
+    // saut spécial du niveau (ex. au pied d'une échelle des égouts : bond jusqu'à la surface)
+    player.vy = (obstacles.jumpBoost && obstacles.jumpBoost(player)) || JUMP_V;
     player.grounded = false;
     player.coyote = 0;
     player.jumpBuf = 0;
@@ -758,7 +776,7 @@ function step(dt) {
   player.h = player.slideT > 0 ? PLAYER_SLIDE_H : PLAYER_H;
 
   const { ground, crash } = obstacles.resolve(player);
-  if (crash) { die(); return; }
+  if (crash) { die(crash); return; }
 
   if (candies.hitFugu(player)) { die(); return; }
   const got = candies.collect(player);
@@ -787,10 +805,12 @@ function camTargets(out, look) {
   const back = (1 - Math.cos(camAngle)) / 2;   // 0 = face à elle (menu), 1 = derrière (course)
   const pf = portrait();
   const r = THREE.MathUtils.lerp(2.75, 6.6 + pf * 1.1, back);   // menu : cadrage rapproché
-  const camY = THREE.MathUtils.lerp(1.25, player.y * 0.75 + 3.3 + pf * 1.0, back);
+  const base = obstacles.baseY ? obstacles.baseY(player) : 0;   // sol de référence (rue ou égouts)
+  const camY = THREE.MathUtils.lerp(1.25, base + (player.y - base) * 0.75 + 3.3 + pf * 1.0, back);
   const follow = 0.8 + pf * 0.2;
   out.set(player.x * follow * back + Math.sin(camAngle) * r, camY, player.z - Math.cos(camAngle) * r);
-  look.set(player.x * (0.9 + pf * 0.1) * back, THREE.MathUtils.lerp(0.98, player.y * 0.6 + 1.1, back), player.z - 10 * back);
+  look.set(player.x * (0.9 + pf * 0.1) * back, THREE.MathUtils.lerp(0.98, base + (player.y - base) * 0.6 + 1.1, back), player.z - 10 * back);
+  if (obstacles.clampCam) obstacles.clampCam(out, look, player);
 }
 
 function snapCamera() {
@@ -805,12 +825,13 @@ function updateCamera(dt) {
   camTargets(_tp, _tl);
   // si la caméra passe au-dessus d'un train, on la monte pour garder l'héroïne en vue
   if (running) {
-    const gCam = obstacles.groundAt(camPos.x, _tp.z, 0.8);
+    const gCam = obstacles.groundAt(camPos.x, _tp.z, 0.8, player.under);
     if (gCam > 0) _tp.y = Math.max(_tp.y, gCam + 2.4);
   }
   const k = 1 - Math.exp(-dt * 10);
   camPos.x += (_tp.x - camPos.x) * k;
-  camPos.y += (_tp.y - camPos.y) * (1 - Math.exp(-dt * 6));
+  // suivi vertical plus vif quand l'écart est grand (chute dans les égouts, bond hors du puits)
+  camPos.y += (_tp.y - camPos.y) * (1 - Math.exp(-dt * (6 + Math.min(12, Math.abs(_tp.y - camPos.y) * 3))));
   camPos.z = _tp.z;
   camLook.lerp(_tl, k);
   if (!Number.isFinite(camPos.x + camPos.y + camPos.z + camLook.x + camLook.y)) snapCamera();
@@ -882,8 +903,9 @@ function frame(now) {
     girl.root.position.set(player.x, player.y, player.z);
     girl.root.visible = state !== 'menu';
     girl.root.rotation.y = state === 'running' ? (LANES[player.lane] - player.x) * -0.12 : 0;
-    world.setShadow(player.x, obstacles.groundAt(player.x, player.z), player.y, player.z);
+    world.setShadow(player.x, obstacles.groundAt(player.x, player.z, 0, player.under), player.y, player.z);
     updateCamera(dt);
+    if (obstacles.frame) obstacles.frame(dt, player, camera, { running: state === 'running', speed });
     world.scenery.update(dt, player.z, camera, renderer.getPixelRatio());
 
     if (fx.active) {

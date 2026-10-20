@@ -19,7 +19,11 @@ export class Sound {
     this.master.connect(this.ctx.destination);
     this.music = this.ctx.createGain();
     this.music.gain.value = 0.35;
-    this.music.connect(this.master);
+    // filtre de la musique : étouffée quand on est sous terre
+    this.musicFilter = this.ctx.createBiquadFilter();
+    this.musicFilter.type = 'lowpass';
+    this.musicFilter.frequency.value = 20000;
+    this.music.connect(this.musicFilter).connect(this.master);
     const len = this.ctx.sampleRate;
     this.noiseBuf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
     const d = this.noiseBuf.getChannelData(0);
@@ -66,6 +70,25 @@ export class Sound {
   }
 
   jump() { this.tone(520, 0.2, { type: 'triangle', vol: 0.18, to: 1000 }); }
+  // chute dans une bouche d'égout : glissando qui descend et « plouf » étouffé
+  fall() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.tone(700, 0.5, { type: 'triangle', vol: 0.16, to: 120 });
+    this.noise(0.35, { vol: 0.12, freq: 300, q: 0.8, at: t + 0.4 });
+  }
+  // bond par l'échelle : arpège qui monte
+  climb() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    [392, 523.25, 659.25, 783.99].forEach((f, i) => this.tone(f, 0.16, { type: 'square', vol: 0.06, at: t + i * 0.05 }));
+    this.tone(400, 0.5, { type: 'triangle', vol: 0.14, to: 1600 });
+  }
+  setMuffle(on) {
+    if (!this.ctx || this.muffled === on) return;
+    this.muffled = on;
+    this.musicFilter.frequency.setTargetAtTime(on ? 650 : 20000, this.ctx.currentTime, 0.15);
+  }
   lane() { this.tone(880, 0.06, { vol: 0.06 }); }
   slide() { this.noise(0.3, { vol: 0.15, freq: 1400, q: 0.7 }); }
   land() { this.noise(0.08, { vol: 0.08, freq: 400 }); }
@@ -157,10 +180,31 @@ export class Sound {
     const bar = st.meter * 2;
     // valse : grille d'accords (fondamentale = degré de la gamme) I - V - I - IV
     const chords = [[0, 2, 4], [4, 6, 8], [0, 2, 4], [3, 5, 7]];
+    // jazz : I - IV - I - V (degrés de la gamme blues)
+    const jazzChords = [[0, 2, 5], [2, 4, 6], [0, 2, 5], [4, 6, 8]];
     this.timer = setInterval(() => {
       while (this.next < this.ctx.currentTime + 0.15) {
         const t = this.next, s = this.step % bar;
-        if (st.voice === 'musette') {
+        if (st.voice === 'jazz') {
+          // swing : croches inégales (longue-brève), walking bass, accords sur 2 et 4, charleston
+          const sw = s % 2 ? eighth * 0.34 : 0;
+          const ts = t + sw;
+          const ch = jazzChords[Math.floor(this.step / bar) % jazzChords.length];
+          if (s % 2 === 0) {
+            const walk = [0, 2, 4, 5][(s / 2) % 4];
+            this.tone(SC[(ch[0] + walk) % SC.length] / 4, eighth * 1.7, { type: 'triangle', vol: 0.22, at: t, out: this.music });
+          }
+          if (s === 2 || s === 6) {
+            for (const k of ch) this.tone(SC[k % SC.length], 0.12, { type: 'square', vol: 0.018, at: ts, out: this.music });
+            this.noise(0.05, { vol: 0.05, freq: 6000, q: 1.5, at: t, out: this.music });
+          }
+          if (s % 2 === 1) this.noise(0.03, { vol: 0.03, freq: 8000, q: 2, at: ts, out: this.music });
+          if (Math.random() > 0.4) {
+            this.note = Math.max(0, Math.min(SC.length - 1, this.note + ((Math.random() * 5) | 0) - 2));
+            this.tone(SC[this.note] * 2, eighth * (s % 2 ? 0.8 : 1.3), { type: 'triangle', vol: 0.09, at: ts, out: this.music });
+            this.tone(SC[this.note] * 4, eighth * 0.5, { type: 'sine', vol: 0.025, at: ts, out: this.music });
+          }
+        } else if (st.voice === 'musette') {
           const ch = chords[Math.floor(this.step / bar) % chords.length];
           if (s === 0) this.tone(SC[ch[0]] / 2, 0.45, { type: 'triangle', vol: 0.2, at: t, out: this.music });
           if (s === 2 || s === 4) {

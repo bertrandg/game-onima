@@ -223,10 +223,19 @@ export class Candies {
     }
   }
 
+  // Une friandise isolée à une position précise (ex. en arc au-dessus d'un canal)
+  placeAt(x, y, z, lane = -1, phase = 0) {
+    const kind = this.kinds[(Math.random() * this.kinds.length) | 0];
+    const mesh = new THREE.Mesh(kind.geo, kind.mat);
+    mesh.position.set(x, y, z);
+    this.scene.add(mesh);
+    this.list.push({ mesh, x, y, z, lane, phase, spin: kind.spin });
+  }
+
   // Un train qui arrive "avale" les bonbons de sa voie
   eatBy(train) {
     for (const c of this.list) {
-      if (c.mesh.visible && c.lane === train.lane && c.z <= train.zNear && c.z >= train.zFar && c.y < train.top) {
+      if (c.mesh.visible && c.lane === train.lane && c.z <= train.zNear && c.z >= train.zFar && c.y < train.top && c.y >= 0) {
         c.mesh.visible = false;
       }
     }

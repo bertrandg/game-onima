@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { LANES } from './config.js';
-import { Builder, U, vcMat, pick, rand } from './geo.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { Builder, U, vcMat, rand } from './geo.js';
 import * as TX from './textures.js';
 
 const TRACK_LEN = 600;
@@ -46,6 +47,22 @@ function finishJob(job) {
   g.computeBoundingSphere();
   return g;
 }
+// Parties texturées d'une tranche (façades, panneaux lumineux…) : regroupées par matériau, une géométrie chacune
+const _tm = new THREE.Matrix4(), _tq = new THREE.Quaternion(), _tp = new THREE.Vector3(), _ts = new THREE.Vector3(), _ty = new THREE.Vector3(0, 1, 0);
+function finishTex(job, mats, mesh) {
+  const byKey = {};
+  for (const p of job.parts) {
+    if (!p.tex) continue;
+    _tm.compose(_tp.set(p.x0, 0, p.z0), _tq.setFromAxisAngle(_ty, p.rot), _ts.set(p.sc, p.sc, p.sc));
+    for (const t of p.tex) (byKey[t.key] ||= []).push(t.geo.clone().applyMatrix4(_tm));
+  }
+  for (const k of Object.keys(byKey)) {
+    const g = mergeGeometries(byKey[k], false);
+    byKey[k].forEach((x) => x.dispose());
+    g.computeBoundingSphere();
+    mesh.add(new THREE.Mesh(g, mats[k]));
+  }
+}
 
 // Monde d'un niveau : sol et voie, décor latéral par tranches, lointain, particules.
 // Tout le contenu vient de la définition du niveau (def.world) ; tous les objets sont dans `root`.
@@ -67,6 +84,9 @@ export class World {
     const sun = new THREE.DirectionalLight(L.sun, L.sunI);
     sun.position.set(-0.6, 1, 0.5);
     root.add(hemi, sun);
+    this.hemi = hemi;
+    this.sun = sun;
+    this.texMats = D.texMats || {};
 
     this.buildTrack();
     this.scenery = def.scenery(root);
@@ -123,6 +143,17 @@ export class World {
       }
     }
     for (const x of [-4.6, 4.6]) b.add(U.box, T.curb || '#a9a397', [x, 0.08, 0], [0.35, 0.16, TRACK_LEN]);
+    // marquage au sol sur toute la largeur de la chaussée (optionnel), qui défile avec le sol
+    if (T.overlay) {
+      this.overlayTex = T.overlay();
+      this.overlayTile = T.overlayTile || 6;
+      this.overlayTex.repeat.set(1, TRACK_LEN / this.overlayTile);
+      const ov = new THREE.Mesh(new THREE.PlaneGeometry(9, TRACK_LEN),
+        new THREE.MeshLambertMaterial({ map: this.overlayTex, transparent: true, alphaTest: 0.3 }));
+      ov.rotation.x = -Math.PI / 2;
+      ov.position.y = 0.025;
+      this.trackGroup.add(ov);
+    }
     this.trackGroup.add(new THREE.Mesh(b.build(), vcMat));
 
     const sh = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 1.3),
@@ -152,7 +183,7 @@ export class World {
   }
 
   reset(startZ) {
-    for (const it of this.items) { this.scene.remove(it.mesh); if (it.own) it.mesh.geometry.dispose(); }
+    for (const it of this.items) this.drop(it);
     this.items = [];
     this.cursors = { '-1': {}, '1': {} };
     for (const s of ['-1', '1']) for (const band of Object.keys(BANDS)) this.cursors[s][band] = startZ + 140 - rand(0, 8);
@@ -160,6 +191,11 @@ export class World {
     this.toriiCursor = startZ - 60;
     this.jobs = [];
     this.update(0, startZ, 0, true);
+  }
+
+  drop(it) {
+    this.scene.remove(it.mesh);
+    if (it.own) it.mesh.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
   }
 
   // Ajoute un élément de décor à la tranche en cours ; renvoie le z du prochain élément de la bande
@@ -175,7 +211,8 @@ export class World {
     const rotY = d.face ? (side > 0 ? Math.PI : 0) : rand(0, Math.PI * 2);
     // légère variation de teinte pour casser la répétition
     const k = rand(0.92, 1.07);
-    parts.push({ geo: pick(d.geos), x0: x, z0: z - (d.len * sc) / 2, rot: rotY, sc, tint: [k * rand(0.97, 1.03), k * rand(0.97, 1.03), k * rand(0.97, 1.03)] });
+    const vi = (Math.random() * d.geos.length) | 0;
+    parts.push({ geo: d.geos[vi], tex: d.texs && d.texs[vi], x0: x, z0: z - (d.len * sc) / 2, rot: rotY, sc, tint: [k * rand(0.97, 1.03), k * rand(0.97, 1.03), k * rand(0.97, 1.03)] });
     // densité de zone appliquée près de la voie seulement (au loin les éléments sont minuscules)
     const mult = theme.mult && theme.mult[band] !== undefined ? theme.mult[band] : band === 'far' ? 1 : theme.dense || 1;
     return z - d.len * sc - BANDS[band].gap() * mult;
@@ -197,12 +234,14 @@ export class World {
       // sol de la zone (rue pavée, chemin, mousse)
       const theme = this.THEMES[this.themeAt(z0 - CHUNK / 2)];
       const gd = this.DECOR[theme.ground];
-      parts.push({ geo: pick(gd.geos), x0: s * (4.85 + gd.w / 2), z0: z0 - CHUNK / 2, rot: s > 0 ? Math.PI : 0, sc: 1, tint: [1, 1, 1] });
+      const gi = (Math.random() * gd.geos.length) | 0;
+      parts.push({ geo: gd.geos[gi], tex: gd.texs && gd.texs[gi], x0: s * (4.85 + gd.w / 2), z0: z0 - CHUNK / 2, rot: s > 0 ? Math.PI : 0, sc: 1, tint: [1, 1, 1] });
     }
     // guirlande tendue au-dessus des voies (selon la zone)
-    const gz = this.THEMES[this.themeAt(z0)].garland || 0;
-    if (this.special.garland && Math.random() < gz) {
-      parts.push({ geo: this.special.garland, x0: 0, z0: z0 - rand(4, CHUNK - 4), rot: 0, sc: 1, tint: [1, 1, 1] });
+    const th = this.THEMES[this.themeAt(z0)];
+    const gGeo = this.special[th.garlandType || 'garland'];
+    if (gGeo && Math.random() < (th.garland || 0)) {
+      parts.push({ geo: gGeo, x0: 0, z0: z0 - rand(4, CHUNK - 4), rot: 0, sc: 1, tint: [1, 1, 1] });
     }
     this.jobs.push(startJob(parts, zFar));
   }
@@ -215,6 +254,7 @@ export class World {
       if (mergeNext(job)) {
         this.jobs.shift();
         const mesh = new THREE.Mesh(finishJob(job), vcMat);
+        finishTex(job, this.texMats, mesh);
         this.scene.add(mesh);
         this.items.push({ mesh, zFar: job.zFar, own: true });
       }
@@ -231,11 +271,15 @@ export class World {
     // au démarrage tout est construit d'un coup ; en course, 2 ms par image au maximum
     this.processJobs(instant ? Infinity : 2);
     while (this.toriiCursor > ahead) {
-      const mesh = new THREE.Mesh(this.special.gate, vcMat);
-      mesh.position.set(0, 0, this.toriiCursor);
-      this.scene.add(mesh);
-      this.items.push({ mesh, zFar: this.toriiCursor - 1 });
-      const [g0, g1] = this.THEMES[this.themeAt(this.toriiCursor)].gateEvery || [220, 380];
+      const th = this.THEMES[this.themeAt(this.toriiCursor)];
+      const gate = this.special[th.gate || 'gate'];
+      if (gate) {
+        const mesh = new THREE.Mesh(gate, vcMat);
+        mesh.position.set(0, 0, this.toriiCursor);
+        this.scene.add(mesh);
+        this.items.push({ mesh, zFar: this.toriiCursor - 1 });
+      }
+      const [g0, g1] = th.gateEvery || [220, 380];
       this.toriiCursor -= rand(g0, g1);
     }
 
@@ -243,7 +287,7 @@ export class World {
     const limit = pz + 30;
     let j = 0;
     for (const it of this.items) {
-      if (it.zFar > limit) { this.scene.remove(it.mesh); if (it.own) it.mesh.geometry.dispose(); }
+      if (it.zFar > limit) this.drop(it);
       else this.items[j++] = it;
     }
     this.items.length = j;
@@ -253,6 +297,7 @@ export class World {
     this.grassTex.offset.y = (-pz / this.groundTile) % 1;
     this.gravelTex.offset.y = (-pz / 3) % 1;
     this.sleeperTex.offset.y = (-pz / 1.3) % 1;
+    if (this.overlayTex) this.overlayTex.offset.y = (-pz / this.overlayTile) % 1;
 
     this.updatePetals(dt, pz, speed);
   }
