@@ -62,6 +62,24 @@ Un niveau n'est téléchargé qu'au moment où on le choisit.
    - `items()` : objets à ramasser et malus.
 2. L'ajouter dans `js/levels/index.js` avec son nom, son icône, son objet et sa condition de déblocage.
 
+## Tests
+
+Les tests n'ont besoin que de Node (22 ou plus) et de Google Chrome installé ; le jeu, lui, reste sans installation.
+
+```bash
+npm install
+npm test            # rapide (moins d'une seconde) : règles du jeu, scores, déblocage, imports
+npm run test:e2e    # dans Chrome (environ 1 min) : chaque niveau se charge et se joue sans erreur
+```
+
+- `tests/unit/` : tests lancés dans Node. Les modules du jeu y sont chargés tels quels, avec un faux
+  `localStorage`, un faux `document` (les textures sur canvas sont dessinées « à vide ») et un hasard
+  rejouable (`seed(n)` dans `tests/helpers/env.mjs`).
+- `tests/e2e/` : tests dans le navigateur (Playwright), sur la page ouverte avec `#debug`.
+- Sur GitHub, chaque envoi lance les tests ; le site n'est mis en ligne que s'ils passent.
+
+À chaque nouvelle règle (« un seul taxi qui roule », « rats immobiles »…), ajouter le test qui la vérifie.
+
 ## Structure
 
 - `js/main.js` : boucle de jeu, états, menus, caméra, physique du joueur

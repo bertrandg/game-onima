@@ -31,3 +31,8 @@ export const LEVELS = [
 ];
 
 export const levelById = (id) => LEVELS.find((l) => l.id === id) || LEVELS[0];
+
+// Un niveau est jouable s'il n'a pas de condition, si le code secret a été saisi, ou si le meilleur
+// score obtenu au niveau précédent atteint le seuil. scores fournit bestOnLevel(id) et allUnlocked().
+export const isUnlocked = (meta, scores) =>
+  !meta.unlock || scores.allUnlocked() || scores.bestOnLevel(meta.unlock.level) >= meta.unlock.score;

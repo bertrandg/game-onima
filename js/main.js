@@ -10,7 +10,7 @@ import { LevelUpFx } from './fx.js';
 import { Input } from './input.js';
 import { Sound } from './audio.js';
 import * as Scores from './scores.js';
-import { LEVELS, levelById } from './levels/index.js';
+import { LEVELS, levelById, isUnlocked as unlockedWith } from './levels/index.js';
 
 // ---------- Rendu ----------
 const container = document.getElementById('game');
@@ -71,7 +71,7 @@ async function buildLevel(id) {
   return c;
 }
 
-const isUnlocked = (meta) => !meta.unlock || Scores.allUnlocked() || Scores.bestOnLevel(meta.unlock.level) >= meta.unlock.score;
+const isUnlocked = (meta) => unlockedWith(meta, Scores);
 let selectedLevel = Scores.getLevel();
 if (!isUnlocked(levelById(selectedLevel))) selectedLevel = 'japon';
 scene.add(girl.root);
