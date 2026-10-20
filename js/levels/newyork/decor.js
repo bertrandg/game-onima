@@ -313,13 +313,6 @@ function signal(b) {   // feu tricolore et feu piéton « main / bonhomme »
   b.add(U.box, '#ff7a3a', [0.28, 2.6, 0], [0.02, 0.24, 0.24]);
 }
 
-function steamStack(b) {   // cheminée de vapeur à rayures orange et blanches
-  for (let i = 0; i < 6; i++) b.add(U.cyl, i % 2 ? '#f4f0e8' : '#ff6a1a', [0, 0.25 + i * 0.4, 0], [0.4, 0.4, 0.4]);
-  b.add(U.cyl, '#ff6a1a', [0, 2.5, 0], [0.42, 0.06, 0.42]);
-  for (let i = 0; i < 7; i++) b.add(BALL, '#f4f4f4', [rand(-0.3, 0.3), 2.9 + i * 0.45, rand(-0.3, 0.3)], [0.45 + i * 0.12, 0.38 + i * 0.08, 0.45 + i * 0.12]);
-  for (const s of [-1, 1]) b.add(U.cone8, '#ff6a1a', [0.3, 0.35, s * 0.8], [0.22, 0.7, 0.22]);   // plots
-}
-
 function scaffold(b) {   // échafaudage de trottoir (« sidewalk shed ») vert avec affiches interdites
   const L = 10, W = 3.0, H = 3.2;
   for (let i = 0; i <= 5; i++) {
@@ -331,22 +324,6 @@ function scaffold(b) {   // échafaudage de trottoir (« sidewalk shed ») vert 
   b.add(U.box, '#2c5a3a', [W / 2 - 0.1, H + 0.8, 0], [0.08, 0.8, L + 0.2]);   // garde-corps plein
   for (let i = 0; i < 4; i++) b.add(U.box, '#f4f0e8', [W / 2 - 0.05, H + 0.8, -L / 2 + 1.4 + i * 2.4], [0.02, 0.35, 1.6]);
   b.add(U.box, '#f2c230', [W / 2 + 0.01, H + 0.2, 0], [0.02, 0.12, L]);
-}
-
-function bull(b) {   // taureau de bronze, tête baissée, prêt à charger
-  const BR = '#8a5a2a', BR2 = '#6a4220', SH = '#c8945a';
-  b.add(U.box, '#5a5652', [0, 0.1, 0], [1.6, 0.2, 3.6]);
-  b.add(BALL, BR, [0, 1.15, 0.4], [0.62, 0.62, 0.95]);   // poitrail
-  b.add(BALL, BR, [0, 1.05, -0.6], [0.52, 0.55, 0.8]);   // arrière-train
-  b.add(BALL, BR2, [0, 0.95, 1.3], [0.32, 0.36, 0.42], [0.5, 0, 0]);   // tête
-  b.add(BALL, SH, [0, 0.82, 1.62], [0.2, 0.17, 0.14]);   // museau
-  for (const s of [-1, 1]) {
-    b.add(U.cone8, '#e8dcc0', [s * 0.38, 1.28, 1.35], [0.07, 0.5, 0.07], [0.3, 0, s * -1.0]);   // cornes
-    b.add(BALL, '#141010', [s * 0.2, 1.05, 1.55], [0.05, 0.05, 0.04]);
-    for (const z of [0.6, -0.8]) b.add(U.cyl6, BR2, [s * 0.3, 0.4, z], [0.11, 0.7, 0.11], [z > 0 ? -0.3 : 0.4, 0, 0]);
-  }
-  b.add(U.cyl6, BR2, [0, 1.4, -1.25], [0.04, 0.9, 0.04], [-0.9, 0, 0]);   // queue fouettant l'air
-  b.add(BALL, SH, [0, 1.6, 0.3], [0.35, 0.12, 0.5]);   // reflets polis
 }
 
 function tkts(b) {   // escalier rouge lumineux de Times Square
@@ -496,9 +473,7 @@ export const DECOR = {
   hotdogCart: { len: 2.2, w: 1.6, face: true, build: hotdogCart },
   tree: { len: 2.6, w: 2.4, build: tree },
   signal: { len: 0.6, w: 0.5, face: true, build: signal },
-  steamStack: { len: 2.2, w: 1.0, face: true, build: steamStack },
   scaffold: { len: 10.4, w: 3.0, face: true, build: scaffold },
-  bull: { len: 3.6, w: 1.6, face: true, build: bull },
   tkts: { len: 5.8, w: 2.6, face: true, build: tkts },
   plaza: { len: 3, w: 1.2, face: true, build: plaza },
   phoneBooth: { len: 1, w: 1, face: true, build: phoneBooth },
@@ -512,7 +487,7 @@ export const THEMES = {
     ground: 'sidewalk', gate: 'gate', gateEvery: [180, 300], garland: 0,
     x: { edge: 0, near: 5.3, mid: 8.4, far: 30 }, spread: { near: 0.3, mid: 0 }, mult: { near: 1.3, mid: 0.04 },
     edge: [],
-    near: [...STREET, ['subway', 0.6], ['hotdogCart', 0.6], ['steamStack', 0.6], ['scaffold', 0.5], ['bull', 0.25]],
+    near: [...STREET, ['subway', 0.6], ['hotdogCart', 0.6], ['scaffold', 0.5]],
     mid: [['decoTower', 3], ['glassTower', 1.6], ['exchange', 0.5]],
     far: [],
   },
@@ -520,7 +495,7 @@ export const THEMES = {
     ground: 'sidewalk', gate: 'gate', gateEvery: [200, 320], garland: 0,
     x: { edge: 0, near: 5.3, mid: 8.4, far: 30 }, spread: { near: 0.3, mid: 0 }, mult: { near: 1.0, mid: 0.04 },
     edge: [],
-    near: [['lamp', 1.8], ['hydrant', 0.6], ['litter', 0.8], ['newsboxes', 0.6], ['signal', 0.6], ['tkts', 0.5], ['plaza', 1.4], ['hotdogCart', 0.9], ['steamStack', 0.5], ['subway', 0.4]],
+    near: [['lamp', 1.8], ['hydrant', 0.6], ['litter', 0.8], ['newsboxes', 0.6], ['signal', 0.6], ['tkts', 0.5], ['plaza', 1.4], ['hotdogCart', 0.9], ['subway', 0.4]],
     mid: [['timesTower', 1]],
     far: [],
   },

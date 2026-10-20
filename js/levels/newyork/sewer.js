@@ -17,7 +17,8 @@ const WALL_X = 4.3, WALL_TOP = SEWER_Y + 3.6, CROWN = -0.35;
 const ARCH_H = CROWN - WALL_TOP;
 const EDGE = 1.35;                        // bord des quais : le canal est entre -EDGE et EDGE
 const MODULE = 16;                        // le tunnel est fait de tronçons identiques de 16 m
-const CLIMB_V = 31;                       // bond de l'échelle jusqu'à la surface
+const CLIMB_V = 31;
+const HOLE_R = 1.05;                      // rayon des bouches d'égout ouvertes                       // bond de l'échelle jusqu'à la surface
 const P_HALF_X = 0.32, P_HALF_Z = 0.35;
 const BALL = new THREE.SphereGeometry(1, 8, 6);
 const SEWER_LIGHT = new THREE.Color('#d8ecc0');
@@ -313,18 +314,17 @@ function poopGeo() {   // tas dégoûtant qui flotte dans la boue (et qui louche
 // bouche d'égout ouverte sur la chaussée : trou noir, plaque déplacée, cône, vapeur
 function holeGeo() {
   const b = new Builder();
-  b.add(U.cyl, '#3a3a40', [0, 0.012, 0], [0.92, 0.02, 0.92]);
-  b.add(U.cyl, '#0c0c0e', [0, 0.02, 0], [0.8, 0.02, 0.8]);
-  b.add(U.cyl, '#020203', [0, 0.024, 0], [0.62, 0.02, 0.62]);
-  for (let i = 0; i < 16; i++) {
-    const a = (i / 16) * Math.PI * 2;
-    b.add(U.box, '#6a6a70', [Math.cos(a) * 0.86, 0.04, Math.sin(a) * 0.86], [0.1, 0.05, 0.36], [0, -a, 0]);
+  const R = HOLE_R;
+  b.add(U.cyl, '#3a3a40', [0, 0.012, 0], [R + 0.14, 0.02, R + 0.14]);
+  b.add(U.cyl, '#0c0c0e', [0, 0.02, 0], [R, 0.02, R]);
+  b.add(U.cyl, '#020203', [0, 0.024, 0], [R * 0.78, 0.02, R * 0.78]);
+  for (let i = 0; i < 20; i++) {
+    const a = (i / 20) * Math.PI * 2;
+    b.add(U.box, '#6a6a70', [Math.cos(a) * (R + 0.07), 0.04, Math.sin(a) * (R + 0.07)], [0.12, 0.05, 0.36], [0, -a, 0]);
   }
   // plaque de fonte posée de travers à côté
-  b.add(U.cyl, '#4a4a50', [1.05, 0.12, 0.4], [0.72, 0.05, 0.72], [0.12, 0, 0.18]);
-  for (let i = 0; i < 4; i++) b.add(U.box, '#3a3a40', [1.05, 0.155 + i * 0.008, 0.4 - 0.45 + i * 0.3], [1.0, 0.02, 0.06], [0.12, 0, 0.18]);
-  // vapeur qui s'échappe
-  for (let i = 0; i < 4; i++) b.add(BALL, '#ecece8', [rand(-0.2, 0.2), 0.7 + i * 0.5, -0.4 - i * 0.2], [0.32 + i * 0.1, 0.26 + i * 0.06, 0.32 + i * 0.1]);
+  b.add(U.cyl, '#4a4a50', [R + 0.3, 0.12, 0.4], [R * 0.9, 0.05, R * 0.9], [0.12, 0, 0.18]);
+  for (let i = 0; i < 4; i++) b.add(U.box, '#3a3a40', [R + 0.3, 0.155 + i * 0.008, 0.4 - 0.55 + i * 0.37], [R * 1.3, 0.02, 0.06], [0.12, 0, 0.18]);
   return b.build();
 }
 function coneGeo() {
@@ -438,13 +438,13 @@ export class NYObstacles extends Obstacles {
     const g = new THREE.Group();
     g.add(new THREE.Mesh(this.geo.hole, vcMat));
     const cone = new THREE.Mesh(this.geo.cone, vcMat);
-    cone.position.set(lane === 0 ? -1.3 : 1.3, 0, 1.2);
+    cone.position.set(lane === 0 ? -1.5 : 1.5, 0, HOLE_R + 0.5);
     g.add(cone);
     if (lane === 0) g.rotation.y = Math.PI;
-    g.position.set(x, 0, z - 0.8);
+    g.position.set(x, 0, z - HOLE_R);
     this.scene.add(g);
-    this.list.push({ kind: open ? 'hole' : 'deco', lane, x, halfW: 0.8, zNear: z, zFar: z - 1.6, mesh: g });
-    this.busy[lane] = Math.min(this.busy[lane], z - 2);
+    this.list.push({ kind: open ? 'hole' : 'deco', lane, x, halfW: HOLE_R, zNear: z, zFar: z - 2 * HOLE_R, mesh: g });
+    this.busy[lane] = Math.min(this.busy[lane], z - 2 * HOLE_R - 0.5);
   }
 
   // ---------- Égouts : génération ----------
@@ -608,8 +608,8 @@ export class NYObstacles extends Obstacles {
     const r = super.resolve(p);
     if (!r.crash && p.y <= 0.02 && r.ground === 0) {
       for (const o of this.list) {
-        if (o.kind !== 'hole' || Math.abs(p.x - o.x) > 0.62) continue;
-        if (p.z <= o.zNear - 0.25 && p.z >= o.zFar + 0.25) {
+        if (o.kind !== 'hole' || Math.abs(p.x - o.x) > HOLE_R - 0.3) continue;
+        if (p.z <= o.zNear - 0.3 && p.z >= o.zFar + 0.3) {
           this.enterSewer(p, o);
           r.ground = SEWER_Y;
           break;
@@ -658,7 +658,7 @@ export class NYObstacles extends Obstacles {
     // la rue au-dessus est dégagée dans cette voie (le joueur ne pouvait pas la voir)
     this.clearLane(false, p.lane, p.z + 6, p.z - 70);
     const exitZ = p.z - (this.lastSpeed || 20) * 0.3;
-    this.addHole(p.lane, exitZ + 0.8, false);
+    this.addHole(p.lane, exitZ + HOLE_R, false);
     if (this.sound && this.sound.climb) this.sound.climb();
     return CLIMB_V;
   }

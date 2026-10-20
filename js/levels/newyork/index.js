@@ -9,7 +9,7 @@ import { nyItems } from './items.js';
 import { NYObstacles } from './sewer.js';
 import * as NX from './textures.js';
 
-// confettis de papier (« ticker tape ») qui tombent des fenêtres comme lors des grandes parades
+// confettis de papier (« ticker tape ») qui tombent des fenêtres comme lors des grandes parades (teintés en pastel)
 const tickerTape = () => {
   const c = document.createElement('canvas');
   c.width = c.height = 32;
@@ -18,7 +18,7 @@ const tickerTape = () => {
   g.rotate(0.7);
   g.fillStyle = '#fbf8f0';
   g.fillRect(-4, -13, 8, 26);
-  g.fillStyle = 'rgba(200,190,170,0.6)';
+  g.fillStyle = 'rgba(220,220,220,0.8)';
   g.fillRect(-4, -2, 8, 2);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
@@ -37,7 +37,7 @@ export default {
       ground: NX.asphalt, groundTile: 8, bed: NX.asphaltBed, sleepers: NX.laneWear, rails: false,
       overlay: NX.roadLines, overlayTile: 6, curb: '#b4b0a8',
     },
-    particles: { texture: tickerTape, size: 0.32 },
+    particles: { texture: tickerTape, size: 0.32, colors: ['#ffb3d1', '#b3e5ff', '#fff3a8', '#c8f5c8', '#e0c8ff', '#ffd2b0'] },
     scenery: nySky,
   },
   // tenues débloquées tous les 10 objets à New York (la première est la tenue de départ)

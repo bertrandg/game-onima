@@ -41,7 +41,7 @@ Aucune installation nécessaire : Three.js est chargé depuis un CDN. Le jeu doi
 | --- | --- | --- |
 | 🗻 Japon | Campagne, villages et forêt du Japon traditionnel, mont Fuji | dès le départ |
 | 🗼 Paris 1900 | Boulevards haussmanniens, marché, quais de Seine, tour Eiffel | 1 500 points au Japon |
-| 🗽 New York | Wall Street, Times Square, Chinatown entre des gratte-ciel, statue de la Liberté ; taxis, bus touristiques et égouts | 1 500 points à Paris |
+| 🗽 New York | Wall Street, Times Square, Chinatown entre des gratte-ciel, statue de la Liberté ; taxis, bus touristiques et égouts | 2 300 points à Paris |
 
 À New York, une bouche d'égout ouverte ne fait pas perdre : on tombe dans les égouts et la course continue sur deux quais,
 de part et d'autre d'un canal de boue mortel. Pour changer de quai, il faut sauter (en l'air, un seul swipe fait passer de
@@ -74,3 +74,7 @@ Un niveau n'est téléchargé qu'au moment où on le choisit.
 - `js/config.js` : réglages (vitesse, saut, tailles…)
 
 Ajouter `#debug` à l'URL expose `window.__onima` pour les tests.
+
+## Crédits
+
+Illustration de la statue de la Liberté (niveau New York) : [Vecteezy.com](https://www.vecteezy.com).

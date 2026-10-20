@@ -25,7 +25,7 @@ export const LEVELS = [
     subtitle: 'Big Apple et égouts',
     icon: '🗽',
     item: '🍕',
-    unlock: { level: 'paris', score: 1500 },
+    unlock: { level: 'paris', score: 2300 },
     load: () => import('./newyork/index.js'),
   },
 ];

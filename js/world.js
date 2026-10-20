@@ -176,8 +176,14 @@ export class World {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     const P = this.def.particles || {};
+    // couleurs par particule (optionnel) : la texture claire est teintée
+    if (P.colors) {
+      const cols = P.colors.map((h) => new THREE.Color(h)), col = new Float32Array(N * 3);
+      for (let i = 0; i < N; i++) { const c = cols[i % cols.length]; col.set([c.r, c.g, c.b], i * 3); }
+      g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    }
     this.petals = new THREE.Points(g, new THREE.PointsMaterial({
-      size: P.size || 0.28, map: (P.texture || TX.petalTexture)(), transparent: true, depthWrite: false, alphaTest: 0.1,
+      size: P.size || 0.28, map: (P.texture || TX.petalTexture)(), transparent: true, depthWrite: false, alphaTest: 0.1, vertexColors: !!P.colors,
     }));
     this.scene.add(this.petals);
   }

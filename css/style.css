@@ -442,3 +442,6 @@ body.no-fullscreen #btn-fs { display: none; }
   .title span { font-size: 22px; }
   .btn.primary { font-size: 18px; padding: 10px; }
 }
+
+.credit { font-size: 11px; color: var(--muted); text-align: center; margin: 4px 0 10px; }
+.credit a { color: inherit; }
