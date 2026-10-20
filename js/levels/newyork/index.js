@@ -37,7 +37,7 @@ export default {
       ground: NX.asphalt, groundTile: 8, bed: NX.asphaltBed, sleepers: NX.laneWear, rails: false,
       overlay: NX.roadLines, overlayTile: 6, curb: '#b4b0a8',
     },
-    particles: { texture: tickerTape, size: 0.32, colors: ['#ffb3d1', '#b3e5ff', '#fff3a8', '#c8f5c8', '#e0c8ff', '#ffd2b0'] },
+    particles: { texture: tickerTape, size: 0.32, colors: ['#ff8ac0', '#7ad0ff', '#ffe066', '#8ee88e', '#c49aff', '#ffaa70'] },
     scenery: nySky,
   },
   // tenues débloquées tous les 10 objets à New York (la première est la tenue de départ)

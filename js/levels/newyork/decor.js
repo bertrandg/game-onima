@@ -57,16 +57,7 @@ function shopfronts(b, n, cols, awning = true) {
   }
 }
 
-// drapeau américain sur hampe, accroché à la façade
-function flag(b, y, z) {
-  b.add(U.cyl6, '#d8d4cc', [fx + 1.4, y, z], [0.04, 3.0, 0.04], [0, 0, -1.1]);
-  const x0 = fx + 2.6, y0 = y + 0.2;
-  for (let i = 0; i < 7; i++) b.add(U.box, i % 2 ? '#f4f0e8' : '#c8202a', [x0, y0 - i * 0.16, z], [0.03, 0.16, 1.9]);
-  b.add(U.box, '#1f2f6a', [x0 + 0.01, y0 - 0.32, z + 0.55], [0.03, 0.66, 0.8]);
-  for (let i = 0; i < 6; i++) b.add(U.box, '#ffffff', [x0 + 0.03, y0 - 0.15 - (i % 3) * 0.2, z + 0.3 + Math.floor(i / 3) * 0.4], [0.01, 0.06, 0.06]);
-}
-
-function decoTower(b, t) {   // tour Art déco en pierre (Wall Street, Times Square)
+function decoTower(b, t) {   // tour Art déco en pierre (Wall Street)
   const tint = pick(['#f4ecdc', '#e6e2da', '#f2dccc', '#e8e0c8', '#dcd8d0']);
   tower(b, t, { key: 'deco', tint, baseCol: pick(['#4a4440', '#3a3a3e', '#5a4a3a']) });
   // entrée monumentale : portique doré et portes à tambour
@@ -79,7 +70,6 @@ function decoTower(b, t) {   // tour Art déco en pierre (Wall Street, Times Squ
     b.add(U.box, '#3a2e26', [fx + 0.22, 2.3, zc], [0.08, 3.4, 3.4]);
     b.add(U.box, '#2a3a46', [fx + 0.27, 2.0, zc], [0.04, 2.6, 2.8]);
   }
-  if (Math.random() < 0.6) { flag(b, 7.5, -3.5); flag(b, 7.5, 3.5); }
 }
 
 function glassTower(b, t) {   // tour de verre moderne sur socle noir
@@ -91,7 +81,7 @@ function glassTower(b, t) {   // tour de verre moderne sur socle noir
   for (let i = 0; i < 4; i++) b.add(U.cyl6, '#ffeec0', [fx + 0.4, 1.1, -1.5 + i], [0.18, 0.9, 0.18]);   // bornes
 }
 
-// Temple de la bourse : colonnes corinthiennes, fronton, immense drapeau
+// Temple de la bourse : colonnes corinthiennes, fronton, portes de bronze
 function exchange(b, t) {
   const tint = '#efe8da';
   b.add(U.box, tint, [0, 80, 0], [BW, 160, BLEN]);
@@ -110,11 +100,11 @@ function exchange(b, t) {
   b.add(U.roof, '#ece6d6', [fx - 0.6, 15.45, 0], [BLEN + 0.3, 3.6, 1.6], [0, Math.PI / 2, 0]);   // fronton
   b.add(U.box, '#d8d0c0', [fx - 0.5, 16.5, 0], [0.3, 1.2, 5]);   // frise sculptée
   b.add(U.box, '#3a3632', [fx - 2.2, 7, 0], [0.1, 12, BLEN - 1]);   // fond sombre du portique
-  // grand drapeau tendu entre les colonnes
-  const x0 = fx - 1.8;
-  for (let i = 0; i < 13; i++) b.add(U.box, i % 2 ? '#f4f0e8' : '#c8202a', [x0, 12.8 - i * 0.62, 0], [0.04, 0.62, 9.4]);
-  b.add(U.box, '#1f2f6a', [x0 + 0.02, 10.9, 2.6], [0.04, 4.3, 4.2]);
-  for (let i = 0; i < 20; i++) b.add(U.box, '#ffffff', [x0 + 0.05, 12.6 - (i % 5) * 0.8, 1.0 + Math.floor(i / 5) * 1.05], [0.01, 0.18, 0.18]);
+  // grandes portes de bronze au fond du portique
+  for (const z of [-3, 0, 3]) {
+    b.add(U.box, '#8a6a3a', [fx - 2.1, 3.0, z], [0.1, 5.2, 2.0]);
+    b.add(U.box, '#2a3440', [fx - 2.05, 9.5, z], [0.06, 5.5, 1.8]);
+  }
 }
 
 // Façade de Times Square couverte d'écrans et de panneaux, bandeau d'actualités qui défile
