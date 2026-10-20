@@ -48,3 +48,14 @@ export function seed(s) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+
+// fetch des fichiers locaux (le kit de New York est chargé au démarrage du module)
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+const netFetch = globalThis.fetch;
+globalThis.fetch = async (url, ...rest) => {
+  const u = String(url);
+  if (!u.startsWith('file:')) return netFetch(url, ...rest);
+  const buf = await readFile(fileURLToPath(u));
+  return new Response(buf);
+};

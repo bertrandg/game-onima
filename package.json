@@ -4,8 +4,8 @@
   "type": "module",
   "description": "Outils de test uniquement : le jeu lui-même se sert tel quel, sans étape de construction.",
   "scripts": {
-    "test": "node --test --test-timeout=30000 tests/unit/",
-    "test:e2e": "node --test --test-concurrency=1 --test-timeout=240000 tests/e2e/",
+    "test": "node --test --test-timeout=30000 \"tests/unit/*.test.mjs\"",
+    "test:e2e": "node --test --test-concurrency=1 --test-timeout=240000 \"tests/e2e/*.test.mjs\"",
     "test:all": "npm test && npm run test:e2e"
   },
   "devDependencies": {
