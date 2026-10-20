@@ -454,7 +454,7 @@ export class NYObstacles extends Obstacles {
     o.x = LANES[o.lane];
     if (o.mesh) {
       o.mesh.position.set(o.x, 0, (o.zNear + o.zFar) / 2);
-      if (o.lane === 0) o.mesh.rotation.y = Math.PI;
+      if (o.lane === 0 && !o.rats) o.mesh.rotation.y = Math.PI;   // les rats restent face au joueur
       this.sewer.add(o.mesh);
     }
     this.sList.push(o);

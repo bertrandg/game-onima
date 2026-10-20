@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Builder, U } from '../../geo.js';
 import { itemMaterial } from '../../candies.js';
 
-// Gourmandises de New York : part de pizza, bretzel, bagel, donut rose ; malus : la Big Apple pourrie
+// Gourmandises de New York : part de pizza, bretzel, bagel, donut rose ; malus : revolver au ruban de police
 const BALL = new THREE.SphereGeometry(1, 9, 7);   // peu de facettes : beaucoup de petites boules par objet
 
 function pizza() {   // part triangulaire : croûte dorée, fromage, rondelles de pepperoni
@@ -72,49 +72,34 @@ function donut() {   // donut au glaçage rose et vermicelles
   return b.build();
 }
 
-// Big Apple pourrie : pomme brun-vert tachée, ver qui sort, mouches, tête de mort et fumée verte
-function rottenApple() {
+// Malus : revolver (de profil face au joueur) entouré d'un ruban de police jaune et noir
+function revolver() {
   const b = new Builder();
-  b.add(BALL, '#6a6a2a', [0, 0, 0], [0.3, 0.27, 0.3]);
-  b.add(BALL, '#5a4a20', [-0.12, 0.08, 0.18], [0.12, 0.1, 0.1]);   // taches de pourriture
-  b.add(BALL, '#4a3a18', [0.15, -0.08, 0.16], [0.1, 0.12, 0.1]);
-  b.add(BALL, '#7a8a2a', [0.1, 0.12, -0.2], [0.12, 0.08, 0.1]);
-  b.add(U.cyl6, '#3a2a18', [0.02, 0.32, 0], [0.025, 0.14, 0.025], [0, 0, -0.3]);   // queue flétrie
-  b.add(BALL, '#4a3a20', [0.1, 0.36, 0], [0.09, 0.02, 0.05], [0, 0, 0.5]);         // feuille morte
-  // ver rose qui sort d'un trou
-  b.add(BALL, '#1a140c', [0.2, 0.05, 0.16], [0.05, 0.05, 0.03]);
-  for (let i = 0; i < 4; i++) b.add(BALL, '#e88a9a', [0.22 + i * 0.05, 0.07 + Math.sin(i) * 0.05, 0.2 + i * 0.02], [0.04, 0.04, 0.04]);
-  b.add(BALL, '#141010', [0.38, 0.12, 0.27], [0.012, 0.012, 0.01]);
-  // tête de mort qui flotte au-dessus
-  const sy = 0.62;
-  b.add(BALL, '#ece4d4', [0, sy, 0], [0.11, 0.105, 0.095]);
-  b.add(U.box, '#e2d8c6', [0, sy - 0.09, 0.02], [0.11, 0.06, 0.08]);
-  for (const sx of [-1, 1]) b.add(BALL, '#0c080a', [sx * 0.04, sy + 0.005, 0.08], [0.03, 0.034, 0.02]);
-  b.add(U.cone4, '#0c080a', [0, sy - 0.04, 0.09], [0.014, 0.03, 0.01], [Math.PI, 0, 0]);
-  for (let i = 0; i < 4; i++) b.add(U.box, '#0c080a', [-0.03 + i * 0.02, sy - 0.1, 0.062], [0.005, 0.028, 0.005]);
-  return b.build();
-}
-function stinkParts() {
-  // fumée verdâtre translucide et mouches qui tournent autour
-  const sm = new Builder();
-  for (let k = 0; k < 3; k++) {
-    for (let i = 0; i < 8; i++) {
-      const a = i * 0.9 + k * 2.1, r = 0.08 + i * 0.015, sz = 0.03 + i * 0.007;
-      sm.add(U.sph0, ['#6a8a2a', '#4a6a1a', '#8aa040'][(i + k) % 3], [Math.cos(a) * r, 0.2 + i * 0.06, Math.sin(a) * r - 0.05], [sz, sz * 2, sz * 0.8], [0, a, 0.4]);
-    }
+  const STEEL = '#8a929e', DARK = '#3a3e46', SHINE = '#d8dee6', WOOD = '#a8602a';
+  b.add(U.cyl, STEEL, [0.2, 0.1, 0], [0.055, 0.42, 0.055], [0, 0, Math.PI / 2]);     // canon
+  b.add(U.box, STEEL, [0.2, 0.15, 0], [0.42, 0.04, 0.05]);                            // nervure
+  b.add(U.box, DARK, [0.4, 0.19, 0], [0.03, 0.04, 0.03]);                             // guidon
+  b.add(U.cyl, SHINE, [0.2, 0.135, 0.03], [0.012, 0.4, 0.012], [0, 0, Math.PI / 2]); // reflet
+  b.add(U.box, STEEL, [-0.06, 0.08, 0], [0.16, 0.18, 0.08]);                          // carcasse
+  b.add(U.cyl, DARK, [-0.04, 0.08, 0], [0.09, 0.14, 0.09], [0, 0, Math.PI / 2]);     // barillet
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    b.add(U.cyl, SHINE, [-0.04, 0.08 + Math.cos(a) * 0.05, Math.sin(a) * 0.05], [0.018, 0.145, 0.018], [0, 0, Math.PI / 2]);
   }
-  const flies = new Builder();
-  for (let i = 0; i < 4; i++) {
-    const a = (i / 4) * Math.PI * 2;
-    const x = Math.cos(a) * 0.42, y = 0.1 + (i % 2) * 0.25, z = Math.sin(a) * 0.42;
-    flies.add(BALL, '#141414', [x, y, z], [0.035, 0.03, 0.045]);
-    for (const s of [-1, 1]) flies.add(BALL, '#c8d8e8', [x + s * 0.035, y + 0.03, z], [0.03, 0.008, 0.02], [0, 0, s * 0.5]);
-  }
-  return [
-    { geo: rottenApple(), mat: itemMaterial('#0e0a06') },
-    { geo: flies.build(), mat: itemMaterial('#000000') },
-    { geo: sm.build(), mat: new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false }) },
-  ];
+  b.add(U.box, DARK, [-0.17, 0.2, 0], [0.05, 0.08, 0.04], [0, 0, 0.5]);              // chien
+  b.add(U.box, WOOD, [-0.2, -0.08, 0], [0.11, 0.26, 0.075], [0, 0, -0.35]);           // crosse
+  for (let i = 0; i < 3; i++) b.add(U.box, '#7a4018', [-0.215 + i * 0.01, -0.05 - i * 0.06, 0.04], [0.06, 0.012, 0.005], [0, 0, -0.35]);
+  b.add(U.cyl, DARK, [-0.05, -0.04, 0], [0.06, 0.02, 0.06], [Math.PI / 2, 0, 0]);    // pontet
+  b.add(U.box, DARK, [-0.05, -0.02, 0], [0.015, 0.06, 0.015], [0, 0, 0.3]);           // détente
+  // un fin ruban « POLICE » noué autour du canon, avec un pan qui pend
+  const rz = 0.45;
+  b.add(U.box, '#ffd21a', [0.16, 0.1, 0], [0.05, 0.2, 0.13], [0, 0, rz]);
+  for (const k of [-1, 0, 1]) b.add(U.box, '#141414', [0.16 - Math.sin(rz) * k * 0.06, 0.1 + Math.cos(rz) * k * 0.06, 0], [0.052, 0.018, 0.132], [0, 0, rz]);
+  b.add(U.box, '#ffd21a', [0.2, -0.03, 0.05], [0.05, 0.2, 0.01], [0, 0, -0.25]);
+  for (const k of [-1, 0, 1]) b.add(U.box, '#141414', [0.2 + Math.sin(0.25) * k * 0.06, -0.03 + k * 0.06, 0.056], [0.052, 0.018, 0.004], [0, 0, -0.25]);
+  const g = b.build();
+  g.scale(1.6, 1.6, 1.6);   // bien visible de loin
+  return g;
 }
 
 export function nyItems() {
@@ -131,6 +116,6 @@ export function nyItems() {
       { geo: donut(), mat, spin: true },
       { geo: donut(), mat, spin: true },
     ],
-    hazard: { parts: stinkParts() },
+    hazard: { geo: revolver(), mat: itemMaterial('#0a0a0e') },
   };
 }
