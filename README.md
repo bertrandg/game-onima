@@ -69,7 +69,9 @@ Les tests n'ont besoin que de Node (22 ou plus) et de Google Chrome installé ; 
 ```bash
 npm install
 npm test            # quelques secondes : règles du jeu, génération des parcours, scores, déblocage, imports
-npm run test:e2e    # dans Chrome (quelques minutes) : chargement, parcours joués, budgets de performance
+npm run test:load   # dans Chrome : chaque niveau se charge et démarre sans erreur
+npm run test:e2e    # dans Chrome (environ 3 min) : parcours joués, budgets de performance
+npm run test:all    # les trois, à lancer avant d'envoyer une modification
 ```
 
 - `tests/unit/` : tests lancés dans Node. Les modules du jeu y sont chargés tels quels, avec un faux
@@ -85,7 +87,10 @@ npm run test:e2e    # dans Chrome (quelques minutes) : chargement, parcours jou�
     déblocage de New York…). Les outils de pilotage sont dans `tests/helpers/game.mjs`.
   - `perf.test.mjs` : chaque niveau se joue 700 m sans erreur ni fichier manquant ; budgets d'appels de dessin et de triangles par niveau, et pas de fuite de mémoire
     graphique. Si un ajout de décor les dépasse, alléger le décor ou relever le budget en connaissance de cause.
-- Sur GitHub, chaque envoi lance les tests ; le site n'est mis en ligne que s'ils passent.
+- `tests/load/` : chargement de chaque niveau dans Chrome.
+- Sur GitHub, chaque envoi lance `npm test` et `npm run test:load` ; le site n'est mis en ligne que s'ils
+  passent. Sans carte graphique, le rendu y est trop lent pour jouer : `npm run test:e2e` se lance donc
+  sur l'ordinateur, avant d'envoyer.
 
 À chaque nouvelle règle (« un seul taxi qui roule », « rats immobiles »…), ajouter le test qui la vérifie.
 

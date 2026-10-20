@@ -66,7 +66,7 @@ export async function startLevel(browser, server, id, { invincible = false, unlo
     for (const [k, v] of Object.entries(storage)) localStorage.setItem(k, v);
   }, { level: id, unlockAll, storage });
   await page.addInitScript(pageTools);
-  await page.goto(`${server.url}/#debug`);
+  await page.goto(`${server.url}/#debug`, { timeout: 120000 });
   try {
     await page.waitForFunction((level) => window.__onima && window.__onima.level === level, id, { timeout: 90000 });
   } catch (e) {

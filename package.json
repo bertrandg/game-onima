@@ -6,7 +6,8 @@
   "scripts": {
     "test": "node --test --test-timeout=30000 \"tests/unit/*.test.mjs\"",
     "test:e2e": "node --test --test-concurrency=1 \"tests/e2e/*.test.mjs\"",
-    "test:all": "npm test && npm run test:e2e"
+    "test:load": "node --test --test-concurrency=1 \"tests/load/*.test.mjs\"",
+    "test:all": "npm test && npm run test:load && npm run test:e2e"
   },
   "devDependencies": {
     "playwright-core": "1.48.2",

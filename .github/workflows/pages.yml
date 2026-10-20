@@ -29,8 +29,9 @@ jobs:
       - run: npm ci
       - name: Tests unitaires et vérifications
         run: npm test
-      - name: Tests dans le navigateur (Chrome, rendu logiciel)
-        run: npm run test:e2e
+      # rendu logiciel, trop lent pour jouer : ici on vérifie seulement que chaque niveau se charge
+      - name: Chargement des niveaux dans Chrome
+        run: npm run test:load
 
   deploy:
     needs: test
