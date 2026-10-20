@@ -78,3 +78,4 @@ Ajouter `#debug` à l'URL expose `window.__onima` pour les tests.
 ## Crédits
 
 Illustration de la statue de la Liberté (niveau New York) : [Vecteezy.com](https://www.vecteezy.com).
+Revolver (malus de New York) : « Survival Pack » de [Quaternius](https://quaternius.com), licence CC0.

@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { Builder, U } from '../../geo.js';
 import { itemMaterial } from '../../candies.js';
+import { MATERIALS, VERTS, TRIS } from './revolvermodel.js';
 
-// Gourmandises de New York : part de pizza, bretzel, bagel, donut rose ; malus : revolver au ruban de police
+// Gourmandises de New York : part de pizza, bretzel, bagel, donut rose ; malus : revolver
 const BALL = new THREE.SphereGeometry(1, 9, 7);   // peu de facettes : beaucoup de petites boules par objet
 
 function pizza() {   // part triangulaire : croûte dorée, fromage, rondelles de pepperoni
@@ -72,33 +73,24 @@ function donut() {   // donut au glaçage rose et vermicelles
   return b.build();
 }
 
-// Malus : revolver (de profil face au joueur) entouré d'un ruban de police jaune et noir
+// Malus : revolver low-poly (modèle de Quaternius, CC0), de profil face au joueur
+const GUN_COLORS = { Metal: '#5e646e', LightMetal: '#a8b0bc', Wood: '#a8643a' };
 function revolver() {
-  const b = new Builder();
-  const STEEL = '#8a929e', DARK = '#3a3e46', SHINE = '#d8dee6', WOOD = '#a8602a';
-  b.add(U.cyl, STEEL, [0.2, 0.1, 0], [0.055, 0.42, 0.055], [0, 0, Math.PI / 2]);     // canon
-  b.add(U.box, STEEL, [0.2, 0.15, 0], [0.42, 0.04, 0.05]);                            // nervure
-  b.add(U.box, DARK, [0.4, 0.19, 0], [0.03, 0.04, 0.03]);                             // guidon
-  b.add(U.cyl, SHINE, [0.2, 0.135, 0.03], [0.012, 0.4, 0.012], [0, 0, Math.PI / 2]); // reflet
-  b.add(U.box, STEEL, [-0.06, 0.08, 0], [0.16, 0.18, 0.08]);                          // carcasse
-  b.add(U.cyl, DARK, [-0.04, 0.08, 0], [0.09, 0.14, 0.09], [0, 0, Math.PI / 2]);     // barillet
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2;
-    b.add(U.cyl, SHINE, [-0.04, 0.08 + Math.cos(a) * 0.05, Math.sin(a) * 0.05], [0.018, 0.145, 0.018], [0, 0, Math.PI / 2]);
+  const pos = new Float32Array(TRIS.length / 4 * 9), col = new Float32Array(pos.length);
+  const c = new THREE.Color();
+  for (let t = 0, o = 0; t < TRIS.length; t += 4) {
+    c.set(GUN_COLORS[MATERIALS[TRIS[t + 3]]] || '#888888');
+    for (let k = 0; k < 3; k++, o += 3) {
+      const v = TRIS[t + k] * 3;
+      pos[o] = VERTS[v]; pos[o + 1] = VERTS[v + 1]; pos[o + 2] = VERTS[v + 2];
+      col[o] = c.r; col[o + 1] = c.g; col[o + 2] = c.b;
+    }
   }
-  b.add(U.box, DARK, [-0.17, 0.2, 0], [0.05, 0.08, 0.04], [0, 0, 0.5]);              // chien
-  b.add(U.box, WOOD, [-0.2, -0.08, 0], [0.11, 0.26, 0.075], [0, 0, -0.35]);           // crosse
-  for (let i = 0; i < 3; i++) b.add(U.box, '#7a4018', [-0.215 + i * 0.01, -0.05 - i * 0.06, 0.04], [0.06, 0.012, 0.005], [0, 0, -0.35]);
-  b.add(U.cyl, DARK, [-0.05, -0.04, 0], [0.06, 0.02, 0.06], [Math.PI / 2, 0, 0]);    // pontet
-  b.add(U.box, DARK, [-0.05, -0.02, 0], [0.015, 0.06, 0.015], [0, 0, 0.3]);           // détente
-  // un fin ruban « POLICE » noué autour du canon, avec un pan qui pend
-  const rz = 0.45;
-  b.add(U.box, '#ffd21a', [0.16, 0.1, 0], [0.05, 0.2, 0.13], [0, 0, rz]);
-  for (const k of [-1, 0, 1]) b.add(U.box, '#141414', [0.16 - Math.sin(rz) * k * 0.06, 0.1 + Math.cos(rz) * k * 0.06, 0], [0.052, 0.018, 0.132], [0, 0, rz]);
-  b.add(U.box, '#ffd21a', [0.2, -0.03, 0.05], [0.05, 0.2, 0.01], [0, 0, -0.25]);
-  for (const k of [-1, 0, 1]) b.add(U.box, '#141414', [0.2 + Math.sin(0.25) * k * 0.06, -0.03 + k * 0.06, 0.056], [0.052, 0.018, 0.004], [0, 0, -0.25]);
-  const g = b.build();
-  g.scale(1.6, 1.6, 1.6);   // bien visible de loin
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g.scale(0.5, 0.5, 0.5);   // environ 1 m de long : bien visible de loin
+  g.computeVertexNormals();
   return g;
 }
 
