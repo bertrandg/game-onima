@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Obstacles } from '../../obstacles.js';
 import { Builder, U, vcMat, pick, rand } from '../../geo.js';
-import { LANES, SPAWN_AHEAD, DESPAWN_BEHIND } from '../../config.js';
+import { LANES, SPAWN_AHEAD, DESPAWN_BEHIND, GRAVITY } from '../../config.js';
 import * as NX from './textures.js';
 
 // Les égouts de New York, sous la chaussée. Une bouche d'égout ouverte fait tomber l'héroïne dans le
@@ -18,6 +18,7 @@ const ARCH_H = CROWN - WALL_TOP;
 const EDGE = 1.35;                        // bord des quais : le canal est entre -EDGE et EDGE
 const MODULE = 16;                        // le tunnel est fait de tronçons identiques de 16 m
 const CLIMB_V = 31;
+const EARLY_JUMP = 0.45;                  // un saut lancé jusqu'à 0,45 s avant l'échelle compte quand même
 const HOLE_R = 1.05;                      // rayon des bouches d'égout ouvertes                       // bond de l'échelle jusqu'à la surface
 const P_HALF_X = 0.32, P_HALF_Z = 0.35;
 const BALL = new THREE.SphereGeometry(1, 8, 6);
@@ -406,6 +407,7 @@ export class NYObstacles extends Obstacles {
     this.nextLadder = startZ - rand(70, 110);
     this.nextHole = startZ - rand(150, 230);
     this.under = false;
+    this.earlyJump = 0;
     this.sewer.visible = true;
     this.setStreetVisible(true);
     this.applyDepth(0);
@@ -477,7 +479,7 @@ export class NYObstacles extends Obstacles {
     arrow.scale.set(1.1, 1.1, 1);
     arrow.position.set(0, SEWER_Y + 2.5, 0);
     g.add(shaft, sky, beam, arrow);
-    const o = this.addS({ kind: 'ladder', lane, zNear: z + 4.5, zFar: z - 3, mesh: g, arrow });
+    const o = this.addS({ kind: 'ladder', lane, zNear: z + 6, zFar: z - 3, mesh: g, arrow });
     o.mesh.position.z = z;
     return o;
   }
@@ -620,6 +622,14 @@ export class NYObstacles extends Obstacles {
   }
 
   resolveSewer(p) {
+    if (this.earlyJump && p.vy > 0) {
+      if (performance.now() - this.earlyJump > EARLY_JUMP * 1000) this.earlyJump = 0;
+      else if (this.ladderAt(p)) {
+        // même trajectoire que si le bond était parti du sol
+        const v = this.climb(p);
+        p.vy = Math.sqrt(Math.max(1, v * v - 2 * GRAVITY * (p.y - SEWER_Y)));
+      }
+    }
     let ground = SEWER_Y, crash = null;
     const ry = p.y - SEWER_Y;
     if (Math.abs(p.x) < EDGE - 0.25) {   // au-dessus de la boue : on y tombe
@@ -653,8 +663,20 @@ export class NYObstacles extends Obstacles {
   // saut au pied d'une échelle : bond jusqu'à la surface (renvoie la vitesse verticale, 0 sinon)
   jumpBoost(p) {
     if (!p.under || p.y > SEWER_Y + 0.2) return 0;
-    const lad = this.sList.find((o) => o.kind === 'ladder' && o.lane === p.lane && p.z <= o.zNear && p.z >= o.zFar);
-    if (!lad) return 0;
+    const lad = this.ladderAt(p);
+    if (!lad) {
+      this.earlyJump = performance.now();   // saut un peu trop tôt : il peut encore devenir un bond de sortie
+      return 0;
+    }
+    return this.climb(p);
+  }
+
+  ladderAt(p) {
+    return this.sList.find((o) => o.kind === 'ladder' && o.lane === p.lane && p.z <= o.zNear && p.z >= o.zFar);
+  }
+
+  climb(p) {
+    this.earlyJump = 0;
     // la rue au-dessus est dégagée dans cette voie (le joueur ne pouvait pas la voir)
     this.clearLane(false, p.lane, p.z + 6, p.z - 70);
     const exitZ = p.z - (this.lastSpeed || 20) * 0.3;
