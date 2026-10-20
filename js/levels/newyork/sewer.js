@@ -207,30 +207,29 @@ function bubbleTexture() {
 
 // ---------- Objets des égouts (construits pour le quai de droite, tournés de 180° à gauche) ----------
 // x local : 0 = centre de la voie, + vers le mur, - vers le canal
-function ratPack() {
+function ratGeo() {   // un gros rat assis, immobile, qui fixe le joueur de ses yeux rouges
   const b = new Builder();
-  const n = randInt(2, 3);
-  for (let i = 0; i < n; i++) {
-    const x = (i - (n - 1) / 2) * 0.55 + rand(-0.06, 0.06), z = rand(-0.4, 0.4), y = SEWER_Y;
-    const fur = pick(['#6a6672', '#5e5864', '#76727e']);
-    b.add(BALL, fur, [x, y + 0.24, z], [0.21, 0.18, 0.34]);
-    b.add(BALL, '#d8d0d8', [x, y + 0.17, z + 0.04], [0.15, 0.1, 0.26]);
-    b.add(BALL, fur, [x, y + 0.32, z + 0.32], [0.16, 0.15, 0.18]);
-    b.add(BALL, '#a8a4b0', [x, y + 0.28, z + 0.48], [0.08, 0.07, 0.1]);
-    b.add(BALL, '#ff8aa8', [x, y + 0.29, z + 0.58], [0.035, 0.03, 0.03]);
-    for (const s of [-1, 1]) {
-      b.add(BALL, fur, [x + s * 0.11, y + 0.47, z + 0.27], [0.08, 0.08, 0.025]);
-      b.add(BALL, '#ffb0c8', [x + s * 0.11, y + 0.47, z + 0.29], [0.055, 0.055, 0.01]);
-      b.add(BALL, '#141414', [x + s * 0.07, y + 0.36, z + 0.45], [0.035, 0.042, 0.02]);
-      b.add(BALL, '#ffffff', [x + s * 0.065, y + 0.375, z + 0.465], [0.012, 0.012, 0.008]);
-      for (const dy of [-0.01, 0.02]) b.add(U.box, '#e8e8e8', [x + s * 0.11, y + 0.29 + dy, z + 0.54], [0.16, 0.006, 0.006], [0, s * 0.3, dy * 6]);
-      for (const dz of [0.22, -0.2]) b.add(U.box, '#d88aa0', [x + s * 0.1, y + 0.05, z + dz], [0.05, 0.1, 0.08]);
-    }
-    for (let k = 0; k < 7; k++) b.add(U.cyl6, '#e8a0b0', [x + Math.sin(k * 0.9) * 0.08, y + 0.2 + k * 0.012, z - 0.36 - k * 0.1], [0.022 - k * 0.002, 0.12, 0.022 - k * 0.002], [Math.PI / 2, 0, 0]);
+  const y = SEWER_Y, fur = pick(['#5e5a66', '#6a6672', '#54505c']);
+  b.add(BALL, fur, [0, y + 0.3, -0.05], [0.3, 0.3, 0.42]);                   // corps
+  b.add(BALL, '#c8c0c8', [0, y + 0.24, 0.05], [0.22, 0.2, 0.33]);            // ventre
+  b.add(BALL, fur, [0, y + 0.5, 0.3], [0.22, 0.21, 0.24]);                   // tête
+  b.add(BALL, '#827e8a', [0, y + 0.45, 0.5], [0.11, 0.1, 0.14]);             // museau
+  b.add(BALL, '#ff8aa8', [0, y + 0.47, 0.63], [0.045, 0.04, 0.035]);         // nez
+  for (const s of [-1, 1]) {
+    b.add(BALL, fur, [s * 0.16, y + 0.72, 0.25], [0.12, 0.12, 0.035]);       // oreilles
+    b.add(BALL, '#ffb0c8', [s * 0.16, y + 0.72, 0.28], [0.08, 0.08, 0.012]);
+    b.add(BALL, '#1a0606', [s * 0.1, y + 0.56, 0.47], [0.06, 0.065, 0.03]);   // yeux rouges luisants
+    b.add(BALL, '#ff2020', [s * 0.1, y + 0.56, 0.49], [0.045, 0.05, 0.02]);
+    b.add(BALL, '#ffd0d0', [s * 0.085, y + 0.58, 0.505], [0.014, 0.014, 0.006]);
+    b.add(U.box, '#2a1a1a', [s * 0.1, y + 0.64, 0.47], [0.1, 0.02, 0.02], [0, 0, s * -0.4]);   // sourcils méchants
+    for (const dy of [-0.015, 0.02]) b.add(U.box, '#e8e8e8', [s * 0.16, y + 0.46 + dy, 0.6], [0.22, 0.008, 0.008], [0, s * 0.3, dy * 6]);
+    b.add(BALL, '#d88aa0', [s * 0.12, y + 0.06, 0.25], [0.06, 0.06, 0.09]);  // pattes
+    b.add(BALL, '#d88aa0', [s * 0.18, y + 0.06, -0.3], [0.07, 0.06, 0.11]);
   }
-  // un peu plus gros que nature, pour qu'on les repère de loin
+  for (const s of [-1, 1]) b.add(U.box, '#f4f0e0', [s * 0.025, y + 0.37, 0.6], [0.04, 0.06, 0.02]);   // dents
+  for (let k = 0; k < 9; k++) b.add(U.cyl6, '#e8a0b0', [Math.sin(k * 0.8) * 0.12, y + 0.08, -0.45 - k * 0.11], [0.03 - k * 0.002, 0.13, 0.03 - k * 0.002], [Math.PI / 2, 0, 0]);
   const g = b.build();
-  g.translate(0, -SEWER_Y, 0).scale(1.3, 1.3, 1.3).translate(0, SEWER_Y, 0);
+  g.translate(0, -SEWER_Y, 0).scale(1.5, 1.5, 1.5).translate(0, SEWER_Y, 0);
   return g;
 }
 
@@ -369,7 +368,7 @@ export class NYObstacles extends Obstacles {
     this.sewer.add(this.tunnel);
 
     this.geo = {
-      rats: [0, 1, 2].map(ratPack), barrels: toxicBarrels(), pipe: bigPipe(), grille: grille(),
+      rats: [0, 1, 2].map(ratGeo), barrels: toxicBarrels(), pipe: bigPipe(), grille: grille(),
       ladder: ladderGeo(), poop: poopGeo(), hole: holeGeo(), cone: coneGeo(),
     };
     this.shaftMat = new THREE.MeshBasicMaterial({ color: '#0c0e0a', side: THREE.BackSide });
@@ -478,13 +477,14 @@ export class NYObstacles extends Obstacles {
     arrow.scale.set(1.1, 1.1, 1);
     arrow.position.set(0, SEWER_Y + 2.5, 0);
     g.add(shaft, sky, beam, arrow);
-    const o = this.addS({ kind: 'ladder', lane, zNear: z + 3, zFar: z - 3, mesh: g, arrow });
+    const o = this.addS({ kind: 'ladder', lane, zNear: z + 4.5, zFar: z - 3, mesh: g, arrow });
+    o.mesh.position.z = z;
     return o;
   }
 
   addSewerObstacle(lane, z, type, moving) {
     let geo, kind, h = 0, depth, halfW = 1.0;
-    if (type === 'rats') { geo = pick(this.geo.rats); kind = 'low'; h = 0.7; depth = 1.0; }
+    if (type === 'rats') { geo = pick(this.geo.rats); kind = 'low'; h = 1.0; depth = 1.2; halfW = 0.7; }
     else if (type === 'barrels') { geo = this.geo.barrels; kind = 'low'; h = 1.0; depth = 0.8; }
     else if (type === 'pipe') { geo = this.geo.pipe; kind = 'high'; depth = 0.7; }
     else { geo = this.geo.grille; kind = 'wall'; depth = 0.5; halfW = 1.2; }
@@ -531,7 +531,7 @@ export class NYObstacles extends Obstacles {
     const count = Math.random() < 0.6 ? 1 : 2;
     lanes.slice(0, count).forEach((l) => {
       const r = Math.random();
-      if (r < 0.42) this.addSewerObstacle(l, z, 'rats', dist > 120 && Math.random() < 0.45);
+      if (r < 0.42) this.addSewerObstacle(l, z, 'rats');
       else if (r < 0.65) this.addSewerObstacle(l, z, 'barrels');
       else this.addSewerObstacle(l, z, 'pipe');
     });
@@ -741,11 +741,7 @@ export class NYObstacles extends Obstacles {
     const t = performance.now() / 1000;
     this.sludgeTex.offset.y = (t * 0.35) % 1;
     for (const o of this.sList) {
-      if (o.rats && o.mesh) {
-        const s = o.moving ? 14 : 5;
-        o.mesh.position.y = Math.abs(Math.sin(t * s + o.phase)) * (o.moving ? 0.07 : 0.02);
-        o.mesh.rotation.z = Math.sin(t * s * 0.5 + o.phase) * 0.04;
-      } else if (o.float) {
+      if (o.float) {
         o.mesh.position.y = SLUDGE_Y + Math.sin(t * 2 + o.phase) * 0.05;
         o.mesh.rotation.y += dt * 0.4;
       } else if (o.arrow) {
