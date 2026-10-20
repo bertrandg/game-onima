@@ -79,3 +79,6 @@ Ajouter `#debug` à l'URL expose `window.__onima` pour les tests.
 
 Illustration de la statue de la Liberté (niveau New York) : [Vecteezy.com](https://www.vecteezy.com).
 Revolver (malus de New York) : « Survival Pack » de [Quaternius](https://quaternius.com), licence CC0.
+Façades de New York : pièces du « Downtown City MegaKit » (version Standard) de [Quaternius](https://quaternius.com), licence CC0
+(`models/nykit/`). La texture des étages supérieurs (`models/nykit/facades.jpg`) se régénère en ouvrant
+`tools/bake-facades.html` via `serve.py`.

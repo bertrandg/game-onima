@@ -1,92 +1,67 @@
 import * as THREE from 'three';
 import { Builder, TexBuilder, U, pick, rand } from '../../geo.js';
 import * as NX from './textures.js';
+import { loadKit, makeKitMats, addPiece } from './kit.js';
+import { FACADE_LEN, FLOOR_H, FLOORS_3D, BAKE, buildFloors, bakedUV } from './facades.js';
+
+await loadKit();   // pièces du kit chargées avant la construction du décor
+const BAKE_TILE = BAKE.floors * FLOOR_H;
 
 // Décor latéral de New York : trottoirs, mobilier urbain, et façades de gratte-ciel si hautes
 // qu'on n'en voit jamais le sommet. Chaque élément est construit "face à +x" (vers la voie quand il est
-// à gauche), origine au sol, centré en z. Les façades sont des panneaux texturés (TexBuilder).
+// à gauche), origine au sol, centré en z. Les façades utilisent les pièces du Downtown City MegaKit.
 
 const BALL = new THREE.SphereGeometry(1, 8, 6);
 const POLE = '#3a4a42';         // vert-gris des lampadaires new-yorkais
-const STEEL = '#a8acb0';
 const GOLD = '#d8b04a';
 const ri = (a, b) => Math.floor(rand(a, b + 1));
-const T = NX.TILE;
 
-// Matériaux des panneaux texturés (créés au chargement du niveau)
+// Matériaux des panneaux texturés (créés au chargement du niveau) : pièces du kit, écrans de Times Square
 export function makeTexMats() {
-  const lit = (map) => new THREE.MeshLambertMaterial({ map, vertexColors: true });
   return {
-    deco: lit(NX.decoFacade()),
-    glass: lit(NX.glassFacade()),
-    brick: lit(NX.brickFacade()),
+    ...makeKitMats(),
     ads: new THREE.MeshBasicMaterial({ map: NX.adsAtlas(), vertexColors: true }),
     ticker: new THREE.MeshBasicMaterial({ map: NX.tickerTexture() }),
   };
 }
 
-// ---------- Gratte-ciel ----------
+// ---------- Gratte-ciel (pièces du « Downtown City MegaKit ») ----------
 const BW = 10;                  // profondeur des immeubles
-const BLEN = 14;                // longueur le long de la rue
+const BLEN = FACADE_LEN;        // longueur le long de la rue (16 m)
 const fx = BW / 2;              // façade côté voie
+const TOP3D = FLOORS_3D * FLOOR_H;
+// couleur du corps (visible entre deux immeubles) selon la matière dominante du style
+const BODY = { trimStone: '#cfc4a4', modern: '#8a8c90', paleInset: '#b07a62', curved: '#b07a62', redWhite: '#8a4a3a', brownstone: '#7a4636', squares: '#7a4636' };
+const at = (u, y) => [[fx, y, BLEN / 2 - u], Math.PI / 2];
 
-// corps du bâtiment, façade texturée au-dessus du rez-de-chaussée, corniche du socle
-function tower(b, t, { key, tint, base = 5.5, H = rand(135, 170), baseCol = '#6a6258' }) {
-  b.add(U.box, tint, [0, H / 2, 0], [BW, H, BLEN]);
-  t.facade(key, [fx + 0.03, base + (H - base) / 2, 0], [BLEN, H - base], T[key][0], T[key][1], tint, rand(0, 1));
-  // socle de pierre sombre et bandeau
-  b.add(U.box, baseCol, [fx + 0.1, base / 2, 0], [0.2, base, BLEN]);
-  b.add(U.box, '#d8d0c0', [fx + 0.3, base, 0], [0.6, 0.35, BLEN + 0.02]);
-  return H;
-}
-
-// vitrines de rez-de-chaussée (2 ou 3 boutiques) avec auvents
-function shopfronts(b, n, cols, awning = true) {
-  const sw = BLEN / n;
-  for (let k = 0; k < n; k++) {
-    const zc = -BLEN / 2 + sw * (k + 0.5);
-    b.add(U.box, pick(cols), [fx + 0.22, 2.4, zc], [0.08, 3.6, sw - 0.6]);
-    b.add(U.box, '#28323c', [fx + 0.27, 1.8, zc], [0.04, 2.6, sw - 1.2]);
-    b.add(U.box, '#f0f4f6', [fx + 0.29, 1.8, zc + sw * 0.15], [0.02, 2.4, 0.08]);
-    b.add(U.box, '#ffe8a8', [fx + 0.28, 3.6, zc], [0.03, 0.5, sw - 1.4]);   // enseigne lumineuse
-    if (awning) {
-      const ac = pick(['#c8302a', '#2c5a3a', '#1f3a70', '#e8a020', '#5a2a6a']);
-      b.add(U.box, ac, [fx + 1.0, 3.25, zc], [1.6, 0.06, sw - 0.8], [0, 0, -0.3]);
-      b.add(U.box, ac, [fx + 1.78, 3.0, zc], [0.04, 0.3, sw - 0.8]);
-    }
+// Rez-de-chaussée et 1er étage en vraies pièces 3D, bandeau, puis texture des étages types jusqu'en haut
+function tower(b, t, style, { tint = null, H = rand(135, 170), from = 0 } = {}) {
+  const body = BODY[style];
+  b.add(U.box, '#2a2622', [-0.15, TOP3D / 2, 0], [BW - 0.3, TOP3D, BLEN]);   // derrière les vitrines, en retrait
+  b.add(U.box, body, [0, (TOP3D + H) / 2, 0], [BW, H - TOP3D, BLEN]);
+  if (from === 0) buildFloors(t, style, 0, FLOORS_3D, at, { tint });
+  const uv = bakedUV(style), col = tint ? new THREE.Color(...tint).getHexString() : 'ffffff';
+  for (let y = Math.max(TOP3D, from); y < H; y += BAKE_TILE) {
+    const h = Math.min(BAKE_TILE, H - y);
+    const v1 = uv[1] + (uv[3] - uv[1]) * (h / BAKE_TILE);
+    const flip = Math.random() < 0.5;   // tuiles retournées au hasard : moins de répétition
+    t.quad('kfacade', [fx + 0.01, y + h / 2, 0], [BLEN, h], [flip ? 1 : 0, uv[1], flip ? 0 : 1, v1], '#' + col);
   }
 }
 
-function decoTower(b, t) {   // tour Art déco en pierre (Wall Street)
-  const tint = pick(['#f4ecdc', '#e6e2da', '#f2dccc', '#e8e0c8', '#dcd8d0']);
-  tower(b, t, { key: 'deco', tint, baseCol: pick(['#4a4440', '#3a3a3e', '#5a4a3a']) });
-  // entrée monumentale : portique doré et portes à tambour
-  b.add(U.box, '#2a2622', [fx + 0.25, 2.2, 0], [0.1, 4.4, 4.4]);
-  b.add(U.box, GOLD, [fx + 0.3, 4.55, 0], [0.12, 0.3, 4.8]);
-  for (const dz of [-1.4, -0.45, 0.45, 1.4]) b.add(U.box, '#c89a40', [fx + 0.32, 1.4, dz], [0.04, 2.6, 0.8]);
-  for (const dz of [-1.4, -0.45, 0.45, 1.4]) b.add(U.box, '#32404c', [fx + 0.34, 1.4, dz], [0.02, 2.3, 0.6]);
-  for (let i = 0; i < 5; i++) b.add(U.box, GOLD, [fx + 0.33, 3.4 + 0.18 * Math.sin(i), -1.6 + i * 0.8], [0.04, 0.5, 0.06], [0.6 * (i - 2) * 0.3, 0, 0]);
-  for (const zc of [-4.8, 4.8]) {   // vitrines de part et d'autre
-    b.add(U.box, '#3a2e26', [fx + 0.22, 2.3, zc], [0.08, 3.4, 3.4]);
-    b.add(U.box, '#2a3a46', [fx + 0.27, 2.0, zc], [0.04, 2.6, 2.8]);
-  }
+function decoTower(b, t) {   // Wall Street : pierre à moulures, brique claire, fenêtres cintrées
+  tower(b, t, pick(['trimStone', 'trimStone', 'paleInset', 'curved']));
 }
 
-function glassTower(b, t) {   // tour de verre moderne sur socle noir
-  tower(b, t, { key: 'glass', tint: pick(['#ffffff', '#e8f4ff', '#f0f0ff', '#e0f0f0']), baseCol: '#202428' });
-  b.add(U.box, '#1a1e22', [fx + 0.22, 2.6, 0], [0.08, 5.2, BLEN - 0.4]);
-  b.add(U.box, '#9ab8cc', [fx + 0.28, 2.4, 0], [0.04, 4.4, BLEN - 1.4]);   // hall vitré
-  for (let i = 0; i < 6; i++) b.add(U.box, '#1a1e22', [fx + 0.3, 2.4, -BLEN / 2 + 1.2 + i * 2.3], [0.06, 4.4, 0.12]);
-  b.add(U.box, '#e8eef2', [fx + 0.6, 5.0, 0], [1.2, 0.18, 6]);   // marquise
-  for (let i = 0; i < 4; i++) b.add(U.cyl6, '#ffeec0', [fx + 0.4, 1.1, -1.5 + i], [0.18, 0.9, 0.18]);   // bornes
+function glassTower(b, t) {   // tour moderne métal et verre
+  tower(b, t, 'modern');
+  for (let i = 0; i < 4; i++) addPiece(t, 'Prop_Bollard', [fx + 0.9, 0, -1.5 + i], 0);   // bornes devant le hall
 }
 
-// Temple de la bourse : colonnes corinthiennes, fronton, portes de bronze
+// Temple de la bourse : colonnes corinthiennes, fronton, portes de bronze, tour de pierre derrière
 function exchange(b, t) {
-  const tint = '#efe8da';
-  b.add(U.box, tint, [0, 80, 0], [BW, 160, BLEN]);
-  t.facade('deco', [fx - 2.4, 50, 0], [BLEN, 60], T.deco[0], T.deco[1], '#e8e2d6');
-  t.facade('deco', [fx - 2.4 + 0.02, 115, 0], [BLEN, 70], T.deco[0], T.deco[1], '#f0eadc');
+  tower(b, t, 'trimStone', { from: 18 });
+  b.add(U.box, '#efe8da', [-0.5, 9, 0], [BW - 1, 18, BLEN]);
   b.add(U.box, '#d8d0c0', [fx - 1, 0.5, 0], [3.8, 1.0, BLEN]);   // emmarchement
   for (let i = 0; i < 3; i++) b.add(U.box, '#e2dccc', [fx + 0.4 - i * 0.4, 0.18 + i * 0.32, 0], [0.4, 0.36, BLEN - 1]);
   for (let i = 0; i < 6; i++) {
@@ -100,8 +75,7 @@ function exchange(b, t) {
   b.add(U.roof, '#ece6d6', [fx - 0.6, 15.45, 0], [BLEN + 0.3, 3.6, 1.6], [0, Math.PI / 2, 0]);   // fronton
   b.add(U.box, '#d8d0c0', [fx - 0.5, 16.5, 0], [0.3, 1.2, 5]);   // frise sculptée
   b.add(U.box, '#3a3632', [fx - 2.2, 7, 0], [0.1, 12, BLEN - 1]);   // fond sombre du portique
-  // grandes portes de bronze au fond du portique
-  for (const z of [-3, 0, 3]) {
+  for (const z of [-3, 0, 3]) {   // grandes portes de bronze au fond du portique
     b.add(U.box, '#8a6a3a', [fx - 2.1, 3.0, z], [0.1, 5.2, 2.0]);
     b.add(U.box, '#2a3440', [fx - 2.05, 9.5, z], [0.06, 5.5, 1.8]);
   }
@@ -109,21 +83,18 @@ function exchange(b, t) {
 
 // Façade de Times Square couverte d'écrans et de panneaux, bandeau d'actualités qui défile
 function timesTower(b, t) {
-  const key = pick(['glass', 'deco']);
-  tower(b, t, { key, tint: key === 'glass' ? '#ffffff' : pick(['#e6e2da', '#f2dccc']), baseCol: '#1a1820' });
-  // rez-de-chaussée : marquise de théâtre à ampoules
-  b.add(U.box, '#1a1820', [fx + 0.22, 2.4, 0], [0.08, 4.8, BLEN - 0.4]);
-  b.add(U.box, '#2a3442', [fx + 0.27, 1.8, 0], [0.04, 2.8, BLEN - 2]);
-  b.add(U.box, '#c8302a', [fx + 1.1, 4.4, 0], [2.0, 0.9, 8]);
-  b.add(U.box, '#fff2c0', [fx + 2.12, 4.4, 0], [0.04, 0.6, 7.6]);
-  for (let i = 0; i < 26; i++) b.add(U.box, '#fff8d8', [fx + 2.15, 4.85, -3.9 + i * 0.31], [0.06, 0.08, 0.08]);
-  t.quad('ads', [fx + 2.16, 4.4, 0], [7.0, 0.55], pick(NX.ADS.wide));
-  // bandeau qui défile tout le long de la façade
-  b.add(U.box, '#141414', [fx + 0.35, 6.6, 0], [0.5, 1.5, BLEN]);
-  t.quad('ticker', [fx + 0.62, 6.6, 0], [BLEN, 1.1], [0, 0, BLEN / 6, 1]);
+  tower(b, t, pick(['modern', 'trimStone', 'redWhite']));
+  // marquise de théâtre à ampoules au-dessus de l'entrée
+  b.add(U.box, '#c8302a', [fx + 1.1, 3.4, 0], [2.0, 0.8, 8]);
+  b.add(U.box, '#fff2c0', [fx + 2.12, 3.4, 0], [0.04, 0.55, 7.6]);
+  for (let i = 0; i < 26; i++) b.add(U.box, '#fff8d8', [fx + 2.15, 3.82, -3.9 + i * 0.31], [0.06, 0.08, 0.08]);
+  t.quad('ads', [fx + 2.16, 3.4, 0], [7.0, 0.5], pick(NX.ADS.wide));
+  // bandeau qui défile tout le long de la façade, au-dessus du 1er étage
+  b.add(U.box, '#141414', [fx + 0.35, TOP3D + 0.9, 0], [0.5, 1.5, BLEN]);
+  t.quad('ticker', [fx + 0.62, TOP3D + 0.9, 0], [BLEN, 1.1], [0, 0, BLEN / 6, 1]);
   // grands panneaux : un ou deux par étage d'affichage, cadres sombres en saillie
-  let y = 8.6;
-  while (y < 46) {
+  let y = TOP3D + 2.4;
+  while (y < 48) {
     const tall = Math.random() < 0.45;
     const h = tall ? rand(9, 13) : rand(5, 7);
     const w = tall ? h / 2 : h * 2;
@@ -145,7 +116,7 @@ function timesTower(b, t) {
 function fireEscape(b, z, floors) {
   const F = 3, w = 3.2;
   for (let f = 0; f < floors; f++) {
-    const y = 5.6 + f * F;
+    const y = 6.05 + f * F;   // paliers au niveau des étages, à partir du 2e
     b.add(U.box, '#1e1e22', [fx + 0.6, y, z], [1.1, 0.06, w]);             // palier
     b.add(U.box, '#1e1e22', [fx + 1.14, y + 0.5, z], [0.04, 0.04, w]);     // rambarde
     for (let k = 0; k <= 8; k++) b.add(U.box, '#1e1e22', [fx + 1.14, y + 0.25, z - w / 2 + (k * w) / 8], [0.03, 0.5, 0.03]);
@@ -157,17 +128,15 @@ function fireEscape(b, z, floors) {
   }
 }
 function tenement(b, t) {
-  const tint = pick(['#c87058', '#b85a48', '#d8a888', '#a8c0a0', '#e8dcc8', '#c88a70']);
-  tower(b, t, { key: 'brick', tint, base: 5.2, baseCol: '#3a2a24' });
-  // boutiques : auvents colorés et enseignes dorées
+  const style = pick(['brownstone', 'brownstone', 'redWhite', 'squares', 'curved']);
+  tower(b, t, style, { tint: pick([null, null, [1.08, 0.95, 0.9], [0.95, 0.92, 0.9]]) });
+  // enseignes rouges et dorées au-dessus des vitrines, auvents colorés
   for (let k = 0; k < 2; k++) {
-    const zc = (k - 0.5) * 7;
+    const zc = (k - 0.5) * 8;
     const col = pick(['#c8202a', '#2c7a4a', '#e8a020', '#1f5a8a']);
-    b.add(U.box, col, [fx + 0.22, 2.4, zc], [0.08, 4.4, 6.4]);
-    b.add(U.box, '#2a343c', [fx + 0.27, 1.6, zc], [0.04, 2.4, 5.2]);
-    b.add(U.box, '#c8202a', [fx + 0.3, 3.85, zc], [0.06, 0.9, 6.2]);   // bandeau d'enseigne rouge
-    for (let i = 0; i < 4; i++) b.add(U.box, GOLD, [fx + 0.34, 3.85, zc - 1.8 + i * 1.2], [0.02, 0.55, 0.7]);
-    b.add(U.box, col, [fx + 1.1, 3.1, zc], [1.8, 0.06, 6], [0, 0, -0.25]);
+    b.add(U.box, '#c8202a', [fx + 0.3, 2.75, zc], [0.08, 0.5, 6.4]);
+    for (let i = 0; i < 4; i++) b.add(U.box, GOLD, [fx + 0.35, 2.75, zc - 1.8 + i * 1.2], [0.02, 0.32, 0.7]);
+    b.add(U.box, col, [fx + 1.0, 2.45, zc], [1.6, 0.06, 6.6], [0, 0, -0.25]);
     // fruits sur l'étal devant la boutique
     if (Math.random() < 0.5) {
       b.add(U.box, '#8a6a42', [fx + 0.9, 0.8, zc], [0.9, 0.1, 4]);
@@ -186,9 +155,9 @@ function tenement(b, t) {
   fireEscape(b, rand(-4, 4), ri(5, 8));
   // lanternes rouges suspendues aux auvents
   for (const z of [-5, -1.5, 2, 5.5]) {
-    b.add(BALL, '#e8202a', [fx + 1.6, 2.6, z], [0.28, 0.34, 0.28]);
-    b.add(U.cyl, GOLD, [fx + 1.6, 2.98, z], [0.12, 0.08, 0.12]);
-    b.add(U.cyl, GOLD, [fx + 1.6, 2.22, z], [0.12, 0.06, 0.12]);
+    b.add(BALL, '#e8202a', [fx + 1.6, 1.9, z], [0.26, 0.32, 0.26]);
+    b.add(U.cyl, GOLD, [fx + 1.6, 2.25, z], [0.12, 0.08, 0.12]);
+    b.add(U.cyl, GOLD, [fx + 1.6, 1.55, z], [0.12, 0.06, 0.12]);
   }
 }
 

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Génération des façades de New York</title>
+<!-- Outil : « photographie » deux étages types de chaque style de façade (pièces du kit) et assemble
+     models/nykit/facades.jpg, la texture des étages supérieurs des gratte-ciel. Ouvrir via serve.py ;
+     le résultat s'affiche et window.__atlas contient l'image (data URL). -->
+<script type="importmap">
+  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                 "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+</script>
+</head>
+<body style="margin:0;background:#222">
+<canvas id="atlas"></canvas>
+<script type="module">
+import * as THREE from 'three';
+import { TexBuilder } from '../js/geo.js';
+import { loadKit, makeKitMats } from '../js/levels/newyork/kit.js';
+import { STYLE_NAMES, BAKE, FACADE_LEN, FLOOR_H, buildFloors } from '../js/levels/newyork/facades.js';
+
+await loadKit();
+const mats = makeKitMats();
+await new Promise((r) => setTimeout(r, 1500));   // textures chargées
+const W = BAKE.atlasW, H = BAKE.floors * FLOOR_H * BAKE.pxPerM;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H);
+const atlas = document.getElementById('atlas');
+atlas.width = W; atlas.height = BAKE.atlasH;
+const g = atlas.getContext('2d');
+g.fillStyle = '#6a625a';
+g.fillRect(0, 0, W, BAKE.atlasH);
+const cam = new THREE.OrthographicCamera(-FACADE_LEN / 2, FACADE_LEN / 2, BAKE.floors * FLOOR_H, 0, 0.1, 20);
+cam.position.set(0, 0, 10);
+STYLE_NAMES.forEach((name, k) => {
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color('#3a3430');
+  scene.add(new THREE.AmbientLight('#ffffff', 1.6));
+  const sun = new THREE.DirectionalLight('#ffffff', 1.2);
+  sun.position.set(-0.4, 0.8, 1);
+  scene.add(sun);
+  const t = new TexBuilder();
+  // deux étages types (pas de rez-de-chaussée), sans bandeau
+  buildFloors(t, name, 1, 1 + BAKE.floors, (u, y) => [[u - FACADE_LEN / 2, y - FLOOR_H, 0], 0], { band: false });
+  for (const { key, geo } of t.build()) scene.add(new THREE.Mesh(geo, mats[key]));
+  renderer.render(scene, cam);
+  g.drawImage(renderer.domElement, 0, k * H);
+});
+window.__atlas = atlas.toDataURL('image/jpeg', 0.85);
+</script>
+</body>
+</html>
