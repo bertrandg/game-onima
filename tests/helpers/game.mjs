@@ -26,13 +26,14 @@ function pageTools() {
       ob.reserve = null;
       ob.cursor = p.z - free;
       ob.busy = [p.z, p.z, p.z];
-      if (ob.sList) {
-        for (const x of ob.sList) if (x.mesh) ob.sewer.remove(x.mesh);
+      if (ob.sList) {   // étage du dessous (égouts de New York, tombeau d'Égypte)
+        const below = ob.sewer || ob.tomb;
+        for (const x of ob.sList) if (x.mesh) below.remove(x.mesh);
         ob.sList = [];
         ob.sCursor = p.z - free;
         ob.sBusy = [p.z, p.z, p.z];
         ob.nextHole = p.z - 1e6;
-        ob.nextLadder = p.z - 1e6;
+        ob.nextLadder = ob.nextStair = p.z - 1e6;
       }
       for (const f of c.fugus) c.scene.remove(f.mesh);
       c.fugus = [];

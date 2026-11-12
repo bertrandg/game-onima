@@ -155,6 +155,39 @@ test('New York : marcher dans la boue des égouts est mortel', async () => {
   });
 });
 
+test('Égypte : dalle effondrée, puis sortie du tombeau en montant l\'escalier sans s\'arrêter', async () => {
+  await scenario('egypte', async (page) => {
+    await put(page, 'ob.addHole(1, z, true)', 30);
+    await page.waitForFunction(() => window.__onima.player.under && window.__onima.player.grounded, null, { timeout: 30000 });
+    await page.evaluate(() => window.__t.clearAhead());
+    let s = await state(page);
+    assert.ok(s.y < -6, 'dans le tombeau');
+    await put(page, 'ob.addStair(1, z)', 25);
+    await page.waitForFunction(() => !window.__onima.player.under || window.__onima.state !== 'running', null, { timeout: 30000 });
+    await page.waitForFunction(() => window.__onima.player.grounded || window.__onima.state !== 'running', null, { timeout: 20000 });
+    s = await state(page);
+    assert.equal(s.state, 'running');
+    assert.equal(s.under, false);
+    assert.ok(s.y >= 0, `de retour sur l'avenue (y = ${s.y.toFixed(2)})`);
+  });
+});
+
+test('Égypte : sauter par-dessus une momie au bon moment ; une porte scellée est mortelle', async () => {
+  await scenario('egypte', async (page) => {
+    await put(page, 'ob.addHole(1, z, true)', 30);
+    await page.waitForFunction(() => window.__onima.player.under && window.__onima.player.grounded, null, { timeout: 30000 });
+    await page.evaluate(() => window.__t.clearAhead());
+    const z = await put(page, "ob.addTombObstacle(1, z, 'mummy')", 40);
+    // sommet du saut (environ 0,36 s après l'appui) au-dessus de la momie
+    await page.evaluate((z) => window.__t.when((o) => o.player.z - (z - 0.3) < o.speed * 0.36, 'ArrowUp'), z);
+    await passed(page, z);
+    assert.equal((await state(page)).state, 'running');
+    await put(page, "ob.addTombObstacle(1, z, 'door')", 30);
+    await page.evaluate(() => window.__t.press('ArrowUp'));
+    await dead(page);
+  });
+});
+
 test('déblocage : 2300 points à Paris débloquent New York pendant la partie et à la fin', async () => {
   const storage = { 'onima.scores.v1': JSON.stringify([{ id: 'a', name: 'Test', score: 1600, date: 1 }]) };
   await scenario('paris', async (page) => {

@@ -28,6 +28,15 @@ export const LEVELS = [
     unlock: { level: 'paris', score: 2300 },
     load: () => import('./newyork/index.js'),
   },
+  {
+    id: 'egypte',
+    name: 'Égypte',
+    subtitle: 'Pharaons et tombeaux',
+    icon: '🐪',
+    item: '🍯',
+    unlock: { level: 'newyork', score: 3000 },
+    load: () => import('./egypte/index.js'),
+  },
 ];
 
 export const levelById = (id) => LEVELS.find((l) => l.id === id) || LEVELS[0];

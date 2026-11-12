@@ -12,7 +12,7 @@ import { World } from '../../js/world.js';
 
 const SEEDS = 12, LENGTH = 4000, STEP = 4;
 const defs = {};
-for (const id of ['japon', 'paris', 'newyork']) defs[id] = (await levelById(id).load()).default;
+for (const id of ['japon', 'paris', 'newyork', 'egypte']) defs[id] = (await levelById(id).load()).default;
 
 // Partie simulée sans joueur : le monde avance de STEP mètres à la fois, à la vitesse du jeu.
 // check(state) est appelé après chaque pas ; renvoie aussi tout ce qui a été généré.
@@ -41,7 +41,7 @@ const where = (id, s, z) => `${id}, partie ${s}, à ${Math.round(-z)} m`;
 const isStatic = (o) => !o.moving && o.kind !== 'deco';
 const covers = (o, z) => z <= o.zNear && z >= o.zFar;
 
-for (const id of ['japon', 'paris', 'newyork']) {
+for (const id of ['japon', 'paris', 'newyork', 'egypte']) {
   test(`${id} : jamais les trois voies fermées par des véhicules sans rampe pour monter dessus`, () => {
     for (let s = 1; s <= SEEDS; s++) {
       play(id, s, ({ ob, pz, fresh }) => {
@@ -157,11 +157,55 @@ test('newyork : les bouches ouvertes sont sur les voies de côté, jamais sous u
   }
 });
 
+// ---------- Égypte ----------
+test('egypte : les dalles effondrées ne sont jamais sous un véhicule qui roule ni sur une rampe', () => {
+  let holes = 0;
+  const lanes = new Set();
+  for (let s = 1; s <= SEEDS; s++) {
+    play('egypte', s, ({ ob, pz, fresh }) => {
+      for (const h of fresh) {
+        if (h.kind !== 'hole') continue;
+        holes++;
+        lanes.add(h.lane);
+        assert.equal(ob.groundAt(h.x, (h.zNear + h.zFar) / 2), 0, `dalle sur une rampe (${where('egypte', s, h.zNear)})`);
+      }
+      for (const h of ob.list) {
+        if (h.kind !== 'hole') continue;
+        const car = ob.list.find((o) => o.moving && o.lane === h.lane && o.zFar < h.zNear && o.zNear > h.zFar && h.zNear < pz);
+        assert.ok(!car, `char sur une dalle effondrée (${where('egypte', s, h.zNear)})`);
+      }
+    });
+  }
+  assert.ok(holes > SEEDS * 5, `${holes} dalles effondrées`);
+  assert.equal(lanes.size, 3, 'sur les trois voies');
+});
+
+test('egypte : dans le tombeau, une voie toujours franchissable, des escaliers réguliers, rien sur les marches', () => {
+  for (let s = 1; s <= SEEDS; s++) {
+    const seen = new Set();
+    play('egypte', s, ({ ob }) => { for (const o of ob.sList) seen.add(o); });
+    const all = [...seen];
+    const walls = all.filter((o) => o.kind === 'wall');
+    for (const w of walls) {
+      const others = walls.filter((o) => o !== w && o.zNear > w.zFar - 0.5 && o.zFar < w.zNear + 0.5);
+      assert.equal(others.length, 0, `deux portes scellées côte à côte (${where('egypte', s, w.zNear)})`);
+    }
+    const stairs = all.filter((o) => o.kind === 'stair').sort((a, b) => b.zNear - a.zNear);
+    assert.ok(stairs.length > 15, `partie ${s} : ${stairs.length} escaliers`);
+    const gaps = stairs.slice(1).map((o, i) => stairs[i].zNear - o.zNear);
+    assert.ok(Math.max(...gaps) < 260, `partie ${s} : ${Math.max(...gaps).toFixed(0)} m sans escalier`);
+    for (const st of stairs) {
+      const on = all.find((o) => o !== st && o.kind !== 'deco' && o.lane === st.lane && o.zNear > st.zFar && o.zFar < st.zNear);
+      assert.ok(!on, `${on && (on.type || on.kind)} sur un escalier (${where('egypte', s, st.zNear)})`);
+    }
+  }
+});
+
 // ---------- Décor ----------
 // Le couloir des trois voies (véhicules compris) doit rester libre : aucun décor plus haut que le sol
 // (0,35 m) n'y entre en dessous de la hauteur d'une personne debout sur le toit d'un véhicule.
 const CORRIDOR = LANES[2] + 1.15, CLEAR = TRAIN_TOP + PLAYER_H + 0.3, FLAT = 0.35;
-for (const id of ['japon', 'paris', 'newyork']) {
+for (const id of ['japon', 'paris', 'newyork', 'egypte']) {
   test(`${id} : le décor n'empiète jamais sur les trois voies`, () => {
     const v = new THREE.Vector3();
     for (let s = 1; s <= 3; s++) {

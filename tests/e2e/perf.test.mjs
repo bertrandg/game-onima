@@ -1,7 +1,7 @@
 // Chaque niveau se charge et se joue 700 m (joueur invincible) sans erreur ni fichier manquant, et
 // reste dans ses budgets de performance : nombre d'appels de dessin et de triangles par image (maximum relevé sur
 // 600 m de course), et mémoire graphique stable dans la durée (pas de fuite de géométries/textures).
-// Les budgets sont environ 15 % au-dessus des valeurs mesurées en octobre 2026 : un dépassement
+// Les budgets sont environ 15 % au-dessus des valeurs mesurées (octobre 2026, Égypte en novembre 2026) : un dépassement
 // signale un décor ou un effet devenu trop lourd pour les téléphones. À relever en connaissance de cause.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,7 +12,11 @@ const BUDGET = {
   paris: { calls: 190, triangles: 650000 },
   newyork: { calls: 265, triangles: 870000 },
   'newyork (égouts)': { calls: 235, triangles: 830000 },
+  egypte: { calls: 205, triangles: 820000 },
+  'egypte (tombeau)': { calls: 215, triangles: 900000 },   // maximum relevé pendant la chute (deux étages affichés)
 };
+// étage du dessous : voie où poser l'ouverture (New York : bouches sur les côtés seulement)
+const BELOW = { newyork: { name: 'newyork (égouts)', lane: 0 }, egypte: { name: 'egypte (tombeau)', lane: 1 } };
 
 let B;
 before(async () => { B = await openBrowser(); });
@@ -41,11 +45,11 @@ const within = (name, got) => {
   assert.ok(got.triangles <= b.triangles, `${name} : ${got.triangles} triangles (budget ${b.triangles})`);
 };
 
-for (const id of ['japon', 'paris', 'newyork']) {
+for (const id of ['japon', 'paris', 'newyork', 'egypte']) {
   test(`${id} : se joue sans erreur, dans le budget de dessin, sans fuite de mémoire graphique`, async () => {
     const { page, ctx, problems } = await startLevel(B.browser, B.server, id, { invincible: true });
     try {
-      // la rue seule (à New York, pas de bouche ouverte pendant la mesure)
+      // la rue seule (pas de passage à l'étage du dessous pendant la mesure)
       await page.evaluate(() => { const ob = window.__onima.obstacles; if ('nextHole' in ob) ob.nextHole = -1e9; });
       await runUntil(page, 100);
       assert.ok(await page.evaluate(() => window.__onima.obstacles.list.length > 0), 'des obstacles sont générés');
@@ -54,24 +58,29 @@ for (const id of ['japon', 'paris', 'newyork']) {
       await runUntil(page, 700, 180000);
       within(id, await readProbe(page));
       const m1 = await memory(page);
-      assert.ok(m1.geometries <= m0.geometries + 15, `géométries : ${m0.geometries} → ${m1.geometries}`);
+      // le nombre varie de ±20 selon le parcours tiré ; une fuite d'une géométrie par tranche de décor en ajouterait plus
+      assert.ok(m1.geometries <= m0.geometries + 25, `géométries : ${m0.geometries} → ${m1.geometries}`);
       assert.ok(m1.textures <= m0.textures + 2, `textures : ${m0.textures} → ${m1.textures}`);
 
-      if (id === 'newyork') {
-        await page.evaluate(() => { window.__t.clearAhead(); window.__t.press('ArrowLeft'); });
-        await page.waitForFunction(() => Math.abs(window.__onima.player.x + 2.6) < 0.05);
-        await page.evaluate(() => {
+      const below = BELOW[id];
+      if (below) {
+        await page.evaluate(() => window.__t.clearAhead());
+        if (below.lane === 0) {
+          await page.evaluate(() => window.__t.press('ArrowLeft'));
+          await page.waitForFunction(() => Math.abs(window.__onima.player.x + 2.6) < 0.05);
+        }
+        await page.evaluate((lane) => {
           const o = window.__onima, ob = o.obstacles;
-          ob.addHole(0, o.player.z - 30, true);
-          ob.nextLadder = o.player.z - 1e6;   // on reste en bas pendant la mesure
+          ob.addHole(lane, o.player.z - 30, true);
+          ob.nextLadder = ob.nextStair = o.player.z - 1e6;   // on reste en bas pendant la mesure
           ob.sCursor = o.player.z - 60;
-        });
+        }, below.lane);
         await page.waitForFunction(() => window.__onima.player.under, null, { timeout: 30000 });
         const d = await page.evaluate(() => window.__onima.dist);
         await startProbe(page);
         await runUntil(page, d + 150, 120000);
-        assert.ok(await page.evaluate(() => window.__onima.player.under), 'toujours dans les égouts');
-        within('newyork (égouts)', await readProbe(page));
+        assert.ok(await page.evaluate(() => window.__onima.player.under), 'toujours à l\'étage du dessous');
+        within(below.name, await readProbe(page));
       }
       assert.deepEqual(problems, []);
     } finally {

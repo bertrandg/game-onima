@@ -166,7 +166,7 @@ export class Sound {
     }
   }
 
-  // style = { scale, meter, bpm, voice } fourni par le niveau ('koto' en 4/4 ou 'musette' en valse à 3 temps)
+  // style = { scale, meter, bpm, voice } fourni par le niveau ('koto', 'musette' en valse, 'jazz' ou 'oud')
   startMusic(style) {
     if (!this.ctx || this.musicOn) return;
     if (style) this.style = style;
@@ -203,6 +203,23 @@ export class Sound {
             this.note = Math.max(0, Math.min(SC.length - 1, this.note + ((Math.random() * 5) | 0) - 2));
             this.tone(SC[this.note] * 2, eighth * (s % 2 ? 0.8 : 1.3), { type: 'triangle', vol: 0.09, at: ts, out: this.music });
             this.tone(SC[this.note] * 4, eighth * 0.5, { type: 'sine', vol: 0.025, at: ts, out: this.music });
+          }
+        } else if (st.voice === 'oud') {
+          // rythme maqsoum à la darbouka (doum tek - tek doum - tek -), bourdon, oud pincé avec glissés
+          const pat = [0, 1, -1, 1, 0, -1, 1, -1][s];
+          if (pat === 0) {
+            this.tone(110, 0.25, { vol: 0.3, to: 62, at: t, out: this.music });
+            this.noise(0.06, { vol: 0.06, freq: 300, at: t, out: this.music });
+          } else if (pat === 1) this.noise(0.04, { vol: 0.07, freq: 4500, q: 3, at: t, out: this.music });
+          if (s === 0 && this.step % (bar * 2) === 0) this.tone(SC[0] / 2, eighth * bar * 2, { type: 'sine', vol: 0.08, at: t, out: this.music });
+          if (s % 2 === 0 || Math.random() > 0.5) {
+            const prev = this.note;
+            this.note = Math.max(0, Math.min(SC.length - 1, this.note + ((Math.random() * 5) | 0) - 2));
+            if (Math.random() > 0.15) {
+              this.pluck(SC[this.note], t, 0.12);
+              // ornement : glissé depuis la note précédente
+              if (Math.random() > 0.75) this.tone(SC[prev] * 2, eighth * 0.6, { type: 'triangle', vol: 0.04, to: SC[this.note] * 2, at: t, out: this.music });
+            }
           }
         } else if (st.voice === 'musette') {
           const ch = chords[Math.floor(this.step / bar) % chords.length];
