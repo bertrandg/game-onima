@@ -35,18 +35,18 @@ function sledGeo(s) {
   // ceinture de taille sous l'arête du dessus (pas dans le même plan que le dessus : ça scintillerait)
   b.add(U.box, s.joint, [0, TRAIN_TOP - 0.12, zc], [W - 0.06, 0.06, L - 0.26]);
   for (const sx of [-1, 1]) {
-    for (let k = 1; k < 4; k++) b.add(U.box, s.joint, [sx * (W / 2 - 0.04), Y + k * (H / 4), zc], [0.02, 0.03, L - 0.35]);
-    b.add(U.box, s.mark, [sx * (W / 2 - 0.03), Y + H * 0.55, zc + 1.5], [0.02, 0.5, 0.06]);
-    b.add(U.box, s.mark, [sx * (W / 2 - 0.03), Y + H * 0.55, zc + 1.5], [0.02, 0.06, 0.6]);
-    b.add(U.box, s.mark, [sx * (W / 2 - 0.03), Y + H * 0.4, zc - 2.2], [0.02, 0.34, 0.34], [0.785, 0, 0]);
+    for (let k = 1; k < 4; k++) b.add(U.box, s.joint, [sx * (W / 2 - 0.03), Y + k * (H / 4), zc], [0.04, 0.04, L - 0.35]);
+    b.add(U.box, s.mark, [sx * (W / 2 - 0.02), Y + H * 0.55, zc + 1.5], [0.06, 0.5, 0.06]);
+    b.add(U.box, s.mark, [sx * (W / 2 - 0.02), Y + H * 0.55, zc + 1.5], [0.06, 0.06, 0.6]);
+    b.add(U.box, s.mark, [sx * (W / 2 - 0.02), Y + H * 0.4, zc - 2.2], [0.06, 0.34, 0.34], [0.785, 0, 0]);
   }
   // cordages qui serrent le bloc sur le traîneau
   for (const dz of [-2.6, 0, 2.6]) {
-    b.add(U.box, ROPE, [0, TRAIN_TOP + 0.025, zc + dz], [W + 0.02, 0.05, 0.14]);
-    for (const sx of [-1, 1]) b.add(U.box, ROPE, [sx * (W / 2 - 0.01), Y + H / 2, zc + dz], [0.05, H + 0.05, 0.14]);
+    b.add(U.box, ROPE, [0, TRAIN_TOP + 0.03, zc + dz], [W + 0.06, 0.06, 0.14]);
+    for (const sx of [-1, 1]) b.add(U.box, ROPE, [sx * (W / 2 - 0.01), Y + H / 2, zc + dz], [0.06, H + 0.06, 0.14]);
   }
   // avant et arrière : traverse de bois et anneaux de traction
-  b.add(U.box, s.joint, [0, Y + H / 2, zc + (L - 0.3) / 2 + 0.01], [W - 0.2, H - 0.2, 0.02]);
+  b.add(U.box, s.joint, [0, Y + H / 2, zc + (L - 0.3) / 2 + 0.02], [W - 0.2, H - 0.2, 0.06]);
   b.add(U.box, WOOD2, [0, 0.6, zc + L / 2 + 0.05], [W, 0.2, 0.2]);
   for (const sx of [-0.6, 0.6]) b.add(U.cyl, ROPE, [sx, 0.62, zc + L / 2 + 0.25], [0.12, 0.04, 0.12], [Math.PI / 2, 0, 0]);
   return b.build();

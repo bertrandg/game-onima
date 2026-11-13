@@ -20,7 +20,9 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 container.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1500);
+// plan proche à 0,3 m (la caméra n'approche jamais à moins de 1,5 m) : trois fois plus de précision de
+// profondeur au loin qu'à 0,1 m, sinon les détails en léger relief scintillent sur certains écrans
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.3, 1500);
 
 scene.fog = new THREE.Fog('#ffffff', 80, 270);
 const sound = new Sound();
