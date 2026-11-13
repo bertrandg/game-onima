@@ -421,6 +421,8 @@ export class Girl {
     this.nextBlink = 2.5;
     this.happyT = 0;
     this.deadT = 0;
+    this.deathKind = 'bonk';
+    this.spin = 0;
   }
 
   setPalette(i) {
@@ -457,6 +459,14 @@ export class Girl {
     if (this.face === kind) return;
     this.face = kind;
     this.faceMat.map = this.faceTex[kind];
+  }
+
+  // type de défaite : 'bonk' (choc de face), 'trip' (trébuche), 'head' (coup sur la tête),
+  // 'sink' (s'enfonce dans la boue), 'faint' (s'évanouit après un malus)
+  die(kind) {
+    this.deathKind = kind;
+    this.deadT = 0;
+    this.spin = kind === 'head' ? 14 : 0;
   }
 
   reset() {
@@ -508,9 +518,22 @@ export class Girl {
       tgt.headZ = Math.sin(t * 1.4) * 0.1;
       tgt.headX = 0.06;
     } else if (mode === 'dead') {
-      tgt.armLz = -2.2; tgt.armRz = 2.2;
-      tgt.legL = 0.5; tgt.legR = -0.2;
+      const kd = this.deathKind;
       tailSpeed = 0; tailAmp = 0;
+      if (kd === 'trip') {   // bras tendus en avant, jambes qui battent l'air
+        tgt.armLx = -2.7; tgt.armRx = -2.7; tgt.armLz = -0.25; tgt.armRz = 0.25; tgt.fore = 0.1;
+        tgt.legL = -0.7; tgt.legR = -0.3;
+      } else if (kd === 'sink') {   // bras levés qui s'agitent
+        const w = Math.sin(t * 9) * 0.35;
+        tgt.armLz = -2.6 + w; tgt.armRz = 2.6 + w;
+      } else if (kd === 'faint') {   // bras ballants
+        tgt.armLz = -0.45; tgt.armRz = 0.45; tgt.fore = 0.2;
+        tgt.legL = 0.15; tgt.legR = -0.15;
+        tgt.headZ = Math.sin(t * 5) * 0.2;
+      } else {   // bonk et coup sur la tête : bras et jambes écartés
+        tgt.armLz = -2.2; tgt.armRz = 2.2;
+        tgt.legL = 0.5; tgt.legR = -0.2;
+      }
     }
 
     legL.rotation.x = lerp(legL.rotation.x, tgt.legL, k);
@@ -548,9 +571,29 @@ export class Girl {
       this.pivot.scale.set(1 - sq * 0.15, 1 - sq * 0.5, 1 - sq * 0.15);
       this.pivot.position.y = 0.55 - sq * 0.15;
     } else if (mode === 'dead') {
+      // chaque défaite a sa chute ; ensuite elle reste allongée, immobile et paisible
       this.deadT += dt;
-      this.pivot.rotation.x = lerp(this.pivot.rotation.x, 1.35, 1 - Math.exp(-dt * 8));
-      this.pivot.position.y = 0.55 + Math.max(0, Math.sin(Math.min(this.deadT * 5, Math.PI))) * 0.4;
+      const d = this.deadT, kd = this.deathKind, pv = this.pivot, e = (r) => 1 - Math.exp(-dt * r);
+      const hop = (h, sp) => Math.max(0, Math.sin(Math.min(d * sp, Math.PI))) * h;
+      if (kd === 'trip') {   // à plat ventre
+        pv.rotation.x = lerp(pv.rotation.x, -1.45, e(9));
+        pv.position.y = 0.55 + hop(0.25, 7);
+      } else if (kd === 'head') {   // tourne sur elle-même puis tombe sur le côté
+        pv.rotation.y += this.spin * dt;
+        this.spin *= Math.exp(-dt * 3.5);
+        if (d > 0.35) pv.rotation.z = lerp(pv.rotation.z, 1.45, e(7));
+        pv.position.y = 0.55 + hop(0.3, 6);
+      } else if (kd === 'sink') {   // s'enfonce doucement dans la boue
+        pv.rotation.x = lerp(pv.rotation.x, 0.2, e(4));
+        pv.position.y = 0.55 - Math.min(1.5, d * 0.9);
+      } else if (kd === 'faint') {   // vacille, puis s'allonge en douceur
+        if (d < 0.8) pv.rotation.z = Math.sin(d * 9) * 0.3 * d;
+        else { pv.rotation.z = lerp(pv.rotation.z, 0, e(5)); pv.rotation.x = lerp(pv.rotation.x, 1.4, e(4)); }
+        pv.position.y = 0.55;
+      } else {   // bonk : rebond en arrière, sur le dos
+        pv.rotation.x = lerp(pv.rotation.x, 1.4, e(8));
+        pv.position.y = 0.55 + hop(0.45, 5);
+      }
     } else {
       this.pivot.rotation.x = lerp(this.pivot.rotation.x, 0, 1 - Math.exp(-dt * 20));
       this.pivot.scale.lerp(ONE, k);
@@ -566,7 +609,8 @@ export class Girl {
       this.root.scale.setScalar(this.baseScale * (1 + Math.sin(this.pop * Math.PI * 3) * 0.12 * this.pop));
     }
     let face = 'open';
-    if (mode === 'dead') face = 'ouch';
+    // au choc : >< ; puis les yeux se ferment, apaisée (et tout de suite pour un évanouissement)
+    if (mode === 'dead') face = this.deadT < (this.deathKind === 'faint' ? 0.3 : 0.9) ? 'ouch' : 'blink';
     else if (mode === 'jump' || mode === 'roll' || this.pop > 0) face = 'happy';
     else if (this.blinkT > 0) face = 'blink';
     this.setFace(face);

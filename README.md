@@ -64,6 +64,11 @@ de la passerelle font retomber dans la rue, sans perdre ; la rue reste visible e
 dessiné par instanciation (un appel de dessin par matière quelle que soit sa longueur). Rien du décor ne descend sous
 10,5 m au-dessus des voies (on saute depuis les passerelles) : le niveau le déclare (`clearance`) et les tests le vérifient.
 
+Quand on perd, pas de sang : une petite animation selon ce qui a fait perdre (rebond en arrière et étoiles après un choc
+de face, chute à plat ventre sur un obstacle bas, tournoiement après un coup sur la tête, enlisement dans la boue des égouts,
+évanouissement après un malus). Une fois l'héroïne allongée et apaisée, son âme s'envole au ciel dans un rai de lumière,
+sur une petite musique d'espoir ; un toucher ou une touche passe directement à l'écran de fin.
+
 Chaque niveau a son propre tableau des scores. Sur l'accueil, les flèches font défiler les niveaux, avec le décor 3D du niveau choisi.
 Un niveau n'est téléchargé qu'au moment où on le choisit.
 

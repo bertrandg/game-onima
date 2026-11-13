@@ -80,6 +80,7 @@ scene.add(girl.root);
 const player = {};
 let state = 'menu';         // menu | running | paused | dying | over
 let dist = 0, speed = 0, runTime = 0, deathT = 0, shake = 0, nextMilestone = 500;
+let deathVy = 0, deathPush = 0, soulOut = false, deathZoom = 0;   // défaite : chute, recul, envol de l'âme, rapprochement de la caméra
 let candyCount = 0;
 const totalScore = () => Math.floor(dist) + candyCount * CANDY_POINTS;
 let camAngle = Math.PI, viewShift = 1;
@@ -88,6 +89,7 @@ const camPos = new THREE.Vector3(0, 1.6, -4.2);
 const camLook = new THREE.Vector3(0, 1.2, 0);
 
 function resetPlayer() {
+  deathZoom = 0;
   Object.assign(player, {
     lane: 1, x: 0, y: 0, z: 0, vy: 0, h: PLAYER_H, grounded: true, coyote: 0, under: false,
     jumpBuf: 0, slideT: 0, slideQueued: false,
@@ -396,7 +398,7 @@ async function startRun(fromMenu) {
   }
   activate(contexts[id]);
   fx.stop();
-  blood.reset();
+  deathFx.reset();
   $('death-dim').classList.remove('on');
   sound.init();
   resetWorld();
@@ -433,7 +435,7 @@ function resume() {
 
 function toMenu() {
   fx.stop();
-  blood.reset();
+  deathFx.reset();
   $('death-dim').classList.remove('on');
   sound.stopMusic();
   activate(contexts[selectedLevel] || ctx);
@@ -448,15 +450,28 @@ function toMenu() {
 function die(crash) {
   fx.stop();
   state = 'dying';
-  blood.start(player.x, player.y, player.z, obstacles.groundAt(player.x, player.z, 0, player.under), crash && crash.kind === 'sludge' ? SLUDGE : null);
+  const kind = deathKind(crash);
+  girl.die(kind);
+  deathFx.start(kind, player.x, player.y, player.z);
   $('death-dim').classList.add('on');
-  fxEl('hit-flash', 0, 0, 500);
+  fxEl('hit-flash', 0, 0, 400);
   deathT = 0;
-  shake = 0.6;
-  sound.crash();
+  deathZoom = 0;
+  deathVy = kind === 'bonk' ? 3 : 0;
+  deathPush = kind === 'bonk' ? 3.5 : kind === 'trip' ? -2.5 : 0;   // rebond en arrière, glissade en avant
+  soulOut = false;
+  shake = kind === 'bonk' ? 0.35 : 0.12;
+  sound.ouch(kind);
   sound.stopMusic();
-  if (navigator.vibrate) navigator.vibrate(120);
+  if (navigator.vibrate) navigator.vibrate(kind === 'faint' || kind === 'sink' ? 60 : 120);
 }
+
+// passer l'envol de l'âme : un toucher ou une touche
+function skipDeath() {
+  if (state === 'dying' && deathT > 0.9) gameOver();
+}
+window.addEventListener('pointerdown', skipDeath);
+window.addEventListener('keydown', skipDeath);
 
 function gameOver() {
   state = 'over';
@@ -629,124 +644,197 @@ function laneFx(dir) {
   el.style.setProperty('--dir', dir > 0 ? 1 : -1);
 }
 
-// ---------- Défaite : jets de sang, flaque, écran qui s'assombrit ----------
-const SLUDGE = { drops: ['#5a7a1a', '#7a9a2a', '#4a3a14', '#8aa83a'].map((h) => new THREE.Color(h)), pool: '#3a4a12' };
-const blood = (() => {
-  const N = 600;
-  const pos = new Float32Array(N * 3).fill(-1000), vel = new Float32Array(N * 3), col = new Float32Array(N * 3);
-  const alive = new Uint8Array(N);
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  const c = document.createElement('canvas');
-  c.width = c.height = 32;
-  const g = c.getContext('2d');
-  const grd = g.createRadialGradient(13, 13, 1, 16, 16, 15);
-  grd.addColorStop(0, '#fff');
-  grd.addColorStop(0.5, '#fff');
-  grd.addColorStop(1, 'rgba(255,255,255,0)');
-  g.fillStyle = grd;
-  g.beginPath(); g.arc(16, 16, 15, 0, Math.PI * 2); g.fill();
-  const pts = new THREE.Points(geo, new THREE.PointsMaterial({
-    size: 0.14, map: new THREE.CanvasTexture(c), vertexColors: true, transparent: true, alphaTest: 0.35,
-  }));
-  pts.frustumCulled = false;
-  scene.add(pts);
-  // flaque et éclaboussures au sol
-  const puddle = new THREE.Group();
-  const pmat = new THREE.MeshBasicMaterial({ color: '#6e0610', transparent: true, opacity: 0.92, depthWrite: false });
-  const disc = new THREE.CircleGeometry(1, 28);
-  const pool = new THREE.Mesh(disc, pmat);
-  pool.rotation.x = -Math.PI / 2;
-  puddle.add(pool);
-  const splats = [];
-  for (let i = 0; i < 9; i++) {
-    const m = new THREE.Mesh(disc, pmat);
-    m.rotation.x = -Math.PI / 2;
-    puddle.add(m);
-    splats.push(m);
-  }
-  puddle.visible = false;
-  scene.add(puddle);
-  const reds = ['#b00818', '#d0101e', '#8a0412', '#e01a2a'].map((h) => new THREE.Color(h));
-  let drops = reds;
-  let emitT = 0, ground = 0, idx = 0, poolS = 0, poolShown = 0, t = 0;
-  const origin = new THREE.Vector3();
+// ---------- Défaite : petite animation selon le choc, puis l'âme s'envole ----------
+// (pas de sang : étoiles, poussière, bulles ou spirales, puis une âme kawaii qui monte au ciel)
+const SOUL_AT = 1.25, OVER_AT = 3.9;   // secondes après le choc
+const deathFx = (() => {
+  const sprite = (size, draw) => {
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    draw(c.getContext('2d'), size);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  };
+  const starTex = sprite(64, (g, n) => {
+    g.translate(n / 2, n / 2);
+    g.fillStyle = '#ffffff';
+    g.beginPath();
+    for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 5, r = i % 2 ? 11 : 28; g.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+    g.closePath(); g.fill();
+  });
+  const puffTex = sprite(64, (g, n) => {
+    const grd = g.createRadialGradient(n / 2, n / 2, 2, n / 2, n / 2, n / 2);
+    grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(0.6, 'rgba(255,255,255,0.7)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grd; g.fillRect(0, 0, n, n);
+  });
+  const glowTex = sprite(128, (g, n) => {
+    const grd = g.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2);
+    grd.addColorStop(0, 'rgba(255,255,255,0.9)'); grd.addColorStop(0.35, 'rgba(200,230,255,0.35)'); grd.addColorStop(1, 'rgba(180,210,255,0)');
+    g.fillStyle = grd; g.fillRect(0, 0, n, n);
+  });
 
-  function emit(n, strength) {
-    for (let k = 0; k < n; k++) {
-      const i = idx++ % N, j = i * 3;
-      alive[i] = 1;
-      pos[j] = origin.x + (Math.random() - 0.5) * 0.25;
-      pos[j + 1] = origin.y + (Math.random() - 0.5) * 0.2;
-      pos[j + 2] = origin.z + (Math.random() - 0.5) * 0.25;
-      const a = Math.random() * Math.PI * 2, r = Math.random() * 2.2 * strength;
-      vel[j] = Math.cos(a) * r;
-      vel[j + 1] = (3 + Math.random() * 4.5) * strength;
-      vel[j + 2] = Math.sin(a) * r + 0.8;
-      const cl = drops[(Math.random() * drops.length) | 0];
-      col[j] = cl.r; col[j + 1] = cl.g; col[j + 2] = cl.b;
-    }
+  // gerbes de particules (étoiles, ou bouffées rondes : poussière, bulles)
+  function burst(tex, n, size) {
+    const pos = new Float32Array(n * 3).fill(-1000), col = new Float32Array(n * 3), vel = new Float32Array(n * 3);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const mat = new THREE.PointsMaterial({ size, map: tex, vertexColors: true, transparent: true, depthWrite: false });
+    const pts = new THREE.Points(geo, mat);
+    pts.frustumCulled = false;
+    scene.add(pts);
+    const c = new THREE.Color();
+    return {
+      start(o, cols, { speed = 3, up = 2, spread = 0.3, grav = 6 }) {
+        this.grav = grav;
+        for (let i = 0; i < n; i++) {
+          const a = Math.random() * Math.PI * 2, r = (0.4 + Math.random() * 0.6) * speed;
+          pos.set([o.x + (Math.random() - 0.5) * spread, o.y + (Math.random() - 0.5) * spread, o.z + (Math.random() - 0.5) * spread], i * 3);
+          vel.set([Math.cos(a) * r, up * (0.5 + Math.random()), Math.sin(a) * r * 0.6], i * 3);
+          c.set(cols[i % cols.length]);
+          col.set([c.r, c.g, c.b], i * 3);
+        }
+        geo.attributes.position.needsUpdate = true;
+        geo.attributes.color.needsUpdate = true;
+        mat.opacity = 1;
+        pts.visible = true;
+        this.t = 0;
+      },
+      update(dt) {
+        if (!pts.visible) return;
+        this.t += dt;
+        for (let i = 0; i < n; i++) {
+          const j = i * 3;
+          vel[j + 1] -= this.grav * dt;
+          pos[j] += vel[j] * dt; pos[j + 1] += vel[j + 1] * dt; pos[j + 2] += vel[j + 2] * dt;
+          vel[j] *= 1 - dt * 1.5; vel[j + 2] *= 1 - dt * 1.5;
+        }
+        geo.attributes.position.needsUpdate = true;
+        mat.opacity = Math.max(0, 1 - this.t / 1.3);
+        if (this.t > 1.3) pts.visible = false;
+      },
+      hide() { pts.visible = false; },
+    };
   }
+  const stars = burst(starTex, 28, 0.32), puffs = burst(puffTex, 22, 0.55);
+
+  // couronne d'étoiles (ou de spirales) qui tourne au-dessus de sa tête
+  const ring = new THREE.Group();
+  const ringMat = new THREE.SpriteMaterial({ map: starTex, transparent: true, depthWrite: false });
+  for (let i = 0; i < 5; i++) { const sp = new THREE.Sprite(ringMat); sp.scale.setScalar(0.24); ring.add(sp); }
+  ring.visible = false;
+  scene.add(ring);
+
+  // l'âme : petit fantôme lumineux aux oreilles de chat, yeux fermés souriants, auréole dorée
+  const soul = new THREE.Group();
+  const soulMat = new THREE.MeshBasicMaterial({ color: '#eef8ff', transparent: true, opacity: 0.9, depthWrite: false });
+  const add = (geo, mat, p, s = [1, 1, 1], r = [0, 0, 0]) => { const m = new THREE.Mesh(geo, mat); m.position.set(...p); m.scale.set(...s); m.rotation.set(...r); soul.add(m); return m; };
+  add(new THREE.SphereGeometry(0.28, 20, 14), soulMat, [0, 0, 0], [1, 1.1, 0.9]);
+  add(new THREE.ConeGeometry(0.22, 0.55, 16), soulMat, [0.06, -0.38, 0], [1, 1, 0.8], [Math.PI, 0, -0.35]);
+  for (const sx of [-1, 1]) add(new THREE.ConeGeometry(0.08, 0.17, 8), soulMat, [sx * 0.15, 0.3, 0], [1, 1, 1], [0, 0, -sx * 0.4]);
+  const inkMat = new THREE.MeshBasicMaterial({ color: '#5a6aa0', transparent: true, depthWrite: false });
+  const blushMat = new THREE.MeshBasicMaterial({ color: '#ffb0c8', transparent: true, depthWrite: false });
+  for (const sx of [-1, 1]) {
+    add(new THREE.TorusGeometry(0.04, 0.009, 6, 12, Math.PI), inkMat, [sx * 0.1, 0.03, 0.25]);   // yeux fermés ^ ^
+    add(new THREE.SphereGeometry(0.035, 8, 6), blushMat, [sx * 0.16, -0.04, 0.23], [1, 0.6, 0.4]);
+  }
+  const haloMat = new THREE.MeshBasicMaterial({ color: '#ffe070', transparent: true, depthWrite: false });
+  add(new THREE.TorusGeometry(0.15, 0.022, 8, 28), haloMat, [0, 0.46, 0], [1, 1, 1], [Math.PI / 2 - 0.25, 0, 0]);
+  const aura = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  aura.scale.setScalar(1.7);
+  soul.add(aura);
+  const sparks = [0, 1, 2].map(() => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: starTex, color: '#fff2b0', transparent: true, depthWrite: false })); sp.scale.setScalar(0.12); soul.add(sp); return sp; });
+  soul.scale.setScalar(1.5);
+  soul.visible = false;
+  scene.add(soul);
+  const soulMats = [soulMat, inkMat, blushMat, haloMat, aura.material, ...sparks.map((x) => x.material)];
+  // rai de lumière qui descend du ciel sur elle
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 1.5, 16, 20, 1, true).translate(0, 8, 0),
+    new THREE.MeshBasicMaterial({ color: '#fff4d0', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+  beam.visible = false;
+  scene.add(beam);
+
+  const RING = {
+    bonk: { cols: '#ffe24a', dz: 0.75, dx: 0 }, head: { cols: '#ffe24a', dx: 0.75, dz: 0 },
+    trip: { cols: '#ffe24a', dz: -0.75, dx: 0 }, faint: { cols: '#c89aff', dz: 0.75, dx: 0 },
+  };
+  let kind = null, t = 0, soulT = -1;
+  const o = new THREE.Vector3(), base = new THREE.Vector3();
+
   return {
-    // palette : { drops, pool } pour une autre couleur que le sang (ex. éclaboussure de boue)
-    start(x, y, z, gY, palette) {
-      drops = palette ? palette.drops : reds;
-      pmat.color.set(palette ? palette.pool : '#6e0610');
-      origin.set(x, y + 0.9, z + 0.05);
-      ground = gY;
-      emitT = 1.15;
-      t = 0;
-      poolS = 0.15; poolShown = 0;
-      puddle.position.set(x, gY + 0.03, z);
-      puddle.visible = true;
-      for (const s of splats) {
-        const a = Math.random() * Math.PI * 2, d = 0.5 + Math.random() * 1.3;
-        s.position.set(Math.cos(a) * d, 0.002, Math.sin(a) * d);
-        s.userData.size = 0.05 + Math.random() * 0.13;
-        s.scale.setScalar(0.001);
+    start(k, x, y, z) {
+      kind = k; t = 0; soulT = -1;
+      o.set(x, y + 1.0, z);
+      if (k === 'sink') puffs.start(o.set(x, y + 0.2, z), ['#8aff6a', '#c8ff9a', '#5ad84a'], { speed: 0.8, up: 2.5, spread: 0.8, grav: -0.5 });
+      else if (k === 'faint') stars.start(o, ['#c89aff', '#ff9ad8', '#ffffff'], { speed: 1.5, up: 1.5, grav: 1 });
+      else {
+        stars.start(o, ['#ffe24a', '#ffffff', '#ffb0d8', '#9ad8ff'], { speed: 3.2, up: 3, grav: 7 });
+        puffs.start(o.set(x, y + 0.25, z), ['#f4ece0', '#e8dcc8', '#ffffff'], { speed: 1.6, up: 0.6, spread: 0.5, grav: 0.5 });
       }
-      pool.scale.setScalar(0.001);
-      emit(60, 1.2);   // premier jet à l'impact
+      const r = RING[k];
+      ring.visible = !!r;
+      if (r) ringMat.color.set(r.cols);
     },
     reset() {
-      emitT = 0;
-      alive.fill(0);
-      pos.fill(-1000);
-      geo.attributes.position.needsUpdate = true;
-      puddle.visible = false;
+      kind = null; soulT = -1;
+      stars.hide(); puffs.hide();
+      ring.visible = soul.visible = beam.visible = false;
     },
-    update(dt) {
-      if (!puddle.visible) return;
+    // l'âme quitte le corps (x, y = sol sous elle, z)
+    soul(x, y, z) {
+      soulT = 0;
+      base.set(x, y + 0.6, z);
+      soul.position.copy(base);
+      soul.visible = beam.visible = true;
+      beam.position.set(x, y, z);
+    },
+    // hauteur atteinte par l'âme (la caméra lève les yeux pour la suivre)
+    get lift() { return soulT < 0 ? 0 : soul.position.y - base.y; },
+    get kind() { return kind; },
+    get soulVisible() { return soul.visible; },
+    update(dt, girlPos) {
+      if (!kind) return;
       t += dt;
-      if (emitT > 0) {
-        emitT -= dt;
-        // jaillit par saccades, comme des battements de coeur
-        const beat = Math.max(0, Math.sin(t * 13));
-        emit(Math.round(beat * 520 * dt), 0.6 + beat * 0.7);
+      stars.update(dt);
+      puffs.update(dt);
+      if (ring.visible) {
+        const r = RING[kind];
+        ring.position.set(girlPos.x + r.dx, girlPos.y + 0.75, girlPos.z + r.dz);
+        ring.children.forEach((sp, i) => {
+          const a = t * 4 + (i / 5) * Math.PI * 2;
+          sp.position.set(Math.cos(a) * 0.35, Math.sin(a * 2) * 0.05, Math.sin(a) * 0.35);
+        });
+        ringMat.opacity = Math.max(0, 1 - Math.max(0, t - 1.4) / 0.5);
+        if (t > 1.9) ring.visible = false;
       }
-      for (let i = 0; i < N; i++) {
-        if (!alive[i]) continue;
-        const j = i * 3;
-        vel[j + 1] -= 18 * dt;
-        pos[j] += vel[j] * dt; pos[j + 1] += vel[j + 1] * dt; pos[j + 2] += vel[j + 2] * dt;
-        if (pos[j + 1] < ground + 0.03) {
-          alive[i] = 0;
-          pos[j + 1] = -1000;
-          poolS = Math.min(1.7, poolS + 0.006);
-        }
-      }
-      geo.attributes.position.needsUpdate = true;
-      geo.attributes.color.needsUpdate = true;
-      poolShown += (poolS - poolShown) * (1 - Math.exp(-dt * 3));
-      pool.scale.set(poolShown, poolShown * 0.85, 1);
-      for (const s of splats) {
-        const target = Math.min(1, t * 2) * s.userData.size * 1.6;
-        s.scale.setScalar(Math.max(0.001, target));
-      }
+      if (soulT < 0) return;
+      soulT += dt;
+      // monte en ondulant, apparaît puis s'efface en haut
+      soul.position.set(base.x + Math.sin(soulT * 2.4) * 0.3, base.y + soulT * 2.3 + soulT * soulT * 0.25, base.z);
+      soul.rotation.z = Math.sin(soulT * 2.4) * 0.15;
+      const pulse = 1.5 * (1 + Math.sin(soulT * 5) * 0.05);
+      soul.scale.set(pulse, pulse, pulse);
+      const a = Math.min(1, soulT / 0.4) * (1 - Math.max(0, soulT - 2.2) / 1.2);
+      for (const m of soulMats) m.opacity = Math.max(0, a) * (m === soulMat ? 0.9 : 1);
+      sparks.forEach((sp, i) => {
+        const ang = soulT * 3 + (i * Math.PI * 2) / 3;
+        sp.position.set(Math.cos(ang) * 0.45, Math.sin(soulT * 4 + i) * 0.2, Math.sin(ang) * 0.45);
+      });
+      beam.material.opacity = 0.15 * Math.min(1, soulT / 0.5) * Math.max(0, 1 - Math.max(0, soulT - 2.0) / 1.4);
+      if (soulT > 3.4) soul.visible = beam.visible = false;
     },
   };
 })();
+
+// type de défaite selon ce qui a été percuté (rien = malus)
+function deathKind(crash) {
+  if (!crash) return 'faint';
+  if (crash.kind === 'sludge') return 'sink';
+  if (crash.kind === 'low') return 'trip';
+  if (crash.kind === 'high') return 'head';
+  return 'bonk';   // véhicules, murs, portes, réservoirs, flancs de rampe ou d'escalier
+}
 
 // ---------- Physique ----------
 function step(dt) {
@@ -804,12 +892,17 @@ const portrait = () => THREE.MathUtils.clamp((1.1 - camera.aspect) / 0.6, 0, 1);
 function camTargets(out, look) {
   const back = (1 - Math.cos(camAngle)) / 2;   // 0 = face à elle (menu), 1 = derrière (course)
   const pf = portrait();
-  const r = THREE.MathUtils.lerp(2.75, 6.6 + pf * 1.1, back);   // menu : cadrage rapproché
+  // menu : cadrage rapproché ; après une défaite, la caméra s'approche doucement d'elle et de son âme
+  const r = THREE.MathUtils.lerp(2.75, 6.6 + pf * 1.1, back) * (1 - 0.42 * deathZoom);
   const base = obstacles.baseY ? obstacles.baseY(player) : 0;   // sol de référence (rue ou égouts)
   const camY = THREE.MathUtils.lerp(1.25, base + (player.y - base) * 0.75 + 3.3 + pf * 1.0, back);
   const follow = 0.8 + pf * 0.2;
   out.set(player.x * follow * back + Math.sin(camAngle) * r, camY, player.z - Math.cos(camAngle) * r);
   look.set(player.x * (0.9 + pf * 0.1) * back, THREE.MathUtils.lerp(0.98, base + (player.y - base) * 0.6 + 1.1, back), player.z - 10 * back);
+  // l'âme s'envole : la caméra la suit des yeux
+  const lift = deathFx.lift;
+  out.y -= deathZoom * 1.3;
+  if (lift > 0) { look.y += lift * 0.8; out.y += lift * 0.25; }
   if (obstacles.clampCam) obstacles.clampCam(out, look, player);
 }
 
@@ -888,14 +981,28 @@ function frame(now) {
     }
   } else if (state === 'dying') {
     deathT += dt;
-    if (deathT > 1.3) gameOver();
+    deathZoom = Math.min(1, deathZoom + dt * 0.9);
+    // elle retombe au sol (après un choc en l'air), recule ou glisse un peu
+    const g = obstacles.groundAt(player.x, player.z, 0, player.under);
+    deathVy -= GRAVITY * dt;
+    player.y = Math.max(g, player.y + deathVy * dt);
+    if (player.y <= g) deathVy = 0;
+    player.z += deathPush * dt;
+    deathPush *= Math.exp(-dt * 5);
+    // immobile, apaisée : son âme s'envole au ciel
+    if (!soulOut && deathT > SOUL_AT) {
+      soulOut = true;
+      deathFx.soul(player.x, g, player.z);
+      sound.soul();
+    }
+    if (deathT > OVER_AT) gameOver();
   }
 
   if (state !== 'paused') {
     world.update(dt, player.z, state === 'running' ? speed : 0);
     candies.update(dt, player.z, player);
     sparkles.update(dt);
-    blood.update(dt);
+    deathFx.update(dt, girl.root.position);
     let mode = 'idle';
     if (state === 'running') mode = player.slideT > 0 ? 'roll' : player.grounded ? 'run' : 'jump';
     else if (state === 'dying' || state === 'over') mode = 'dead';
@@ -926,7 +1033,7 @@ window.addEventListener('resize', () => {
 
 // Accès de test : ouvrir la page avec #debug
 if (location.hash === '#debug') {
-  window.__onima = { player, get obstacles() { return obstacles; }, camera, get world() { return world; }, get candies() { return candies; }, loadLevel, get level() { return ctx && ctx.id; }, addCandies: (n) => collectCandies(n), fx, renderer, get candyCount() { return candyCount; }, get state() { return state; }, get dist() { return dist; }, get speed() { return speed; }, celebrate: (id) => celebrateUnlock(levelById(id)) };
+  window.__onima = { player, get obstacles() { return obstacles; }, camera, get world() { return world; }, get candies() { return candies; }, loadLevel, get level() { return ctx && ctx.id; }, addCandies: (n) => collectCandies(n), fx, renderer, get candyCount() { return candyCount; }, get state() { return state; }, get dist() { return dist; }, get speed() { return speed; }, celebrate: (id) => celebrateUnlock(levelById(id)), get deathKind() { return deathFx.kind; }, get soulVisible() { return deathFx.soulVisible; } };
 }
 
 // Préchauffage : compile tous les shaders et envoie toutes les textures au GPU dès le chargement,

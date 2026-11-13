@@ -92,9 +92,39 @@ export class Sound {
   lane() { this.tone(880, 0.06, { vol: 0.06 }); }
   slide() { this.noise(0.3, { vol: 0.15, freq: 1400, q: 0.7 }); }
   land() { this.noise(0.08, { vol: 0.08, freq: 400 }); }
-  crash() {
-    this.noise(0.6, { vol: 0.5, freq: 500, q: 0.5 });
-    this.tone(160, 0.5, { type: 'sawtooth', vol: 0.25, to: 40 });
+  // défaite, façon dessin animé : un son par type de chute (pas de fracas)
+  ouch(kind) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    if (kind === 'sink') {   // glouglou de bulles
+      for (let i = 0; i < 5; i++) this.tone(260 + i * 70, 0.14, { type: 'sine', vol: 0.12, to: 110, at: t + i * 0.13 });
+    } else if (kind === 'faint') {   // vertige qui descend en vibrant
+      this.tone(660, 1.0, { type: 'triangle', vol: 0.12, to: 200 });
+      this.tone(990, 1.0, { type: 'sine', vol: 0.05, to: 300 });
+    } else if (kind === 'trip') {   // « wouup » puis petit bruit mat
+      this.tone(520, 0.25, { type: 'triangle', vol: 0.16, to: 170 });
+      this.noise(0.14, { vol: 0.16, freq: 600, at: t + 0.22 });
+    } else if (kind === 'head') {   // « boïng »
+      this.tone(220, 0.4, { type: 'square', vol: 0.07, to: 700 });
+      this.tone(880, 0.12, { type: 'triangle', vol: 0.1, at: t + 0.05 });
+      this.noise(0.1, { vol: 0.16, freq: 900 });
+    } else {   // « bonk » de bois creux
+      this.noise(0.2, { vol: 0.22, freq: 500, q: 0.6 });
+      this.tone(190, 0.3, { type: 'triangle', vol: 0.2, to: 95 });
+      this.tone(1200, 0.08, { type: 'sine', vol: 0.08, at: t + 0.02 });
+    }
+  }
+  // l'âme s'envole : petite musique d'espoir (arpège majeur qui monte, accord tenu, scintillement)
+  soul() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98].forEach((f, i) => {
+      this.tone(f, 0.7, { type: 'triangle', vol: 0.09, at: t + i * 0.2 });
+      this.tone(f * 2, 0.35, { type: 'sine', vol: 0.025, at: t + i * 0.2 + 0.02 });
+    });
+    for (const f of [261.63, 329.63, 392.0, 523.25]) this.tone(f, 2.8, { type: 'sine', vol: 0.055, at: t + 0.1 });
+    this.tone(1046.5, 1.6, { type: 'sine', vol: 0.045, at: t + 1.25, to: 1567.98 });
+    this.noise(1.2, { vol: 0.025, freq: 7000, q: 0.7, at: t + 1.0 });
   }
   horn() {
     if (!this.ctx) return;

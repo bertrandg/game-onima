@@ -36,11 +36,19 @@ const passed = (page, z, margin = 6) => page.waitForFunction(([z, m]) => {
   return o.state !== 'running' || o.player.z < z - m;
 }, [z, margin], { timeout: 60000, polling: 50 });
 const dead = (page) => page.waitForFunction(() => window.__onima.state === 'over', null, { timeout: 30000 });
+// défaite d'un type donné (sans sang) : animation de ce type, puis l'âme s'envole avant l'écran de fin
+async function deadAs(page, kind) {
+  await page.waitForFunction(() => window.__onima.state !== 'running', null, { timeout: 30000 });
+  assert.equal(await page.evaluate(() => window.__onima.deathKind), kind);
+  await page.waitForFunction(() => window.__onima.soulVisible || window.__onima.state === 'over', null, { timeout: 10000, polling: 50 });
+  assert.equal(await page.evaluate(() => window.__onima.state), 'dying', 'l\'âme s\'envole avant l\'écran de fin');
+  await dead(page);
+}
 
-test('percuter une barrière : fin de partie, score affiché et enregistré', async () => {
+test('trébucher sur une barrière : chute, envol de l\'âme, score affiché et enregistré', async () => {
   await scenario('japon', async (page) => {
     await put(page, "ob.addBarrier(1, z, 'low')");
-    await dead(page);
+    await deadAs(page, 'trip');
     const r = await page.evaluate(() => ({
       over: !document.getElementById('screen-over').classList.contains('hidden'),
       shown: document.getElementById('over-score').textContent.replace(/\D/g, ''),
@@ -69,7 +77,7 @@ test('passer en roulade sous une barrière haute (et mourir sans roulade)', asyn
     await passed(page, z);
     assert.equal((await state(page)).state, 'running');
     await put(page, "ob.addBarrier(1, z, 'high')", 30);
-    await dead(page);
+    await deadAs(page, 'head');
   });
 });
 
@@ -98,7 +106,7 @@ test('ramasser une friandise ; toucher le malus fait perdre', async () => {
     await passed(page, z, 2);
     assert.equal((await state(page)).candies, before + 1);
     await put(page, 'o.candies.placeFugu(1, z, ob)', 30);
-    await dead(page);
+    await deadAs(page, 'faint');
   });
 });
 
@@ -149,7 +157,7 @@ test('New York : marcher dans la boue des égouts est mortel', async () => {
     await put(page, 'ob.addHole(0, z, true)', 30);
     await page.waitForFunction(() => window.__onima.player.under && window.__onima.player.grounded, null, { timeout: 30000 });
     await page.evaluate(() => { window.__t.clearAhead(); window.__t.press('ArrowRight'); });
-    await dead(page);
+    await deadAs(page, 'sink');
     const s = await state(page);
     assert.ok(Math.abs(s.x) < 1.2 && s.y < -7.2, `englouti par la boue (x = ${s.x.toFixed(2)}, y = ${s.y.toFixed(2)})`);
   });
@@ -184,7 +192,7 @@ test('Égypte : sauter par-dessus une momie au bon moment ; une porte scellée e
     assert.equal((await state(page)).state, 'running');
     await put(page, "ob.addTombObstacle(1, z, 'door')", 30);
     await page.evaluate(() => window.__t.press('ArrowUp'));
-    await dead(page);
+    await deadAs(page, 'bonk');
   });
 });
 
