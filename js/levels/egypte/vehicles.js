@@ -32,7 +32,8 @@ function sledGeo(s) {
   // le bloc : faces dressées, lignes de taille, marques de carrier à l'ocre
   const H = TRAIN_TOP - Y;
   b.add(U.box, s.stone, [0, Y + H / 2, zc], [W - 0.1, H, L - 0.3]);
-  b.add(U.box, s.joint, [0, TRAIN_TOP - 0.03, zc], [W - 0.06, 0.06, L - 0.26]);
+  // ceinture de taille sous l'arête du dessus (pas dans le même plan que le dessus : ça scintillerait)
+  b.add(U.box, s.joint, [0, TRAIN_TOP - 0.12, zc], [W - 0.06, 0.06, L - 0.26]);
   for (const sx of [-1, 1]) {
     for (let k = 1; k < 4; k++) b.add(U.box, s.joint, [sx * (W / 2 - 0.04), Y + k * (H / 4), zc], [0.02, 0.03, L - 0.35]);
     b.add(U.box, s.mark, [sx * (W / 2 - 0.03), Y + H * 0.55, zc + 1.5], [0.02, 0.5, 0.06]);
@@ -41,7 +42,7 @@ function sledGeo(s) {
   }
   // cordages qui serrent le bloc sur le traîneau
   for (const dz of [-2.6, 0, 2.6]) {
-    b.add(U.box, ROPE, [0, TRAIN_TOP + 0.01, zc + dz], [W + 0.02, 0.05, 0.14]);
+    b.add(U.box, ROPE, [0, TRAIN_TOP + 0.025, zc + dz], [W + 0.02, 0.05, 0.14]);
     for (const sx of [-1, 1]) b.add(U.box, ROPE, [sx * (W / 2 - 0.01), Y + H / 2, zc + dz], [0.05, H + 0.05, 0.14]);
   }
   // avant et arrière : traverse de bois et anneaux de traction
@@ -69,7 +70,8 @@ function chariotGeo() {
   for (const sx of [-1, 1]) {
     smooth.add(new THREE.TorusGeometry(0.62, 0.07, 8, 24), '#5a3c22', [sx * 0.95, 0.66, zc - 0.1], [1, 1, 1], [0, Math.PI / 2, 0]);
     smooth.add(new THREE.TorusGeometry(0.6, 0.03, 6, 24), PAINT.gold, [sx * 1.0, 0.66, zc - 0.1], [1, 1, 1], [0, Math.PI / 2, 0]);
-    for (let k = 0; k < 6; k++) flat.add(U.box, WOOD, [sx * 0.95, 0.66, zc - 0.1], [0.04, 1.18, 0.05], [(k * Math.PI) / 3, 0, 0]);
+    // trois barreaux traversants = six rayons
+    for (let k = 0; k < 3; k++) flat.add(U.box, WOOD, [sx * 0.95, 0.66, zc - 0.1], [0.04, 1.18, 0.05], [(k * Math.PI) / 3, 0, 0]);
     smooth.add(BALL, PAINT.gold, [sx * 1.0, 0.66, zc - 0.1], [0.1, 0.1, 0.1]);
   }
   flat.add(U.cyl, WOOD2, [0, 0.66, zc - 0.1], [0.05, 2.0, 0.05], [0, 0, Math.PI / 2]);

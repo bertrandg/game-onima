@@ -19,7 +19,6 @@ function minibusGeo(roof) {
   const zc = -BUS_LEN / 2, CREAM = '#f2ecd8';
   f.add(U.box, CREAM, [0, 1.15, zc], [W, 1.5, BUS_LEN - 0.2]);
   f.add(U.box, roof, [0, 2.25, zc], [W - 0.04, 0.7, BUS_LEN - 0.3]);
-  f.add(U.box, roof, [0, TRAIN_TOP - 0.03, zc], [W - 0.2, 0.06, BUS_LEN - 0.5]);
   f.add(U.box, '#2a2a30', [0, 0.4, zc], [W, 0.2, BUS_LEN - 0.1]);
   // vitres éclairées de l'intérieur, passagers en silhouette
   for (const sx of [-1, 1]) {

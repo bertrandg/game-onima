@@ -43,7 +43,7 @@ export function japanObstacleKit() {
     }
     for (const y of [0.12, 0.32, 0.62, 0.84]) {  // cordes tressées
       b.add(U.cyl, '#6b4a2c', [x, y, 0], [0.44, 0.045, 0.44]);
-      b.add(U.cyl, '#8a6440', [x, y + 0.02, 0], [0.442, 0.012, 0.442]);
+      b.add(U.cyl, '#8a6440', [x, y + 0.03, 0], [0.442, 0.012, 0.442]);
     }
     b.add(U.cyl, '#8b6a42', [x, 0.95, 0], [0.4, 0.03, 0.4]);
     b.add(U.cyl, '#b48c58', [x, 0.965, 0], [0.33, 0.01, 0.33]);
