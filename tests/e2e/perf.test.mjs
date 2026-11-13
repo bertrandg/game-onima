@@ -1,7 +1,7 @@
 // Chaque niveau se charge et se joue 700 m (joueur invincible) sans erreur ni fichier manquant, et
 // reste dans ses budgets de performance : nombre d'appels de dessin et de triangles par image (maximum relevé sur
 // 600 m de course), et mémoire graphique stable dans la durée (pas de fuite de géométries/textures).
-// Les budgets sont environ 15 % au-dessus des valeurs mesurées (octobre 2026, Égypte en novembre 2026) : un dépassement
+// Les budgets sont environ 15 % au-dessus des valeurs mesurées (octobre 2026 ; Égypte et Hong Kong en novembre 2026) : un dépassement
 // signale un décor ou un effet devenu trop lourd pour les téléphones. À relever en connaissance de cause.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,9 +14,11 @@ const BUDGET = {
   'newyork (égouts)': { calls: 235, triangles: 830000 },
   egypte: { calls: 205, triangles: 820000 },
   'egypte (tombeau)': { calls: 215, triangles: 900000 },   // maximum relevé pendant la chute (deux étages affichés)
+  hongkong: { calls: 240, triangles: 740000 },
+  'hongkong (passerelles)': { calls: 235, triangles: 570000 },
 };
-// étage du dessous : voie où poser l'ouverture (New York : bouches sur les côtés seulement)
-const BELOW = { newyork: { name: 'newyork (égouts)', lane: 0 }, egypte: { name: 'egypte (tombeau)', lane: 1 } };
+// autre étage : voie où poser l'ouverture (New York : bouches sur les côtés seulement), ou passerelle au-dessus
+const BELOW = { newyork: { name: 'newyork (égouts)', lane: 0 }, egypte: { name: 'egypte (tombeau)', lane: 1 }, hongkong: { name: 'hongkong (passerelles)', above: true } };
 
 let B;
 before(async () => { B = await openBrowser(); });
@@ -45,7 +47,7 @@ const within = (name, got) => {
   assert.ok(got.triangles <= b.triangles, `${name} : ${got.triangles} triangles (budget ${b.triangles})`);
 };
 
-for (const id of ['japon', 'paris', 'newyork', 'egypte']) {
+for (const id of ['japon', 'paris', 'newyork', 'egypte', 'hongkong']) {
   test(`${id} : se joue sans erreur, dans le budget de dessin, sans fuite de mémoire graphique`, async () => {
     const { page, ctx, problems } = await startLevel(B.browser, B.server, id, { invincible: true });
     try {
@@ -65,11 +67,20 @@ for (const id of ['japon', 'paris', 'newyork', 'egypte']) {
       const below = BELOW[id];
       if (below) {
         await page.evaluate(() => window.__t.clearAhead());
-        if (below.lane === 0) {
+        if (below.above) {
+          await page.evaluate(() => {
+            const o = window.__onima, ob = o.obstacles, z = o.player.z;
+            ob.nextSection = z - 1e6;
+            ob.addRamp(1, z - 30);
+            ob.addSection(z - 48, 240);
+            ob.uCursor = z - 60;
+            ob.addGap = () => null;   // on reste là-haut pendant la mesure (obstacles d'en haut, mais pas de trou)
+          });
+        } else if (below.lane === 0) {
           await page.evaluate(() => window.__t.press('ArrowLeft'));
           await page.waitForFunction(() => Math.abs(window.__onima.player.x + 2.6) < 0.05);
         }
-        await page.evaluate((lane) => {
+        if (!below.above) await page.evaluate((lane) => {
           const o = window.__onima, ob = o.obstacles;
           ob.addHole(lane, o.player.z - 30, true);
           ob.nextLadder = ob.nextStair = o.player.z - 1e6;   // on reste en bas pendant la mesure
@@ -79,7 +90,7 @@ for (const id of ['japon', 'paris', 'newyork', 'egypte']) {
         const d = await page.evaluate(() => window.__onima.dist);
         await startProbe(page);
         await runUntil(page, d + 150, 120000);
-        assert.ok(await page.evaluate(() => window.__onima.player.under), 'toujours à l\'étage du dessous');
+        assert.ok(await page.evaluate(() => window.__onima.player.under), 'toujours à l\'autre étage');
         within(below.name, await readProbe(page));
       }
       assert.deepEqual(problems, []);

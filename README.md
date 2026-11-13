@@ -43,6 +43,7 @@ Aucune installation nécessaire : Three.js est chargé depuis un CDN. Le jeu doi
 | 🗼 Paris 1900 | Boulevards haussmanniens, marché, quais de Seine, tour Eiffel | 1 500 points au Japon |
 | 🗽 New York | Wall Street, Times Square, Chinatown entre des gratte-ciel, statue de la Liberté ; taxis, bus touristiques et égouts | 2 300 points à Paris |
 | 🐪 Égypte | Allée des sphinx et temples, bords du Nil, souk, pyramides de Gizeh ; blocs sur traîneaux, chars et tombeau | 3 000 points à New York |
+| 🌃 Hong Kong | La nuit : néons de Mong Kok, marché de Temple Street, port Victoria et sa skyline ; minibus, taxis rouges et passerelles d'échafaudage | 3 500 points en Égypte |
 
 À New York, une bouche d'égout ouverte ne fait pas perdre : on tombe dans les égouts et la course continue sur deux quais,
 de part et d'autre d'un canal de boue mortel. Pour changer de quai, il faut sauter (en l'air, un seul swipe fait passer de
@@ -55,6 +56,14 @@ débouche sur l'avenue, sans s'arrêter. Le décor y est plus fin que dans les a
 peintes) tout en restant dans le même budget de dessin : trois matières seulement par tranche de décor (facettes, pièces
 lisses peintes avec un atlas unique, flammes et ors lumineux), voir `js/levels/egypte/shapes.js`.
 
+À Hong Kong, l'autre étage est au-dessus : des passerelles d'échafaudage de bambou courent à 5,4 m au-dessus des trois
+voies, par tronçons de 120 à 240 m. On y monte par une rampe de planches (flèche rose) ou en sautant depuis le toit d'un
+minibus (le plancher se traverse par en dessous et porte quand on retombe dessus). Là-haut : climatiseurs et plantes à
+sauter, linge à passer en roulade, réservoirs d'eau à éviter, et des friandises en plus. Une planche manquante ou le bout
+de la passerelle font retomber dans la rue, sans perdre ; la rue reste visible et continue en dessous. Le plancher est
+dessiné par instanciation (un appel de dessin par matière quelle que soit sa longueur). Rien du décor ne descend sous
+10,5 m au-dessus des voies (on saute depuis les passerelles) : le niveau le déclare (`clearance`) et les tests le vérifient.
+
 Chaque niveau a son propre tableau des scores. Sur l'accueil, les flèches font défiler les niveaux, avec le décor 3D du niveau choisi.
 Un niveau n'est téléchargé qu'au moment où on le choisit.
 
@@ -66,7 +75,8 @@ Un niveau n'est téléchargé qu'au moment où on le choisit.
      `lights`, `track` (textures du sol et de la voie, marquage au sol), `particles`, `scenery(root)` (ciel et lointain) ;
      les éléments de décor peuvent avoir des panneaux texturés (`TexBuilder`, matériaux dans `decor.texMats`) ;
    - `obstacleKit()` : véhicules (`buildVehicle`, taille propre possible), rampe, obstacles bas et haut, attelage éventuel ;
-   - `obstacles(root, opts)` (facultatif) : moteur d'obstacles propre au niveau (ex. les deux étages rue / égouts de New York) ;
+   - `obstacles(root, opts)` (facultatif) : moteur d'obstacles propre au niveau (ex. les deux étages rue / égouts de New York, rue / passerelles de Hong Kong) ;
+   - `clearance` (facultatif) : hauteur libre au-dessus des voies que le décor doit respecter (4,5 m par défaut) ;
    - `items()` : objets à ramasser et malus.
 2. L'ajouter dans `js/levels/index.js` avec son nom, son icône, son objet et sa condition de déblocage.
 
@@ -90,10 +100,11 @@ npm run test:all    # les trois, à lancer avant d'envoyer une modification
     placés, un seul taxi qui roule, bouches d'égout sur les côtés, décor hors de la chaussée…
   - `sewer.test.mjs` : chute, boue, rats, échelles (y compris le saut un peu trop tôt).
   - `tomb.test.mjs` : dalles effondrées, obstacles du tombeau, montée de l'escalier jusqu'à l'avenue.
+  - `scaffold.test.mjs` : rampes et sauts vers les passerelles, obstacles d'en haut, planches manquantes.
 - `tests/e2e/` : tests dans Chrome (Playwright), sur la page ouverte avec `#debug`.
   - `scenarios.test.mjs` : de vraies parties sans invincibilité ; la route est vidée, on y pose les
     obstacles voulus et on appuie sur les touches au bon moment (saut, roulade, rampe, égouts aller-retour,
-    déblocage de New York, tombeau d'Égypte…). Les outils de pilotage sont dans `tests/helpers/game.mjs`.
+    déblocage de New York, tombeau d'Égypte, passerelles de Hong Kong…). Les outils de pilotage sont dans `tests/helpers/game.mjs`.
   - `perf.test.mjs` : chaque niveau se joue 700 m sans erreur ni fichier manquant ; budgets d'appels de dessin et de triangles par niveau, et pas de fuite de mémoire
     graphique. Si un ajout de décor les dépasse, alléger le décor ou relever le budget en connaissance de cause.
 - `tests/load/` : chargement de chaque niveau dans Chrome.
@@ -111,7 +122,7 @@ npm run test:all    # les trois, à lancer avant d'envoyer une modification
 - `js/girl.js` : le personnage et ses animations
 - `js/audio.js` : sons et musique générés (WebAudio)
 - `js/scores.js` : tableaux des scores par niveau (stockés dans le navigateur)
-- `js/levels/` : registre des niveaux et contenu de chaque niveau (`japon.js`, `paris/`, `newyork/`, `egypte/`)
+- `js/levels/` : registre des niveaux et contenu de chaque niveau (`japon.js`, `paris/`, `newyork/`, `egypte/`, `hongkong/`)
 - `js/config.js` : réglages (vitesse, saut, tailles…)
 
 Ajouter `#debug` à l'URL expose `window.__onima` pour les tests.

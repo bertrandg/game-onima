@@ -243,11 +243,13 @@ export class World {
       const gi = (Math.random() * gd.geos.length) | 0;
       parts.push({ geo: gd.geos[gi], tex: gd.texs && gd.texs[gi], x0: s * (4.85 + gd.w / 2), z0: z0 - CHUNK / 2, rot: s > 0 ? Math.PI : 0, sc: 1, tint: [1, 1, 1] });
     }
-    // guirlande tendue au-dessus des voies (selon la zone)
+    // guirlande tendue au-dessus des voies (selon la zone) ; une géométrie, ou { geo, tex } avec des
+    // parties texturées ou lumineuses comme les éléments de décor
     const th = this.THEMES[this.themeAt(z0)];
-    const gGeo = this.special[th.garlandType || 'garland'];
-    if (gGeo && Math.random() < (th.garland || 0)) {
-      parts.push({ geo: gGeo, x0: 0, z0: z0 - rand(4, CHUNK - 4), rot: 0, sc: 1, tint: [1, 1, 1] });
+    const gar = this.special[th.garlandType || 'garland'];
+    if (gar && Math.random() < (th.garland || 0)) {
+      const g = gar.isBufferGeometry ? { geo: gar } : gar;
+      parts.push({ geo: g.geo, tex: g.tex, x0: 0, z0: z0 - rand(4, CHUNK - 4), rot: 0, sc: 1, tint: [1, 1, 1] });
     }
     this.jobs.push(startJob(parts, zFar));
   }
@@ -280,7 +282,9 @@ export class World {
       const th = this.THEMES[this.themeAt(this.toriiCursor)];
       const gate = this.special[th.gate || 'gate'];
       if (gate) {
-        const mesh = new THREE.Mesh(gate, vcMat);
+        // une géométrie, ou { geo, tex } : parties texturées ou lumineuses (matériaux texMats du niveau)
+        const mesh = new THREE.Mesh(gate.isBufferGeometry ? gate : gate.geo, vcMat);
+        if (!gate.isBufferGeometry) for (const t of gate.tex || []) mesh.add(new THREE.Mesh(t.geo, this.texMats[t.key]));
         mesh.position.set(0, 0, this.toriiCursor);
         this.scene.add(mesh);
         this.items.push({ mesh, zFar: this.toriiCursor - 1 });

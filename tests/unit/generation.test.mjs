@@ -12,7 +12,7 @@ import { World } from '../../js/world.js';
 
 const SEEDS = 12, LENGTH = 4000, STEP = 4;
 const defs = {};
-for (const id of ['japon', 'paris', 'newyork', 'egypte']) defs[id] = (await levelById(id).load()).default;
+for (const id of ['japon', 'paris', 'newyork', 'egypte', 'hongkong']) defs[id] = (await levelById(id).load()).default;
 
 // Partie simulée sans joueur : le monde avance de STEP mètres à la fois, à la vitesse du jeu.
 // check(state) est appelé après chaque pas ; renvoie aussi tout ce qui a été généré.
@@ -41,7 +41,7 @@ const where = (id, s, z) => `${id}, partie ${s}, à ${Math.round(-z)} m`;
 const isStatic = (o) => !o.moving && o.kind !== 'deco';
 const covers = (o, z) => z <= o.zNear && z >= o.zFar;
 
-for (const id of ['japon', 'paris', 'newyork', 'egypte']) {
+for (const id of ['japon', 'paris', 'newyork', 'egypte', 'hongkong']) {
   test(`${id} : jamais les trois voies fermées par des véhicules sans rampe pour monter dessus`, () => {
     for (let s = 1; s <= SEEDS; s++) {
       play(id, s, ({ ob, pz, fresh }) => {
@@ -201,11 +201,56 @@ test('egypte : dans le tombeau, une voie toujours franchissable, des escaliers r
   }
 });
 
+// ---------- Hong Kong ----------
+test('hongkong : chaque passerelle commence en haut d\'une rampe libre, et l\'arrivée au bout est dégagée', () => {
+  let sections = 0;
+  for (let s = 1; s <= SEEDS; s++) {
+    const seenSections = new Set();
+    play('hongkong', s, ({ ob, pz }) => {
+      for (const sec of ob.sections) {
+        if (seenSections.has(sec)) continue;
+        seenSections.add(sec);
+        sections++;
+        const ramp = ob.list.find((o) => o.kind === 'upramp' && Math.abs(o.zFar - sec.zStart) < 0.01);
+        assert.ok(ramp, `passerelle sans rampe (${where('hongkong', s, sec.zStart)})`);
+        assert.ok(!ob.list.some((o) => o.moving && o.lane === ramp.lane), `taxi qui roule dans la voie de la rampe (${where('hongkong', s, ramp.zNear)})`);
+        assert.ok(sec.zStart - sec.zEnd >= 120, 'passerelle assez longue');
+      }
+      // rien d'immobile dans la rue juste après le bout d'une passerelle (on y retombe)
+      for (const sec of ob.sections) {
+        const bad = ob.list.find((o) => !o.moving && o.kind !== 'deco' && o.kind !== 'upramp' && o.zNear <= sec.zEnd + 1 && o.zNear > sec.zEnd - 12 && o.zFar < pz);
+        assert.ok(!bad, `${bad && bad.kind} sous l'arrivée de la passerelle (${where('hongkong', s, sec.zEnd)})`);
+      }
+    });
+  }
+  assert.ok(sections > SEEDS * 8, `${sections} passerelles`);
+});
+
+test('hongkong : sur les passerelles, jamais deux réservoirs côte à côte, rien sur l\'arrivée de la rampe ni au bout', () => {
+  let gaps = 0;
+  for (let s = 1; s <= SEEDS; s++) {
+    const seen = new Set(), secs = new Set();
+    play('hongkong', s, ({ ob }) => { for (const o of ob.uList) seen.add(o); for (const x of ob.sections) secs.add(x); });
+    const all = [...seen];
+    for (const w of all.filter((o) => o.kind === 'wall')) {
+      assert.ok(!all.some((o) => o !== w && o.kind === 'wall' && o.zNear > w.zFar - 0.5 && o.zFar < w.zNear + 0.5), `deux réservoirs côte à côte (${where('hongkong', s, w.zNear)})`);
+    }
+    for (const o of all) {
+      const sec = [...secs].find((x) => o.zNear <= x.zStart && o.zFar >= x.zEnd);
+      assert.ok(sec, `${o.type || o.kind} hors d'une passerelle (${where('hongkong', s, o.zNear)})`);
+      assert.ok(o.zNear <= sec.zStart - 9.5 && o.zFar >= sec.zEnd + 13.5, `${o.type || o.kind} trop près d'un bout (${where('hongkong', s, o.zNear)})`);
+      if (o.kind === 'gap') gaps++;
+    }
+  }
+  assert.ok(gaps > SEEDS * 4, `${gaps} trous dans les planches`);
+});
+
 // ---------- Décor ----------
 // Le couloir des trois voies (véhicules compris) doit rester libre : aucun décor plus haut que le sol
-// (0,35 m) n'y entre en dessous de la hauteur d'une personne debout sur le toit d'un véhicule.
+// (0,35 m) n'y entre en dessous de la hauteur d'une personne debout sur le toit d'un véhicule (ou plus
+// haut si le niveau le demande, ex. Hong Kong où l'on saute depuis les passerelles).
 const CORRIDOR = LANES[2] + 1.15, CLEAR = TRAIN_TOP + PLAYER_H + 0.3, FLAT = 0.35;
-for (const id of ['japon', 'paris', 'newyork', 'egypte']) {
+for (const id of ['japon', 'paris', 'newyork', 'egypte', 'hongkong']) {
   test(`${id} : le décor n'empiète jamais sur les trois voies`, () => {
     const v = new THREE.Vector3();
     for (let s = 1; s <= 3; s++) {
@@ -224,7 +269,7 @@ for (const id of ['japon', 'paris', 'newyork', 'egypte']) {
             const p = m.geometry.attributes.position;
             for (let i = 0; i < p.count; i++) {
               v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld);
-              if (Math.abs(v.x) < CORRIDOR && v.y > FLAT && v.y < CLEAR) {
+              if (Math.abs(v.x) < CORRIDOR && v.y > FLAT && v.y < (defs[id].clearance || CLEAR)) {
                 assert.fail(`décor dans la chaussée en x = ${v.x.toFixed(2)}, y = ${v.y.toFixed(2)} (${where(id, s, v.z)})`);
               }
             }

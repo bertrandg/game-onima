@@ -188,6 +188,56 @@ test('Égypte : sauter par-dessus une momie au bon moment ; une porte scellée e
   });
 });
 
+test('Hong Kong : monter par la rampe sur la passerelle, puis retomber dans la rue par une planche manquante', async () => {
+  await scenario('hongkong', async (page) => {
+    await page.evaluate(() => {
+      const o = window.__onima, ob = o.obstacles, z = o.player.z;
+      ob.nextSection = z - 1e6;
+      ob.uCursor = z - 1e6;   // pas d'obstacles là-haut pendant le scénario
+      ob.addRamp(1, z - 30);
+      ob.addSection(z - 30 - 18, 160);
+    });
+    await page.waitForFunction(() => window.__onima.player.under || window.__onima.state !== 'running', null, { timeout: 30000 });
+    let s = await state(page);
+    assert.equal(s.state, 'running');
+    assert.ok(s.y > 5, `sur la passerelle (y = ${s.y.toFixed(2)})`);
+    // planche manquante juste devant, dans la voie du joueur
+    await page.evaluate(() => {
+      const o = window.__onima, ob = o.obstacles, sec = ob.sectionAt(o.player.z);
+      ob.addGap(sec, 1, Math.ceil((sec.zStart - o.player.z + 24) / 4), 2);
+    });
+    await page.waitForFunction(() => !window.__onima.player.under || window.__onima.state !== 'running', null, { timeout: 30000 });
+    await page.waitForFunction(() => window.__onima.player.grounded || window.__onima.state !== 'running', null, { timeout: 20000 });
+    s = await state(page);
+    assert.equal(s.state, 'running', 'on ne perd pas en tombant');
+    assert.ok(s.y < 0.1, `de retour dans la rue (y = ${s.y.toFixed(2)})`);
+  });
+});
+
+test('Hong Kong : sauter du toit d\'un minibus sur la passerelle, puis redescendre au bout', async () => {
+  await scenario('hongkong', async (page) => {
+    await page.evaluate(() => {
+      const o = window.__onima, ob = o.obstacles, z = o.player.z;
+      ob.nextSection = z - 1e6;
+      ob.uCursor = z - 1e6;
+      window.__z = z;
+      ob.addTrain(1, z - 25, 2, true, false);   // deux minibus avec une rampe pour monter sur le toit (de z - 32 à z - 47)
+      ob.addSection(z - 38, 60);
+    });
+    // bien engagée sur le toit : saut vers la passerelle qui commence juste devant, au-dessus
+    await page.evaluate(() => window.__t.when((o) => o.player.y > 2.5 && o.player.grounded && o.player.z < window.__z - 31, 'ArrowUp'));
+    await page.waitForFunction(() => window.__onima.player.under || window.__onima.state !== 'running', null, { timeout: 30000 });
+    let s = await state(page);
+    assert.equal(s.state, 'running');
+    assert.ok(s.y > 5, `sur la passerelle (y = ${s.y.toFixed(2)})`);
+    await page.waitForFunction(() => !window.__onima.player.under || window.__onima.state !== 'running', null, { timeout: 30000 });
+    await page.waitForFunction(() => window.__onima.player.grounded || window.__onima.state !== 'running', null, { timeout: 20000 });
+    s = await state(page);
+    assert.equal(s.state, 'running');
+    assert.ok(s.y < 0.1, 'redescendue dans la rue au bout de la passerelle');
+  });
+});
+
 test('déblocage : 2300 points à Paris débloquent New York pendant la partie et à la fin', async () => {
   const storage = { 'onima.scores.v1': JSON.stringify([{ id: 'a', name: 'Test', score: 1600, date: 1 }]) };
   await scenario('paris', async (page) => {

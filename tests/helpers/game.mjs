@@ -26,6 +26,17 @@ function pageTools() {
       ob.reserve = null;
       ob.cursor = p.z - free;
       ob.busy = [p.z, p.z, p.z];
+      if (ob.sections) {   // étage du dessus (passerelles de Hong Kong) : tronçons, obstacles d'en haut
+        for (const x of ob.sections) ob.up.remove(x.mesh);
+        for (const x of ob.uList) if (x.mesh) ob.up.remove(x.mesh);
+        ob.sections = [];
+        ob.uList = [];
+        ob.nextSection = p.z - 1e6;
+        ob.uCursor = p.z - free;
+        ob.uBusy = [p.z, p.z, p.z];
+        ob.dirty = true;
+        ob.rebuild();
+      }
       if (ob.sList) {   // étage du dessous (égouts de New York, tombeau d'Égypte)
         const below = ob.sewer || ob.tomb;
         for (const x of ob.sList) if (x.mesh) below.remove(x.mesh);

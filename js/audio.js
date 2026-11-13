@@ -166,7 +166,7 @@ export class Sound {
     }
   }
 
-  // style = { scale, meter, bpm, voice } fourni par le niveau ('koto', 'musette' en valse, 'jazz' ou 'oud')
+  // style = { scale, meter, bpm, voice } fourni par le niveau ('koto', 'musette' en valse, 'jazz', 'oud' ou 'neon')
   startMusic(style) {
     if (!this.ctx || this.musicOn) return;
     if (style) this.style = style;
@@ -203,6 +203,20 @@ export class Sound {
             this.note = Math.max(0, Math.min(SC.length - 1, this.note + ((Math.random() * 5) | 0) - 2));
             this.tone(SC[this.note] * 2, eighth * (s % 2 ? 0.8 : 1.3), { type: 'triangle', vol: 0.09, at: ts, out: this.music });
             this.tone(SC[this.note] * 4, eighth * 0.5, { type: 'sine', vol: 0.025, at: ts, out: this.music });
+          }
+        } else if (st.voice === 'neon') {
+          // pop de synthés : basse en octaves, arpège carré en croches, caisse claire sur 2 et 4
+          const prog = [[0, 2, 4], [5, 7, 4], [3, 5, 7], [4, 6, 8]];
+          const ch = prog[Math.floor(this.step / bar) % prog.length];
+          this.tone(SC[ch[0]] / 4 * (s % 2 ? 2 : 1), eighth * 0.9, { type: 'square', vol: 0.06, at: t, out: this.music });
+          this.tone(SC[ch[s % 3] % SC.length], eighth * 0.8, { type: 'square', vol: 0.025, at: t, out: this.music });
+          this.noise(0.03, { vol: 0.03, freq: 8000, q: 2, at: t, out: this.music });
+          if (s === 2 || s === 6) this.noise(0.12, { vol: 0.09, freq: 1800, q: 0.8, at: t, out: this.music });
+          if (s === 0 || s === 4) this.tone(95, 0.2, { vol: 0.28, to: 50, at: t, out: this.music });
+          if (s % 2 === 0 && Math.random() > 0.3) {
+            this.note = Math.max(0, Math.min(SC.length - 1, this.note + ((Math.random() * 5) | 0) - 2));
+            this.tone(SC[this.note] * 2, eighth * 1.8, { type: 'triangle', vol: 0.08, at: t, out: this.music });
+            this.tone(SC[this.note] * 4, eighth * 0.6, { type: 'sine', vol: 0.03, at: t + eighth * 0.5, out: this.music });
           }
         } else if (st.voice === 'oud') {
           // rythme maqsoum à la darbouka (doum tek - tek doum - tek -), bourdon, oud pincé avec glissés
