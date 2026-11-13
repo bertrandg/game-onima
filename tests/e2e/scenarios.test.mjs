@@ -47,8 +47,11 @@ async function deadAs(page, kind) {
 
 test('trébucher sur une barrière : chute, envol de l\'âme, score affiché et enregistré', async () => {
   await scenario('japon', async (page) => {
-    await put(page, "ob.addBarrier(1, z, 'low')");
+    const z = await put(page, "ob.addBarrier(1, z, 'low')");
     await deadAs(page, 'trip');
+    // elle s'est allongée devant la barrière, pas dedans
+    const gap = (await state(page)).z - z;
+    assert.ok(gap >= 1.8, `allongée à ${gap.toFixed(2)} m de la barrière`);
     const r = await page.evaluate(() => ({
       over: !document.getElementById('screen-over').classList.contains('hidden'),
       shown: document.getElementById('over-score').textContent.replace(/\D/g, ''),

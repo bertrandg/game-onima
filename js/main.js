@@ -80,7 +80,7 @@ scene.add(girl.root);
 const player = {};
 let state = 'menu';         // menu | running | paused | dying | over
 let dist = 0, speed = 0, runTime = 0, deathT = 0, shake = 0, nextMilestone = 500;
-let deathVy = 0, deathPush = 0, soulOut = false, deathZoom = 0;   // défaite : chute, recul, envol de l'âme, rapprochement de la caméra
+let deathVy = 0, deathBackZ = null, soulOut = false, deathZoom = 0;   // défaite : chute, recul devant l'obstacle, envol de l'âme, caméra
 let candyCount = 0;
 const totalScore = () => Math.floor(dist) + candyCount * CANDY_POINTS;
 let camAngle = Math.PI, viewShift = 1;
@@ -458,7 +458,11 @@ function die(crash) {
   deathT = 0;
   deathZoom = 0;
   deathVy = kind === 'bonk' ? 3 : 0;
-  deathPush = kind === 'bonk' ? 3.5 : kind === 'trip' ? -2.5 : 0;   // rebond en arrière, glissade en avant
+  // elle recule juste devant ce qu'elle a percuté, pour s'allonger devant et jamais dedans
+  // (à plat ventre : la longueur de son corps ; sur le dos ou sur le côté : un peu d'espace)
+  const front = crash ? (crash.trainFront !== undefined ? crash.trainFront : crash.zNear) : null;
+  const room = { trip: 1.9, bonk: 0.7, head: 0.8 }[kind];
+  deathBackZ = front !== null && room ? front + room : null;
   soulOut = false;
   shake = kind === 'bonk' ? 0.35 : 0.12;
   sound.ouch(kind);
@@ -987,8 +991,7 @@ function frame(now) {
     deathVy -= GRAVITY * dt;
     player.y = Math.max(g, player.y + deathVy * dt);
     if (player.y <= g) deathVy = 0;
-    player.z += deathPush * dt;
-    deathPush *= Math.exp(-dt * 5);
+    if (deathBackZ !== null && player.z < deathBackZ) player.z += (deathBackZ - player.z) * (1 - Math.exp(-dt * 12));
     // immobile, apaisée : son âme s'envole au ciel
     if (!soulOut && deathT > SOUL_AT) {
       soulOut = true;
