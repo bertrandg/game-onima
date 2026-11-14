@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 import { Builder, U, pick, rand } from '../../geo.js';
+import { loadPlants, addPlant } from '../../plants.js';
+
+await loadPlants('paris');   // modèles du décor (platanes, tonneaux, cagettes, pains, barques) avant sa construction
 
 // Décor latéral de Paris 1900. Chaque élément est construit "face à +x" (vers la voie quand il est
 // à gauche), origine au sol, centré en z. Le moteur (world.js) les assemble par tranches fusionnées.
@@ -11,6 +14,59 @@ const GOLD = '#d8b04a';
 const STONE = ['#e8dcc4', '#efe4cc', '#e2d4b8', '#eadfca'];
 const ZINC = '#7f8a9a';
 const ri = (a, b) => Math.floor(rand(a, b + 1));
+
+// ---------- Devanture de boutique ----------
+// Vitrine posée contre le coffrage peint (x = devant du coffrage, zc = centre, sw = largeur) : soubassement,
+// vitres à petits bois et imposte, reflets, porte vitrée, marchandises en vitrine, enseigne en lettres dorées
+// et deux appliques. La marchandise dépend du commerce tiré au hasard.
+const WARES = {
+  patisserie: () => [pick(['#f4c8d8', '#f8e0a0', '#c8805a', '#ffffff']), 'cake'],
+  chapelier: () => [pick(['#2a2522', '#5a3a2a', '#3a4a6a', '#8a6a4a']), 'hat'],
+  epicerie: () => [pick(['#c8302a', '#e8a020', '#2c5a3a', '#f4ecd8']), 'jar'],
+  fleuriste: () => [pick(['#ff8fb6', '#ffd23f', '#c8302a', '#ffffff', '#b48ae0']), 'flower'],
+  vins: () => [pick(['#3a5a2a', '#5a1a2a', '#2a3a2a']), 'bottle'],
+};
+function shopfront(b, x, zc, sw, col, k) {
+  const kind = pick(Object.keys(WARES));
+  const door = 0.95, gw = sw - door - 0.5;   // largeur vitrée
+  const gz = zc - (k ? 1 : -1) * (door / 2 + 0.05);   // la porte du côté de la porte cochère
+  const dz = zc + (k ? 1 : -1) * (sw / 2 - door / 2 - 0.25);
+  const dark = new THREE.Color(col).multiplyScalar(0.7).getStyle();
+  b.add(U.box, dark, [x + 0.02, 0.35, gz], [0.06, 0.6, gw]);   // soubassement
+  b.add(U.box, '#2a3a48', [x + 0.01, 1.7, gz], [0.03, 2.1, gw]);   // vitre
+  b.add(U.box, '#4a6276', [x + 0.03, 1.7, gz - gw * 0.18], [0.01, 2.0, gw * 0.12], [0.5, 0, 0]);   // reflet en biais
+  b.add(U.box, '#3e5466', [x + 0.03, 1.7, gz + gw * 0.22], [0.01, 2.0, gw * 0.06], [0.5, 0, 0]);
+  const nb = Math.max(2, Math.round(gw / 1.1));
+  for (let i = 0; i <= nb; i++) b.add(U.box, col, [x + 0.05, 1.7, gz - gw / 2 + (i * gw) / nb], [0.06, 2.12, 0.07]);   // montants
+  b.add(U.box, col, [x + 0.05, 2.32, gz], [0.06, 0.07, gw]);   // imposte
+  b.add(U.box, col, [x + 0.06, 0.66, gz], [0.1, 0.05, gw + 0.05]);   // appui
+  // marchandises posées sur l'appui de la vitrine
+  const n = Math.floor(gw / 0.32);
+  for (let i = 0; i < n; i++) {
+    const z = gz - gw / 2 + 0.16 + i * (gw / n), [c, form] = WARES[kind]();
+    if (form === 'cake') { b.add(U.cyl6, c, [x + 0.1, 0.76, z], [0.11, 0.12, 0.11]); b.add(U.cyl6, '#f8f0e8', [x + 0.1, 0.84, z], [0.08, 0.04, 0.08]); }
+    else if (form === 'hat') { b.add(U.cyl6, c, [x + 0.1, 0.72, z], [0.15, 0.03, 0.15]); b.add(U.cyl6, c, [x + 0.1, 0.8, z], [0.09, 0.14, 0.09]); }
+    else if (form === 'jar') b.add(U.box, c, [x + 0.1, 0.77, z], [0.1, 0.16, 0.12]);
+    else if (form === 'flower') b.add(U.sph0, c, [x + 0.12, 0.8, z], [0.13, 0.12, 0.13]);
+    else { b.add(U.cyl6, c, [x + 0.1, 0.82, z], [0.04, 0.28, 0.04]); b.add(U.cyl6, c, [x + 0.1, 1.0, z], [0.02, 0.1, 0.02]); }
+  }
+  // porte vitrée et poignée
+  b.add(U.box, dark, [x + 0.03, 1.25, dz], [0.06, 2.5, door]);
+  b.add(U.box, '#2a3a48', [x + 0.05, 1.55, dz], [0.03, 1.6, door - 0.3]);
+  b.add(U.box, GOLD, [x + 0.08, 1.2, dz + (k ? -1 : 1) * (door / 2 - 0.15)], [0.04, 0.04, 0.12]);
+  // enseigne : bandeau sombre et lettres dorées
+  b.add(U.box, dark, [x + 0.04, 2.95, zc], [0.06, 0.5, sw]);
+  // lettres fines, groupées en deux ou trois mots
+  const nl = Math.round(sw * 2.4), gaps = new Set([Math.round(nl * 0.4), Math.round(nl * 0.72)]);
+  for (let i = 0; i < nl; i++) {
+    if (gaps.has(i)) continue;
+    b.add(U.box, GOLD, [x + 0.08, 2.95 + (Math.random() < 0.15 ? 0.03 : 0), zc - (nl - 1) * 0.09 + i * 0.18], [0.02, rand(0.17, 0.23), rand(0.05, 0.11)]);
+  }
+  for (const s of [-1, 1]) {   // appliques en fonte
+    b.add(U.box, IRON_DARK, [x + 0.25, 3.3, zc + s * (sw / 2 - 0.3)], [0.4, 0.03, 0.03]);
+    b.add(U.box, '#f6e2a0', [x + 0.42, 3.18, zc + s * (sw / 2 - 0.3)], [0.12, 0.16, 0.12]);
+  }
+}
 
 // ---------- Immeuble haussmannien ----------
 function haussmann(b) {
@@ -28,9 +84,7 @@ function haussmann(b) {
     const zc = (k - 0.5) * (L / 2);
     const sw = L / 2 - 0.6;
     b.add(U.box, shops[k], [fx + 0.06, G / 2 - 0.2, zc], [0.12, G - 0.6, sw]);
-    b.add(U.box, '#24303a', [fx + 0.1, 1.55, zc], [0.04, 2.2, sw - 0.6]);
-    b.add(U.box, '#f2e6c8', [fx + 0.1, 1.55, zc], [0.03, 2.25, 0.06]);
-    b.add(U.box, GOLD, [fx + 0.14, 3.15, zc], [0.03, 0.12, sw * 0.7]);   // lettres de l'enseigne
+    shopfront(b, fx + 0.12, zc, sw, shops[k], k);
     // store banne rayé
     const sc = pick([['#c8302a', '#f4ecd8'], ['#2c5a3a', '#f4ecd8'], ['#1f3157', '#f4ecd8'], ['#d8a830', '#f4ecd8']]);
     const n = Math.floor(sw / 0.4);
@@ -81,7 +135,7 @@ function haussmann(b) {
 
 // Immeuble de l'autre rive : fenêtres, balcons filants, boutiques et mansardes, avec platanes du quai d'en face
 function haussmannFar(b) {
-  const W = 8, L = rand(10, 13), floors = ri(4, 6), G = 4.2, F = 3.1, Hb = G + floors * F;
+  const W = 8, L = rand(12.1, 12.6), floors = ri(4, 6), G = 4.2, F = 3.1, Hb = G + floors * F;
   const fx = W / 2, stone = pick(STONE);
   b.add(U.box, stone, [0, Hb / 2, 0], [W, Hb, L]);
   for (let f = 0; f <= floors; f++) b.add(U.box, '#d2c3a6', [fx + 0.08, G + f * F - 0.05, 0], [0.16, 0.16, L]);
@@ -117,11 +171,7 @@ function haussmannFar(b) {
   }
   for (const z of [-L / 2 + 1, L / 2 - 1]) b.add(U.box, '#b8644a', [rand(-1.5, 0.5), Hb + 3.5, z], [0.7, 1.3, 0.5]);
   // quai d'en face : platanes devant les façades
-  if (Math.random() < 0.7) {
-    const z = rand(-L / 3, L / 3), tx = fx + rand(3, 5);
-    b.add(U.cyl6, '#8a8268', [tx, 2, z], [0.22, 4, 0.22]);
-    for (let i = 0; i < 4; i++) b.add(BALL, pick(['#7aa04a', '#8ab458', '#6a9040']), [tx + rand(-1, 1), 4.6 + rand(0, 1.4), z + rand(-1.2, 1.2)], [rand(1.4, 2), rand(1.1, 1.5), rand(1.4, 2)]);
-  }
+  if (Math.random() < 0.8) plane(b, fx + rand(3, 4.5), rand(-L / 4, L / 4), rand(6.5, 8), 1.2);
 }
 
 // ---------- Mobilier urbain ----------
@@ -189,19 +239,24 @@ function bench(b) {   // banc public
   for (let i = 0; i < 3; i++) b.add(U.box, IRON, [-0.24, 0.6 + i * 0.12, 0], [0.04, 0.09, 1.8], [0, 0, 0.2]);
 }
 
-function platane(b) {   // platane dans sa grille
-  const h = rand(3.2, 4.2);
+// Couleur d'un triangle de modèle : teinte de base légèrement variée, plus claire sur les faces tournées vers le ciel
+const _tc = new THREE.Color();
+const shade = (c, up = 0, j = 0.06) => _tc.set(c).multiplyScalar(1 + rand(-j, j) + (up > 0.4 ? 0.06 : -0.03));
+
+const PLANE_LEAF = ['#6f9a3e', '#7aa84a', '#86b456', '#5f8a36'];
+const PLANE_BARK = ['#c8bba0', '#8a8270', '#e2d8c0', '#b0a48a', '#d6cab0'];
+// platane (modèle « p_tree ») : feuillage en grosses touffes, écorce tachetée qui se desquame
+function plane(b, x, z, h, wide = 1.05) {
+  const leaf = {};
+  addPlant(b, 'p_tree', [x, 0, z], h, (role, part, i, up) => role === 1
+    ? _tc.set(pick(PLANE_BARK))
+    : shade(leaf[part] ||= pick(PLANE_LEAF), up), { s: [wide, wide], ry: rand(0, Math.PI * 2) });
+}
+
+function platane(b) {   // platane dans sa grille de fonte
   b.add(U.box, '#22352a', [0, 0.02, 0], [1.4, 0.04, 1.4]);
-  b.add(U.cyl6, '#c8bba0', [0, h / 2, 0], [0.2, h, 0.2]);
-  for (let i = 0; i < 5; i++) b.add(U.cyl6, pick(['#8a8270', '#e2d8c0']), [rand(-0.1, 0.1), rand(0.5, h), rand(-0.1, 0.1)], [0.21, 0.4, 0.21]);   // écorce tachetée
-  for (let i = 0; i < 3; i++) {
-    const a = i * 2.1;
-    b.add(U.cyl6, '#b0a48a', [Math.cos(a) * 0.45, h * 0.92, Math.sin(a) * 0.45], [0.07, 1.4, 0.07], [Math.sin(a) * 0.8, 0, -Math.cos(a) * 0.8]);
-  }
-  for (let i = 0; i < 8; i++) {
-    const a = rand(0, Math.PI * 2), r = rand(0.3, 1.6);
-    b.add(U.sph, pick(['#6f9a3e', '#7aa84a', '#86b456', '#5f8a36']), [Math.cos(a) * r, h + rand(0.4, 1.8), Math.sin(a) * r], [rand(0.9, 1.3), rand(0.7, 0.95), rand(0.9, 1.3)]);
-  }
+  for (let i = 0; i < 4; i++) b.add(U.box, IRON_DARK, [-0.5 + i * 0.33, 0.045, 0], [0.04, 0.01, 1.3]);
+  plane(b, 0, 0, rand(5.4, 6.4));
 }
 
 function cafe(b) {   // terrasse de café
@@ -261,8 +316,10 @@ function marketStall(b) {   // étal sous auvent rayé
       const z = -0.95 + i * 0.63, x = 0.05 + r * 0.38;
       b.add(U.box, '#c8a46a', [x, 0.9, z], [0.34, 0.12, 0.55]);
       const col = produce[(i + r) % produce.length];
-      if (kind === 3) {
-        for (let k = 0; k < 3; k++) b.add(BALL, col, [x, 1.0, z - 0.15 + k * 0.15], [0.05, 0.05, 0.22], [0.2, 0, 0]);   // baguettes
+      if (kind === 3) {   // baguettes couchées ou miches (modèles « p_baguette », « p_loaf »)
+        const bread = (role, part, j, up) => shade(role ? '#c88a3a' : '#e8b868', up, 0.05);
+        if ((i + r) % 2) for (let k = 0; k < 2; k++) addPlant(b, 'p_baguette', [x, 0.96, z - 0.08 + k * 0.16], 0.12, bread, { ry: Math.PI / 2 + rand(-0.15, 0.15) });
+        else for (let k = 0; k < 2; k++) addPlant(b, 'p_loaf', [x, 0.96, z - 0.12 + k * 0.24], 0.09, bread, { ry: rand(0, 3) });
       } else if (kind === 4) {
         b.add(U.cyl, col, [x, 1.02, z], [0.16, 0.12, 0.16]);   // meules
       } else {
@@ -273,18 +330,16 @@ function marketStall(b) {   // étal sous auvent rayé
   b.add(U.box, '#1e2426', [1.25, 1.3, -1.0], [0.03, 0.3, 0.4]);   // ardoise des prix
 }
 
-function crates(b) {   // cagettes et tonneaux
-  for (let i = 0; i < ri(2, 4); i++) {
-    const z = rand(-0.9, 0.9), n = ri(1, 3);
-    for (let k = 0; k < n; k++) {
-      b.add(U.box, '#c8a46a', [rand(-0.1, 0.1), 0.2 + k * 0.4, z], [0.55, 0.38, 0.45], [0, rand(-0.2, 0.2), 0]);
-      b.add(U.box, pick(['#e8501c', '#f2c230', '#7ab83a', '#c8302a']), [0, 0.34 + k * 0.4, z], [0.45, 0.1, 0.36]);
-    }
+function crates(b) {   // piles de cagettes chargées et tonneaux (modèles « p_crate », « p_barrel »)
+  const wood = (role, part, j, up) => shade(role ? '#c8a46a' : '#8a6a42', up);
+  const zs = [-0.75, -0.1, 0.55].slice(0, ri(2, 3));
+  for (const z0 of zs) {
+    const n = ri(1, 3), z = z0 + rand(-0.08, 0.08);
+    for (let k = 0; k < n; k++) addPlant(b, 'p_crate', [rand(-0.06, 0.06), k * 0.4, z], 0.4, wood, { s: [1.25, 1.05], ry: Math.PI / 2 + rand(-0.12, 0.12) });
+    const c = pick([['#e8501c', '#f08a3a'], ['#f2c230', '#e8d040'], ['#7ab83a', '#8ac84a'], ['#c8302a', '#a82020']]);
+    for (let k = 0; k < 6; k++) b.add(U.sph0, pick(c), [rand(-0.15, 0.15), n * 0.4 + 0.05, z + rand(-0.13, 0.13)], [0.08, 0.075, 0.08]);
   }
-  if (Math.random() < 0.5) {
-    b.add(U.cyl, '#8a5a32', [0, 0.45, 1.1], [0.32, 0.9, 0.32]);
-    for (const y of [0.15, 0.75]) b.add(U.cyl, '#2a2522', [0, y, 1.1], [0.335, 0.04, 0.335]);
-  }
+  if (Math.random() < 0.6) addPlant(b, 'p_barrel', [0, 0, 1.05], 0.85, (role, part, j, up, c) => (c[0] + c[1] + c[2] < 200 ? null : shade('#8a5a32', up)), { s: [0.65, 0.65], ry: rand(0, 3) });
 }
 
 function flowerCart(b) {   // charrette de fleuriste
@@ -321,10 +376,14 @@ function halles(b) {   // pavillon de marché en fonte et verre (style Baltard)
 }
 
 // ---------- Quais de Seine ----------
-function parapet(b) {
+function parapet(b) {   // parapet de pierre : assises, pierres de couronnement débordantes, mousse au pied
   b.add(U.box, '#d8ccb0', [0, 0.5, 0], [0.6, 1.0, 4]);
-  b.add(U.box, '#e8dcc4', [0, 1.04, 0], [0.75, 0.1, 4.02]);
-  for (let i = 0; i < 4; i++) b.add(U.box, '#c8bca0', [0.31, 0.5, -1.5 + i], [0.01, 0.9, 0.02]);
+  for (const y of [0.33, 0.66]) b.add(U.box, '#c8bca0', [0.305, y, 0], [0.01, 0.02, 4]);   // joints d'assises
+  for (let i = 0; i < 4; i++) {
+    b.add(U.box, '#c8bca0', [0.305, 0.5, -1.5 + i + (i % 2) * 0.3], [0.01, 0.9, 0.02]);
+    b.add(U.box, pick(['#e8dcc4', '#e2d6bc', '#eee2cc']), [0, 1.06, -1.5 + i], [0.78, 0.12, 0.98]);   // couronnement
+  }
+  b.add(U.box, '#7a8a6a', [0.31, 0.05, 0], [0.02, 0.1, 4]);
 }
 
 function bouquiniste(b) {   // boîte verte de bouquiniste ouverte sur le parapet
@@ -414,6 +473,12 @@ function seine(b) {   // la Seine : murs de quai à anneaux, escalier, reflets, 
   const r = Math.random();
   if (r < 0.65) peniche(b, rand(-5, -1), rand(-6, 6));
   if (r < 0.25) peniche(b, rand(2, 5), rand(-6, 6));
+  // barques amarrées le long du quai, côté voie (modèle « p_boat »), avec leur reflet
+  for (const z of r > 0.4 ? [rand(-13, -6), rand(6, 13)] : [rand(-13, 13)]) {
+    const hull = pick(['#2c5a3a', '#1f3a6a', '#8a3a2a', '#f4ecd8']);
+    addPlant(b, 'p_boat', [Wr / 2 - 2.2, 0.02, z], 0.45, (role, part, j, up) => (up > 0.5 ? shade('#a8865a', up) : shade(role ? hull : '#3a2a20', up)), { ry: rand(-0.1, 0.1) });
+    b.add(U.box, '#4f7f90', [Wr / 2 - 2.2, 0.075, z], [1.1, 0.01, 2.0]);
+  }
 }
 
 // ---------- Sols (bandes de 32 m le long de la voie, côté +x vers la voie) ----------
@@ -527,7 +592,8 @@ export const THEMES = {
   },
   quais: {
     ground: 'quai', gateEvery: [380, 600], garland: 0,
-    x: { edge: 0, near: 6.6, mid: 8.2, far: 34 }, spread: { near: 0.1, mid: 0 }, mult: { near: 0.1, mid: 0 },
+    // rive d'en face : immeubles jointifs, alignés le long du quai (sans trou entre eux)
+    x: { edge: 0, near: 6.6, mid: 8.2, far: 34 }, spread: { near: 0.1, mid: 0, far: 0.6 }, mult: { near: 0.1, mid: 0, far: 0 },
     edge: [],
     near: [['bouquiniste', 3], ['parapet', 2], ['lamppost', 1]],
     mid: [['seine', 1]],

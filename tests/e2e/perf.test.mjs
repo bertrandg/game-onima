@@ -9,7 +9,7 @@ import { openBrowser, startLevel, runUntil } from '../helpers/game.mjs';
 
 const BUDGET = {
   japon: { calls: 185, triangles: 860000 },
-  paris: { calls: 190, triangles: 650000 },
+  paris: { calls: 190, triangles: 800000 },   // relevé en novembre 2026 : vitrines, platanes, cagettes, rive d'en face continue
   newyork: { calls: 265, triangles: 870000 },
   'newyork (égouts)': { calls: 235, triangles: 830000 },
   egypte: { calls: 205, triangles: 820000 },

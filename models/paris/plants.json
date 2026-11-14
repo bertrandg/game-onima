@@ -1,0 +1,67 @@
+{
+ "p_tree": {
+  "off": 0,
+  "tris": 916,
+  "parts": 2,
+  "roles": [
+   "Tree_Green.002",
+   "Tree_Wood.002"
+  ],
+  "w": 0.764,
+  "d": 0.472
+ },
+ "p_barrel": {
+  "off": 38472,
+  "tris": 320,
+  "parts": 14,
+  "roles": [
+   "Atlas.002"
+  ],
+  "w": 1.086,
+  "d": 1.085
+ },
+ "p_crate": {
+  "off": 51912,
+  "tris": 313,
+  "parts": 37,
+  "roles": [
+   "DarkWood.001",
+   "Wood.004"
+  ],
+  "w": 1.0,
+  "d": 1.0
+ },
+ "p_baguette": {
+  "off": 65060,
+  "tris": 84,
+  "parts": 1,
+  "roles": [
+   "brownLight",
+   "brown"
+  ],
+  "w": 3.321,
+  "d": 1.0
+ },
+ "p_loaf": {
+  "off": 68588,
+  "tris": 80,
+  "parts": 1,
+  "roles": [
+   "brownDark",
+   "brown.001"
+  ],
+  "w": 2.596,
+  "d": 1.731
+ },
+ "p_boat": {
+  "off": 71948,
+  "tris": 172,
+  "parts": 1,
+  "roles": [
+   "DarkWood.002",
+   "Wood.005"
+  ],
+  "w": 2.323,
+  "d": 4.26
+ }
+}

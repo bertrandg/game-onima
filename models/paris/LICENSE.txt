@@ -1,0 +1,18 @@
+Modèles du décor du niveau Paris (plants.bin, plants.json)
+
+Trouvés sur Poly Pizza, tous sous licence CC0 1.0 (domaine public) :
+
+Quaternius (https://quaternius.com)
+- « Tree » : https://poly.pizza/m/i4QMw4L64D (platanes)
+- « Barrel » : https://poly.pizza/m/Eko3cjAMW9
+- « Crate » : https://poly.pizza/m/3OEFd1AWfa (cagettes du marché)
+- « Boat » : https://poly.pizza/m/OknDJkGeJ8 (barques le long des quais)
+
+Kenney (https://kenney.nl)
+- « Loaf Baguette » : https://poly.pizza/m/XUjyfPrTnz
+- « Loaf Round » : https://poly.pizza/m/4BiXgXnxTY
+
+Licence : https://creativecommons.org/publicdomain/zero/1.0/
+
+Simplifiés et convertis dans Blender (tools/export-plants.py, ONIMA_LEVEL=paris) : textures et matériaux
+remplacés par une couleur par triangle, recolorée dans le jeu (js/plants.js).

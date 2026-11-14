@@ -7,10 +7,18 @@
 # texture au centre du triangle), rôle (numéro du matériau d'origine) et morceau (partie d'un seul tenant).
 import bpy, bmesh, struct, json, os
 
-OUT = os.path.join(os.path.dirname(bpy.data.filepath) or '.', 'models', 'japon')
-OUT = os.environ.get('ONIMA_PLANTS_OUT', OUT)
-SPEC = {'X_tree': 'tree', 'X_conifer': 'conifer', 'X_rock1': 'rock1', 'X_rock2': 'rock2', 'X_rock3': 'rock3',
-        'X_stall': 'stall', 'X_cart': 'cart', 'X_cabbage': 'cabbage', 'X_radish': 'radish', 'X_leek': 'leek'}
+#
+# Niveau exporté : variable d'environnement ONIMA_LEVEL (japon par défaut) ; dossier de sortie :
+# ONIMA_PLANTS_OUT (par défaut models/<niveau> à côté du fichier .blend).
+LEVEL = os.environ.get('ONIMA_LEVEL', 'japon')
+OUT = os.environ.get('ONIMA_PLANTS_OUT', os.path.join(os.path.dirname(bpy.data.filepath) or '.', 'models', LEVEL))
+SPECS = {
+    'japon': {'X_tree': 'tree', 'X_conifer': 'conifer', 'X_rock1': 'rock1', 'X_rock2': 'rock2', 'X_rock3': 'rock3',
+              'X_stall': 'stall', 'X_cart': 'cart', 'X_cabbage': 'cabbage', 'X_radish': 'radish', 'X_leek': 'leek'},
+    'paris': {'P_tree': 'p_tree', 'P_barrel': 'p_barrel', 'P_crate': 'p_crate', 'P_baguette': 'p_baguette',
+              'P_loaf': 'p_loaf', 'P_boat': 'p_boat'},
+}
+SPEC = SPECS[LEVEL]
 
 
 def lin2srgb(c):

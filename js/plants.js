@@ -1,21 +1,25 @@
 import * as THREE from 'three';
 
-// Modèles du décor du Japon (arbres, rochers, étals, charrettes, légumes), pris dans des bibliothèques libres
-// (voir models/japon/LICENSE.txt) puis nettoyés dans Blender : triangles seuls, sans texture, origine au pied,
+// Modèles de décor (arbres, rochers, étals, légumes…) d'un niveau, pris dans des bibliothèques libres
+// (voir models/<niveau>/LICENSE.txt) puis nettoyés dans Blender : triangles seuls, sans texture, origine au pied,
 // hauteur 1. Pour chaque triangle : position, couleur d'origine, rôle (matériau d'origine : 0 = bois…)
 // et numéro de morceau (partie d'un seul tenant, ex. une touffe de feuillage). On les recolore à la
 // construction et ils se fusionnent dans le décor comme les autres primitives : aucun appel de dessin en plus.
-const BASE = new URL('../models/japon/', import.meta.url).href;
+// Les modèles de chaque niveau sont préfixés (ex. « p_ » pour Paris) : leurs noms ne se croisent pas.
+const BASE = new URL('../models/', import.meta.url).href;
 
-let MODELS = null;
+const MODELS = {};
+const loaded = {};
 
-export async function loadPlants() {
-  if (MODELS) return MODELS;
+export function loadPlants(level = 'japon') {
+  return (loaded[level] ||= loadSet(level));
+}
+
+async function loadSet(level) {
   const [index, bin] = await Promise.all([
-    fetch(BASE + 'plants.json').then((r) => r.json()),
-    fetch(BASE + 'plants.bin').then((r) => r.arrayBuffer()),
+    fetch(BASE + level + '/plants.json').then((r) => r.json()),
+    fetch(BASE + level + '/plants.bin').then((r) => r.arrayBuffer()),
   ]);
-  MODELS = {};
   for (const [key, m] of Object.entries(index)) {
     const n = m.tris;
     let o = m.off;
@@ -30,8 +34,8 @@ export async function loadPlants() {
 }
 
 export const plant = (key) => {
-  const m = MODELS && MODELS[key];
-  if (!m) throw new Error('modèle de végétation inconnu : ' + key);
+  const m = MODELS[key];
+  if (!m) throw new Error('modèle de décor inconnu : ' + key);
   return m;
 };
 
