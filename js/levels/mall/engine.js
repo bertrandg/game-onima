@@ -70,7 +70,8 @@ class FloorObstacles extends Obstacles {
     const C = this.candies;
     let extra = BONUS[this.f];
     if (C && prev !== null && prev - z > 8) {
-      const lanes = [0, 1, 2].filter((l) => !this.list.some((o) => o.moving && o.lane === l)).sort(() => Math.random() - 0.5);
+      const lanes = [0, 1, 2].filter((l) => !this.list.some((o) => o.moving && o.lane === l));
+      for (let i = lanes.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [lanes[i], lanes[j]] = [lanes[j], lanes[i]]; }
       for (const l of lanes) {
         if (extra <= 0 || (extra < 1 && Math.random() > extra)) break;
         C.placeTrail(l, prev - 1, z - 3, this);
@@ -222,9 +223,13 @@ export class MallObstacles {
         if (this.lastUp[a] - z0 > 190) wants.push([a, 1]);
         if (this.lastDown[a + 1] - z0 > 230) wants.push([a, -1]);
       }
-      wants.sort(() => Math.random() - 0.5);
-      for (let a = 0; a < TOP; a++) if (Math.random() < 0.16) wants.push([a, Math.random() < 0.55 ? 1 : -1]);
-      for (const [a, dir] of wants) this.tryConn(a, dir, z0);
+      // ordre tiré au hasard (mélange de Fisher-Yates : même partie quelle que soit la version de Node)
+      for (let i = wants.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [wants[i], wants[j]] = [wants[j], wants[i]]; }
+      let missed = false;
+      for (const [a, dir] of wants) if (!this.tryConn(a, dir, z0)) missed = true;
+      // un escalator attendu n'a pas trouvé de place : on réessaie un peu plus loin, sans en ajouter d'autres
+      if (missed) { this.escCursor -= 2 * MOD; continue; }
+      for (let a = 0; a < TOP; a++) if (Math.random() < 0.16) this.tryConn(a, Math.random() < 0.55 ? 1 : -1, z0);
       this.escCursor -= rand(26, 44);
     }
   }
