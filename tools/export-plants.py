@@ -1,15 +1,16 @@
-# Export des modèles de végétation du Japon (models/japon/plants.bin + plants.json), à lancer dans Blender.
+# Export des modèles du décor du Japon (models/japon/plants.bin + plants.json), à lancer dans Blender.
 #
-# Préparation (déjà faite pour les fichiers du dépôt) : importer les modèles de Poly Pizza (voir Crédits du
-# README), fusionner les sommets en double, simplifier (Decimate) puis nommer les objets prêts X_tree,
-# X_conifer, X_rock1, X_rock2, X_rock3. Le script écrit, pour chaque triangle : position (origine au pied,
+# Préparation (déjà faite pour les fichiers du dépôt) : importer les modèles de Poly Pizza (voir
+# models/japon/LICENSE.txt), fusionner les sommets en double, simplifier (Decimate) puis nommer les objets
+# prêts comme dans SPEC ci-dessous. Le script écrit, pour chaque triangle : position (origine au pied,
 # hauteur 1, axe y vers le haut comme dans three.js), couleur d'origine (couleur du matériau, ou de la
 # texture au centre du triangle), rôle (numéro du matériau d'origine) et morceau (partie d'un seul tenant).
 import bpy, bmesh, struct, json, os
 
 OUT = os.path.join(os.path.dirname(bpy.data.filepath) or '.', 'models', 'japon')
 OUT = os.environ.get('ONIMA_PLANTS_OUT', OUT)
-SPEC = {'X_tree': 'tree', 'X_conifer': 'conifer', 'X_rock1': 'rock1', 'X_rock2': 'rock2', 'X_rock3': 'rock3'}
+SPEC = {'X_tree': 'tree', 'X_conifer': 'conifer', 'X_rock1': 'rock1', 'X_rock2': 'rock2', 'X_rock3': 'rock3',
+        'X_stall': 'stall', 'X_cart': 'cart', 'X_cabbage': 'cabbage', 'X_radish': 'radish', 'X_leek': 'leek'}
 
 
 def lin2srgb(c):

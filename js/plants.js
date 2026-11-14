@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
-// Modèles de végétation du Japon (arbres feuillus, conifère, rochers), pris dans des bibliothèques libres
-// (voir Crédits du README) puis nettoyés dans Blender : triangles seuls, sans texture, origine au pied,
+// Modèles du décor du Japon (arbres, rochers, étals, charrettes, légumes), pris dans des bibliothèques libres
+// (voir models/japon/LICENSE.txt) puis nettoyés dans Blender : triangles seuls, sans texture, origine au pied,
 // hauteur 1. Pour chaque triangle : position, couleur d'origine, rôle (matériau d'origine : 0 = bois…)
 // et numéro de morceau (partie d'un seul tenant, ex. une touffe de feuillage). On les recolore à la
 // construction et ils se fusionnent dans le décor comme les autres primitives : aucun appel de dessin en plus.
@@ -68,6 +68,28 @@ export function addPlant(b, key, p, h, paint, { s = [1, 1], ry = 0 } = {}) {
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));
   b.parts.push(g);
   return _m.clone();
+}
+
+// Surface horizontale (tournée vers le ciel) des triangles des rôles `roles` entre les hauteurs y0 et y1
+// (relatives : modèle de hauteur 1, avant rotation) : { x0, x1, z0, z1, y }, pour y poser des objets
+export function shelf(key, roles, y0, y1) {
+  const m = plant(key);
+  const r = { x0: Infinity, x1: -Infinity, z0: Infinity, z1: -Infinity, y: 0 };
+  for (let i = 0; i < m.n; i++) {
+    if (!roles.includes(m.role[i])) continue;
+    const o = i * 9;
+    _a.set(m.pos[o + 3] - m.pos[o], m.pos[o + 4] - m.pos[o + 1], m.pos[o + 5] - m.pos[o + 2]);
+    _b.set(m.pos[o + 6] - m.pos[o], m.pos[o + 7] - m.pos[o + 1], m.pos[o + 8] - m.pos[o + 2]);
+    if (_n.crossVectors(_a, _b).normalize().y < 0.9) continue;
+    const y = (m.pos[o + 1] + m.pos[o + 4] + m.pos[o + 7]) / 3;
+    if (y < y0 || y > y1) continue;
+    for (let k = 0; k < 3; k++) {
+      r.x0 = Math.min(r.x0, m.pos[o + k * 3]); r.x1 = Math.max(r.x1, m.pos[o + k * 3]);
+      r.z0 = Math.min(r.z0, m.pos[o + k * 3 + 2]); r.z1 = Math.max(r.z1, m.pos[o + k * 3 + 2]);
+    }
+    r.y = Math.max(r.y, y);
+  }
+  return r;
 }
 
 // n points pris au hasard à la surface des triangles du rôle `role` (centres des triangles, dans le repère

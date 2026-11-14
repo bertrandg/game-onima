@@ -1,11 +1,20 @@
-Végétation du niveau Japon (plants.bin, plants.json)
+Modèles du décor du niveau Japon (plants.bin, plants.json)
 
-Modèles de Quaternius (https://quaternius.com), trouvés sur Poly Pizza, licence CC0 1.0 (domaine public) :
+Trouvés sur Poly Pizza, tous sous licence CC0 1.0 (domaine public) :
+
+Quaternius (https://quaternius.com)
 - « Tree » : https://poly.pizza/m/9nvGuZlbpE (feuillus : cerisiers, érables, plaqueminiers)
 - « Pine Tree Autumn » : https://poly.pizza/m/n0X3N2yUFL (cèdres du Japon, recolorés en vert)
 - « Rock Medium » : https://poly.pizza/m/s1OJ3bBzqc
 - « Rock » : https://poly.pizza/m/4MUaQTcDdc
 - « Rocks » : https://poly.pizza/m/Gl3pcrdnpW
+- « Market Stand » : https://poly.pizza/m/DGIM5HGISb (étals du marché, auvents recolorés)
+- « Cart » : https://poly.pizza/m/l7bDe7ak6j (charrettes yatai)
+
+Kenney (https://kenney.nl)
+- « Cabbage » : https://poly.pizza/m/6urnIRBhzr
+- « Radish » : https://poly.pizza/m/L7AHSKtgSL (radis daikon)
+- « Leek » : https://poly.pizza/m/jnfaimryxs (poireaux negi)
 
 Licence : https://creativecommons.org/publicdomain/zero/1.0/
 

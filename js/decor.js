@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Builder, U, pick, rand } from './geo.js';
-import { loadPlants, addPlant, surface } from './plants.js';
+import { loadPlants, addPlant, surface, shelf } from './plants.js';
 
 await loadPlants();   // modèles de végétation chargés avant la construction du décor
 
@@ -163,13 +163,17 @@ function ferns(b) {   // fougères
 const MOSS = ['#6f9a4f', '#7caa58', '#628c45'];
 function rock(b, key, x, z, h, mossy = Math.random() < 0.6) {
   const stone = pick(STONE);
-  addPlant(b, key, [x, -0.04, z], h, painter(null, [stone], { moss: mossy ? MOSS : null, jitter: 0.08 }), { s: [rand(0.85, 1.15), rand(0.85, 1.15)], ry: rand(0, Math.PI * 2) });
+  addPlant(b, key, [x, -0.04, z], h, painter(null, [stone], { moss: mossy ? MOSS : null, jitter: 0.08 }), { s: [rand(0.9, 1.05), rand(0.9, 1.05)], ry: rand(0, Math.PI * 2) });
 }
 
+// l'élément est tourné au hasard : tout doit tenir dans un rayon de 0,8 m (moitié de sa largeur)
 function rocks(b) {
-  if (Math.random() < 0.35) { rock(b, 'rock3', 0, 0, rand(0.45, 0.6)); return; }   // amas de pierres
-  const n = ri(1, 3);
-  for (let i = 0; i < n; i++) rock(b, pick(['rock1', 'rock2']), rand(-0.4, 0.4), -0.7 + i * 0.7 + rand(-0.15, 0.15), rand(0.3, 0.6) * (i ? 0.75 : 1));
+  if (Math.random() < 0.35) { rock(b, 'rock3', 0, 0, rand(0.38, 0.46)); return; }   // amas de pierres
+  rock(b, pick(['rock1', 'rock2']), 0, 0, rand(0.35, 0.52));
+  for (let i = 0; i < ri(0, 2); i++) {
+    const a = rand(0, Math.PI * 2);
+    rock(b, pick(['rock1', 'rock2']), Math.cos(a) * 0.42, Math.sin(a) * 0.42, rand(0.2, 0.32));
+  }
 }
 
 function stoneWall(b) {   // muret de pierres empilées, mousse sur le dessus
@@ -290,21 +294,66 @@ function chaya(b) {   // banc de maison de thé : feutre rouge et grande ombrell
   b.add(BALL, '#a8cf6a', [0.1, 0.6, 0.4], [0.05, 0.05, 0.05]);
 }
 
-function yatai(b) {   // échoppe de rue : comptoir, auvent rayé, lanternes, marchandises
-  b.add(U.box, '#8a6240', [0, 0.5, 0], [1.1, 1.0, 2.6]);
-  b.add(U.box, '#6b4a33', [0.56, 0.5, 0], [0.04, 0.9, 2.5]);
-  for (const z of [-1.25, 1.25]) for (const x of [-0.5, 0.5]) b.add(U.box, DARK_WOOD, [x, 1.25, z], [0.08, 2.5, 0.08]);
-  for (let i = 0; i < 8; i++) {   // auvent rayé
-    b.add(U.box, i % 2 ? '#ffffff' : '#c8302a', [0.35, 2.45, -1.4 + i * 0.4 + 0.2], [1.6, 0.06, 0.4], [0, 0, -0.3]);
+// Marchandises d'une échoppe posées sur un plateau (rectangle r d'un modèle, voir shelf()) : paniers de
+// fruits ou de légumes, boîtes de gâteaux, bouteilles
+const GOODS = [['#f08a24', '#f59a2e'], ['#c8302a', '#e04a3a'], ['#a8cf6a', '#8fbf55'], ['#f48fb1', '#ffffff'], ['#ffd23f', '#f2c230']];
+function wares(b, x0, x1, z0, z1, y) {
+  const n = Math.max(2, Math.round((z1 - z0) / 0.45));
+  for (let i = 0; i < n; i++) {
+    const z = z0 + ((i + 0.5) * (z1 - z0)) / n, x = (x0 + x1) / 2 + rand(-0.08, 0.08);
+    const k = Math.random();
+    if (k < 0.55) {   // panier plat chargé
+      b.add(U.cyl, '#b08850', [x, y + 0.04, z], [0.19, 0.08, 0.19]);
+      const c = pick(GOODS);
+      for (let j = 0; j < 5; j++) b.add(U.sph0, pick(c), [x + rand(-0.1, 0.1), y + 0.12 + (j > 3 ? 0.07 : 0), z + rand(-0.1, 0.1)], [0.07, 0.065, 0.07]);
+    } else if (k < 0.8) {   // pile de boîtes de gâteaux
+      for (let j = 0; j < ri(1, 3); j++) b.add(U.box, pick(['#f4ecdc', '#e8b8c8', '#c8d8a8']), [x, y + 0.05 + j * 0.1, z], [0.26, 0.09, 0.3], [0, rand(-0.2, 0.2), 0]);
+    } else {   // bouteilles de saké
+      for (let j = 0; j < 3; j++) {
+        b.add(U.cyl6, pick(['#f2ece0', '#6a4a8a', '#3a6a5a']), [x + rand(-0.08, 0.08), y + 0.13, z - 0.1 + j * 0.1], [0.045, 0.26, 0.045]);
+      }
+    }
   }
-  b.add(U.box, '#2c3c78', [1.15, 2.05, 0], [0.03, 0.45, 2.6]);
-  for (const z of [-0.9, 0.9]) {
-    b.add(BALL, '#d8392f', [1.15, 1.6, z], [0.17, 0.24, 0.17]);
-    b.add(U.cyl, '#1e1a18', [1.15, 1.86, z], [0.08, 0.04, 0.08]);
+}
+
+// Échoppe de rue : étal en bois à auvent rayé (modèle « stall ») ou charrette yatai (modèle « cart »),
+// recolorés aux couleurs du marché, avec lanternes, noren et marchandises
+const AWNINGS = [['#c8302a', '#f4ecdc'], ['#2c3c78', '#f4ecdc'], ['#3f6a4a', '#efe2c4'], ['#a8452f', '#f2d9a0']];
+function yatai(b) {
+  const [c1, c2] = pick(AWNINGS);
+  const wood = pick(['#8a6240', '#7a5638', '#94704a']);
+  const rot = Math.PI;   // côté ouvert vers la voie
+  const flip = (r) => ({ x0: -r.x1, x1: -r.x0, z0: -r.z1, z1: -r.z0, y: r.y });
+  if (Math.random() < 0.55) {
+    const H = 2.65;
+    addPlant(b, 'stall', [0, 0, 0], H, (role) => {
+      if (role === 0) return _tc.set(c1);
+      if (role === 1) return _tc.set(c2);
+      return _tc.set(role === 2 ? wood : DARK_WOOD).multiplyScalar(1 + rand(-0.06, 0.06));
+    }, { ry: rot });
+    const r = flip(shelf('stall', [2], 0.4, 0.6));
+    wares(b, r.x0 * H, r.x1 * H, r.z0 * H + 0.1, r.z1 * H - 0.1, r.y * H);
+    for (const z of [-1.1, 1.1]) {   // lanternes accrochées à l'auvent
+      b.add(BALL, z < 0 ? '#d8392f' : '#f4e6c4', [0.95, 1.75, z], [0.16, 0.23, 0.16]);
+      b.add(U.cyl, '#1e1a18', [0.95, 2.0, z], [0.07, 0.04, 0.07]);
+      b.add(U.cyl, '#1e1a18', [0.95, 1.5, z], [0.07, 0.04, 0.07]);
+    }
+  } else {
+    const H = 2.3;
+    addPlant(b, 'cart', [0, 0, 0], H, (role) => {
+      if (role === 1) return _tc.set(c1);
+      if (role === 2) return _tc.set(c2);
+      if (role === 4) return _tc.set('#3a3330');
+      return _tc.set(role === 3 ? DARK_WOOD : wood).multiplyScalar(1 + rand(-0.06, 0.06));
+    }, { ry: rot + Math.PI / 2 });   // charrette en long, le long de la voie
+    // noren pendu sous l'auvent, côté voie, et une lanterne rouge
+    b.add(U.box, c1, [0.58, 1.55, 0.3], [0.03, 0.4, 1.0]);
+    b.add(U.box, '#f4f1ea', [0.6, 1.55, 0.3], [0.01, 0.14, 0.14]);
+    b.add(BALL, '#d8392f', [0.7, 1.45, -0.6], [0.15, 0.21, 0.15]);
+    b.add(U.cyl, '#1e1a18', [0.7, 1.67, -0.6], [0.065, 0.04, 0.065]);
+    // tabourets devant le comptoir
+    for (const z of [-0.5, 0.4]) b.add(U.cyl6, '#6b4a33', [1.0, 0.25, z], [0.14, 0.5, 0.14]);
   }
-  const goods = ['#f08a24', '#ffd23f', '#a8cf6a', '#f48fb1', '#ffffff', '#c8302a'];
-  for (let i = 0; i < 10; i++) b.add(BALL, pick(goods), [rand(-0.3, 0.4), 1.08, -1.1 + i * 0.24], [0.1, 0.09, 0.1]);
-  b.add(U.cyl, '#e8dcc0', [0.2, 1.05, 0.7], [0.18, 0.12, 0.18]);
 }
 
 function well(b) {   // puits avec petit toit et seau
@@ -344,6 +393,18 @@ function tiledRoof(b, y, w, h, l, col = ROOF_TILE) {
   }
   b.add(U.box, '#2f3440', [0, y + h + 0.02, 0], [0.24, 0.16, l + 0.1]);
   for (const sz of [-1, 1]) b.add(U.box, '#2f3440', [0, y + h + 0.12, sz * (l / 2 + 0.05)], [0.18, 0.24, 0.12], [sz * 0.4, 0, 0]);
+  // bord de l'avant-toit côté voie : planche de rive claire et bouts de tuiles ronds alignés
+  b.add(U.box, '#e9e2d2', [w / 2 - 0.04, y - 0.06, 0], [0.06, 0.1, l]);
+  for (let i = 0; i <= n; i++) b.add(U.box, '#2a2f3a', [w / 2 + 0.01, y + 0.04, -l / 2 + (i * l) / n], [0.08, 0.11, 0.13]);
+}
+
+// petites plantes en pot devant une façade (x = pied du mur côté voie)
+function frontPots(b, x, zs) {
+  for (const z of zs) {
+    b.add(U.cyl6, pick(['#8a5a3a', '#4a5a6a', '#6a4a3a']), [x, 0.15, z], [0.14, 0.3, 0.14]);
+    b.add(U.sph0, pick(LEAF), [x, 0.4, z], [0.2, 0.16, 0.2], [0, rand(0, 3), 0]);
+    if (Math.random() < 0.5) b.add(U.sph0, pick(['#f4a8c4', '#ffffff', '#c9a6ff']), [x + 0.05, 0.5, z], [0.06, 0.05, 0.06]);
+  }
 }
 
 function minka(b) {
@@ -360,13 +421,33 @@ function minka(b) {
     for (let i = 1; i < 5; i++) b.add(U.box, DARK_WOOD, [W / 2 + 0.06, 1.15, zc - 0.95 + i * 0.38], [0.02, 1.3, 0.025]);
     for (let j = 1; j < 4; j++) b.add(U.box, DARK_WOOD, [W / 2 + 0.06, 0.5 + j * 0.33, zc], [0.02, 0.025, 1.9]);
   }
-  // toit de chaume épais
-  b.add(U.roof, '#c4a265', [0, 2.3, 0], [W + 1.8, 3.4, L + 1.4]);
-  b.add(U.roof, '#b08c50', [0, 2.25, 0], [W + 1.9, 0.5, L + 1.5]);
+  b.add(U.box, '#5a4030', [W / 2 + 0.03, 0.42, 0], [0.04, 0.12, L]);   // plinthe en bois sous les shōji
+  // toit de chaume épais : versant, bord taillé plus clair, mèches de paille plus sombres le long du versant
+  const RW = W + 1.8, RH = 3.4, RL = L + 1.4, ang = Math.atan2(RH, RW / 2), slope = Math.hypot(RH, RW / 2);
+  const thatch = pick(['#c4a265', '#bc9a5c', '#c8a86c']);
+  b.add(U.roof, thatch, [0, 2.3, 0], [RW, RH, RL]);
+  b.add(U.roof, '#b08c50', [0, 2.25, 0], [RW + 0.1, 0.5, RL + 0.1]);
+  b.add(U.box, '#d9bd84', [RW / 2 - 0.12, 2.32, 0], [0.3, 0.16, RL + 0.12], [0, 0, -ang]);   // tranche du chaume
+  for (let i = 0; i < 16; i++) {
+    const z = -RL / 2 + 0.3 + (i * (RL - 0.6)) / 15, t = rand(0.35, 0.75);
+    b.add(U.box, pick(['#a8864c', '#b8945a', '#9c7c46']), [RW / 4 + 0.03, 2.3 + RH / 2 + 0.02, z + rand(-0.1, 0.1)], [slope * t, 0.03, 0.08], [0, 0, -ang]);
+  }
   b.add(U.box, '#5b4a36', [0, 5.62, 0], [0.7, 0.4, L + 1.6]);
   for (let i = 0; i < 5; i++) b.add(U.box, '#3f3226', [0, 5.86, -L / 2 + 0.3 + i * (L / 4)], [0.9, 0.12, 0.12]);
-  // jardin : petit potager et pierre
+  // bois de chauffe empilé contre le pignon
+  for (let r = 0; r < 3; r++) for (let i = 0; i < 4 - (r >> 1); i++) {
+    b.add(U.box, pick(['#8a6a48', '#7a5a3a', '#9a7a52']), [W / 2 - 0.5 - i * 0.28 - r * 0.14, 0.14 + r * 0.24, L / 2 + 0.45], [0.24, 0.22, 0.7]);
+  }
+  // kakis séchés (hoshigaki) pendus sous l'avant-toit
+  if (Math.random() < 0.6) {
+    for (const z of [-2.6, -2.1, 2.1]) {
+      b.add(U.box, '#c8b088', [W / 2 + 0.55, 2.0, z], [0.02, 0.7, 0.02]);
+      for (let k = 0; k < 5; k++) b.add(U.sph0, pick(['#d8601c', '#c4501a', '#e07028']), [W / 2 + 0.55, 1.75 + k * 0.12, z], [0.06, 0.055, 0.06]);
+    }
+  }
+  // jardin : pierre et pas japonais vers l'engawa
   if (Math.random() < 0.6) b.add(U.sph0, pick(STONE), [W / 2 + 1.5, 0.25, rand(-2, 2)], [0.5, 0.35, 0.4]);
+  for (let i = 0; i < 3; i++) b.add(U.cyl6, pick(STONE), [W / 2 + 1.15 + i * 0.5, 0.03, rand(-0.3, 0.3)], [0.22, 0.06, 0.18]);
 }
 
 function machiya(b) {
@@ -397,6 +478,18 @@ function machiya(b) {
   // enseigne en bois
   b.add(U.box, '#3a2a1c', [W / 2 + 0.06, 2.35, 1.6], [0.05, 0.35, 1.2]);
   b.add(U.box, '#e8c46a', [W / 2 + 0.09, 2.35, 1.6], [0.01, 0.06, 0.8]);
+  // poteaux d'angle et poutre entre les étages : la façade se lit maison par maison
+  for (const z of [-L / 2, L / 2]) b.add(U.box, '#4a3426', [W / 2 + 0.06, H / 2, z], [0.16, H, 0.18]);
+  if (two) b.add(U.box, '#4a3426', [W / 2 + 0.06, 2.6, 0], [0.1, 0.12, L]);
+  // inuyarai : clôture basse de bambou courbée au pied du mur, à côté de la porte
+  for (let i = 0; i < 9; i++) b.add(U.box, '#6a5034', [W / 2 + 0.3, 0.3, 0.2 + i * 0.32], [0.03, 0.7, 0.04], [0, 0, 0.55]);
+  b.add(U.box, '#5a4030', [W / 2 + 0.12, 0.62, 1.48], [0.04, 0.04, 2.7]);
+  b.add(U.box, '#5a4030', [W / 2 + 0.48, 0.04, 1.48], [0.05, 0.05, 2.7]);
+  if (two && Math.random() < 0.6) {   // store de bambou (sudare) déroulé à l'étage
+    b.add(U.box, '#c8a868', [W / 2 + 0.1, 3.0, 2.2], [0.03, 0.75, 1.1]);
+    for (let j = 0; j < 4; j++) b.add(U.box, '#9a7a48', [W / 2 + 0.12, 2.7 + j * 0.2, 2.2], [0.01, 0.02, 1.1]);
+  }
+  frontPots(b, W / 2 + 0.35, Math.random() < 0.5 ? [-2.6] : [-2.6, -0.45]);
   tiledRoof(b, H, W + 1.1, 1.5, L + 0.8);
 }
 
@@ -411,6 +504,18 @@ function kura(b) {   // entrepôt à murs blancs et soubassement en namako
   b.add(U.box, '#f6f4ee', [W / 2 + 0.08, 2.5, 0.55], [0.04, 0.75, 0.4]);
   b.add(U.box, '#3a2a20', [W / 2 + 0.03, 1.0, -1.2], [0.06, 1.8, 1.2]);   // porte
   b.add(U.cyl, '#d0a43a', [W / 2 + 0.08, 1.9, -1.2], [0.12, 0.02, 0.12], [0, 0, Math.PI / 2]);
+  // marches de pierre devant la porte, armoiries de la famille sur les pignons
+  b.add(U.box, '#9a978e', [W / 2 + 0.3, 0.1, -1.2], [0.6, 0.2, 1.4]);
+  b.add(U.box, '#a8a59c', [W / 2 + 0.7, 0.05, -1.2], [0.4, 0.1, 1.2]);
+  // pignons en enduit blanc, dépassant à peine du toit de tuiles, avec les armoiries
+  const GZ = (L + 0.7) / 2 + 0.02;
+  b.add(U.roof, '#f6f4ee', [0, H, 0], [W, 1.2, GZ * 2]);
+  const crest = pick(['#1e1a18', '#2a3a5a', '#7a2a2a']);
+  for (const sz of [-1, 1]) {
+    b.add(U.cyl, crest, [0, H + 0.42, sz * (GZ + 0.015)], [0.32, 0.02, 0.32], [Math.PI / 2, 0, 0]);
+    b.add(U.cyl, '#f6f4ee', [0, H + 0.42, sz * (GZ + 0.04)], [0.18, 0.02, 0.18], [Math.PI / 2, 0, 0]);
+    b.add(U.box, crest, [0, H + 0.42, sz * (GZ + 0.06)], [0.05, 0.28, 0.01]);
+  }
   tiledRoof(b, H, W + 0.9, 1.3, L + 0.7);
 }
 
@@ -507,21 +612,29 @@ function paddy(b) {
 
 function field(b) {
   b.add(U.box, '#8b6a45', [0, 0.05, 0], [7, 0.1, 9]);
-  const kind = Math.random();
+  // potager en sillons : une culture par rang (choux, radis daikon, poireaux negi), modèles « cabbage »,
+  // « radish », « leek », un peu variés en taille, teinte et orientation
+  const crops = [['cabbage', 0.46, 9, 1.35], ['radish', 0.78, 11, 1.5], ['leek', 0.85, 13, 1.4]];
+  const first = ri(0, 2);
   for (let r = 0; r < 5; r++) {
-    b.add(U.box, '#7a5a3a', [-2.8 + r * 1.4, 0.12, 0], [0.5, 0.08, 8.6]);
-    for (let i = 0; i < 8; i++) {
-      const x = -2.8 + r * 1.4, z = -3.8 + i * 1.08;
-      if (kind < 0.5) {   // choux
-        b.add(U.sph0, pick(['#a8d58a', '#9acb7a']), [x, 0.3, z], [0.32, 0.26, 0.32]);
-        b.add(U.sph0, '#5f9e45', [x, 0.22, z], [0.42, 0.14, 0.42]);
-      } else {   // poireaux
-        for (let k = 0; k < 3; k++) b.add(U.cyl6, '#e8efd6', [x + rand(-0.15, 0.15), 0.3, z + rand(-0.15, 0.15)], [0.04, 0.45, 0.04]);
-        b.add(U.cone4, '#5f9e45', [x, 0.75, z], [0.14, 0.5, 0.14]);
-      }
+    const x = -2.8 + r * 1.4;
+    b.add(U.box, '#7a5a3a', [x, 0.12, 0], [0.6, 0.1, 8.6]);
+    const [key, h, n, wide] = crops[(first + (r >> 1)) % 3];
+    for (let i = 0; i < n; i++) {
+      const z = -4.1 + ((i + 0.5) * 8.2) / n + rand(-0.08, 0.08);
+      addPlant(b, key, [x + rand(-0.08, 0.08), 0.14, z], h * rand(0.85, 1.15), (role, part, j, up, c) => {
+        // feuillage vert du jeu, racines et tiges claires gardées
+        if (c[1] > c[0] + 20 && c[1] > c[2]) return _tc.setRGB(c[0] / 255, c[1] / 255, c[2] / 255, THREE.SRGBColorSpace).lerp(_leaf, 0.55);
+        return null;
+      }, { s: [wide, wide], ry: rand(0, Math.PI * 2) });
     }
   }
+  if (Math.random() < 0.5) {   // panier et outils au bout d'un rang
+    b.add(U.cyl, '#b08850', [3.6, 0.15, 4.2], [0.25, 0.3, 0.25]);
+    b.add(U.cyl6, '#8a6a42', [3.4, 0.6, 3.6], [0.025, 1.3, 0.025], [0.3, 0, 0.2]);
+  }
 }
+const _leaf = new THREE.Color('#5f9e45');
 
 function hasakake(b) {   // séchoir à riz : gerbes dorées sur perches
   for (const z of [-1.8, 0, 1.8]) {

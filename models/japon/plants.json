@@ -51,5 +51,67 @@
   ],
   "w": 2.065,
   "d": 2.429
+ },
+ "stall": {
+  "off": 103996,
+  "tris": 1548,
+  "parts": 34,
+  "roles": [
+   "RoofTiles_Red.001",
+   "Beige.001",
+   "Wood.002",
+   "Wood_Side"
+  ],
+  "w": 0.906,
+  "d": 1.134
+ },
+ "cart": {
+  "off": 169012,
+  "tris": 1315,
+  "parts": 63,
+  "roles": [
+   "Wood.003",
+   "Red",
+   "Beige.002",
+   "DarkWood",
+   "Stone_Dark"
+  ],
+  "w": 0.578,
+  "d": 1.161
+ },
+ "cabbage": {
+  "off": 224244,
+  "tris": 67,
+  "parts": 1,
+  "roles": [
+   "green",
+   "_defaultMat"
+  ],
+  "w": 1.009,
+  "d": 1.232
+ },
+ "radish": {
+  "off": 227060,
+  "tris": 64,
+  "parts": 1,
+  "roles": [
+   "green.001",
+   "purpleLight",
+   "_defaultMat.001"
+  ],
+  "w": 0.593,
+  "d": 0.593
+ },
+ "leek": {
+  "off": 229748,
+  "tris": 68,
+  "parts": 1,
+  "roles": [
+   "green.002",
+   "_defaultMat.002",
+   "greenDark"
+  ],
+  "w": 0.323,
+  "d": 0.323
  }
 }
