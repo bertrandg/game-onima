@@ -1,0 +1,14 @@
+Modèles du mobilier du niveau New York (plants.bin, plants.json)
+
+Trouvés sur Poly Pizza, tous de Quaternius (https://quaternius.com), licence CC0 1.0 (domaine public) :
+- « Tree » : https://poly.pizza/m/i4QMw4L64D (arbres d'alignement)
+- « Crate » : https://poly.pizza/m/3OEFd1AWfa (cagettes de Chinatown)
+- « Fire Hydrant » : https://poly.pizza/m/DKkMQbEklp
+- « Bench » : https://poly.pizza/m/jLxjFxFRpw
+- « Trashcan Large » : https://poly.pizza/m/eYNKnGlhon
+- « Dumpster » : https://poly.pizza/m/PKsbolkZSr (bennes de Chinatown)
+
+Licence : https://creativecommons.org/publicdomain/zero/1.0/
+
+Simplifiés et convertis dans Blender (tools/export-plants.py, ONIMA_LEVEL=newyork) : textures et matériaux
+remplacés par une couleur par triangle, recolorée dans le jeu (js/plants.js).

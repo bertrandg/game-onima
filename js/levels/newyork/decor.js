@@ -2,9 +2,10 @@ import * as THREE from 'three';
 import { Builder, TexBuilder, U, pick, rand } from '../../geo.js';
 import * as NX from './textures.js';
 import { loadKit, makeKitMats, addPiece } from './kit.js';
+import { loadPlants, addPlant } from '../../plants.js';
 import { FACADE_LEN, FLOOR_H, FLOORS_3D, BAKE, buildFloors, bakedUV } from './facades.js';
 
-await loadKit();   // pièces du kit chargées avant la construction du décor
+await Promise.all([loadKit(), loadPlants('newyork')]);   // pièces du kit et modèles du mobilier avant la construction du décor
 const BAKE_TILE = BAKE.floors * FLOOR_H;
 
 // Décor latéral de New York : trottoirs, mobilier urbain, et façades de gratte-ciel si hautes
@@ -15,6 +16,10 @@ const BALL = new THREE.SphereGeometry(1, 8, 6);
 const POLE = '#3a4a42';         // vert-gris des lampadaires new-yorkais
 const GOLD = '#d8b04a';
 const ri = (a, b) => Math.floor(rand(a, b + 1));
+// couleur d'un triangle de modèle : teinte légèrement variée, plus claire sur les faces tournées vers le ciel
+const _tc = new THREE.Color();
+const shade = (c, up = 0, j = 0.06) => _tc.set(c).multiplyScalar(1 + rand(-j, j) + (up > 0.4 ? 0.06 : -0.03));
+const keep = (c) => _tc.setRGB(c[0] / 255, c[1] / 255, c[2] / 255, THREE.SRGBColorSpace);
 
 // Matériaux des panneaux texturés (créés au chargement du niveau) : pièces du kit, écrans de Times Square
 export function makeTexMats() {
@@ -175,13 +180,9 @@ function lamp(b) {   // lampadaire « crosse d'évêque »
   b.add(BALL, '#fff2c0', [1.0, 5.12, 0], [0.18, 0.14, 0.18]);
 }
 
-function hydrant(b) {   // bouche d'incendie rouge et chromée
-  b.add(U.cyl, '#c8202a', [0, 0.35, 0], [0.18, 0.6, 0.18]);
-  b.add(U.cyl, '#c8202a', [0, 0.05, 0], [0.25, 0.1, 0.25]);
-  b.add(BALL, '#e8e4dc', [0, 0.7, 0], [0.19, 0.16, 0.19]);
-  b.add(U.cyl6, '#e8e4dc', [0, 0.86, 0], [0.05, 0.08, 0.05]);
-  for (const s of [-1, 1]) b.add(U.cyl6, '#e8e4dc', [0, 0.45, s * 0.2], [0.07, 0.14, 0.07], [Math.PI / 2, 0, 0]);
-  b.add(U.cyl6, '#e8e4dc', [0.2, 0.45, 0], [0.09, 0.14, 0.09], [0, 0, Math.PI / 2]);
+function hydrant(b) {   // bouche d'incendie (modèle « n_hydrant »), rouge ou jaune selon le quartier
+  const c = Math.random() < 0.75 ? '#c8202a' : '#e8b020';
+  addPlant(b, 'n_hydrant', [0, 0, 0], 0.85, (role, part, i, up, o) => (o[0] > o[1] + 40 ? shade(c, up, 0.04) : keep(o)), { ry: Math.PI / 2 + rand(-0.3, 0.3) });
 }
 
 function litter(b) {   // corbeille grillagée verte
@@ -253,15 +254,48 @@ function hotdogCart(b) {   // chariot de hot-dogs avec parasol et vendeur
   b.add(U.box, '#c8202a', [-0.55, 1.75, 0.3], [0.2, 0.03, 0.2]);
 }
 
-function tree(b) {   // arbre d'alignement dans sa fosse grillagée
+function tree(b) {   // arbre d'alignement (modèle « n_tree ») dans sa fosse à garde-corps bas
   b.add(U.box, '#4a3a2a', [0, 0.02, 0], [1.2, 0.04, 1.2]);
   for (const [dx, dz, w, l] of [[0.6, 0, 0.04, 1.2], [-0.6, 0, 0.04, 1.2], [0, 0.6, 1.2, 0.04], [0, -0.6, 1.2, 0.04]]) b.add(U.box, '#2a2a2e', [dx, 0.25, dz], [w, 0.05, l]);
-  const h = rand(3.2, 4.2);
-  b.add(U.cyl6, '#5a4632', [0, h / 2, 0], [0.12, h, 0.12]);
-  for (let i = 0; i < 9; i++) {
-    const a = rand(0, Math.PI * 2), r = rand(0.2, 1.3);
-    b.add(U.sph, pick(['#7aa84a', '#8ab858', '#6a9a40', '#9ac060']), [Math.cos(a) * r, h + rand(0.2, 1.6), Math.sin(a) * r], [rand(0.7, 1.0), rand(0.6, 0.8), rand(0.7, 1.0)]);
+  for (const [dx, dz] of [[0.6, 0.6], [0.6, -0.6], [-0.6, 0.6], [-0.6, -0.6]]) b.add(U.box, '#2a2a2e', [dx, 0.13, dz], [0.04, 0.26, 0.04]);
+  for (let i = 0; i < 4; i++) b.add(U.sph0, pick(['#6a9a40', '#8ab858', '#e8a0c0', '#f2d23a']), [rand(-0.4, 0.4), 0.08, rand(-0.4, 0.4)], [0.1, 0.06, 0.1]);   // fleurs de la fosse
+  const leaf = {}, h = rand(5.2, 6.2);
+  addPlant(b, 'n_tree', [0, 0, 0], h, (role, part, i, up) => role === 1
+    ? shade('#5a4632', up)
+    : shade(leaf[part] ||= pick(['#7aa84a', '#8ab858', '#6a9a40', '#9ac060']), up), { s: [0.95, 0.95], ry: rand(0, Math.PI * 2) });
+}
+
+function bench(b) {   // banc de parc en lattes de bois (modèle « n_bench ») et pigeons
+  addPlant(b, 'n_bench', [0, 0, 0], 0.85, (role, part, i, up) => shade('#7a5232', up), { s: [0.95, 1], ry: -Math.PI / 2 });
+  for (let i = 0; i < ri(0, 3); i++) {
+    const x = rand(0.3, 0.9), z = rand(-1, 1);
+    b.add(U.sph0, '#8a8a92', [x, 0.12, z], [0.1, 0.08, 0.14]);
+    b.add(U.sph0, '#5a6a6a', [x, 0.2, z + 0.1], [0.05, 0.05, 0.05]);
   }
+}
+
+function trashcan(b) {   // poubelle de métal à couvercle, parfois accompagnée de sacs noirs
+  addPlant(b, 'n_trashcan', [0, 0, 0], 0.9, (role, part, i, up) => shade(up > 0.5 ? '#8a9096' : '#a8aeb4', up), { ry: rand(0, 3) });
+  bags(b, 0.15, 0.55, ri(0, 2));
+}
+
+// sacs-poubelle noirs entassés (x, z du premier sac, n sacs)
+function bags(b, x, z, n) {
+  for (let i = 0; i < n; i++) {
+    const s = rand(0.28, 0.38);
+    b.add(U.sph0, pick(['#1e1e22', '#2a2a30', '#26262c']), [x + rand(-0.15, 0.15), s * 0.8, z + i * 0.45], [s, s * 0.85, s], [0, rand(0, 3), 0]);
+    b.add(U.box, '#1e1e22', [x, s * 1.65, z + i * 0.45], [0.05, 0.1, 0.05]);
+  }
+}
+
+// arrière-boutique de Chinatown : benne verte (modèle « n_dumpster »), cagettes vides empilées, sacs, carton
+function alley(b) {
+  const green = pick(['#2c6a3a', '#3a5a2a', '#1f4a6a']);
+  addPlant(b, 'n_dumpster', [-0.1, 0, -0.5], 1.4, (role, part, i, up, o) => (role === 1 ? shade(green, up) : keep(o)), { ry: Math.PI / 2 });
+  const wood = (role, part, i, up) => shade(role ? '#c8a46a' : '#8a6a42', up);
+  for (let k = 0; k < ri(1, 3); k++) addPlant(b, 'n_crate', [0.1, k * 0.38, 1.0], 0.38, wood, { s: [1.3, 1.05], ry: Math.PI / 2 + rand(-0.2, 0.2) });
+  bags(b, 0.35, 0.6, ri(1, 3));
+  if (Math.random() < 0.5) b.add(U.box, '#b8946a', [0.4, 0.04, 1.5], [0.6, 0.06, 0.45], [0, rand(-0.5, 0.5), 0]);   // carton aplati
 }
 
 function signal(b) {   // feu tricolore et feu piéton « main / bonhomme »
@@ -285,19 +319,32 @@ function scaffold(b) {   // échafaudage de trottoir (« sidewalk shed ») vert 
   b.add(U.box, '#f2c230', [W / 2 + 0.01, H + 0.2, 0], [0.02, 0.12, L]);
 }
 
-function tkts(b) {   // escalier rouge lumineux de Times Square
-  const L = 5.6, n = 9;
-  for (let i = 0; i < n; i++) {
-    const h = 0.3 + i * 0.32;
-    b.add(U.box, '#e8202a', [-1.3 + (i * 2.6) / n, h / 2, 0], [2.6 / n + 0.02, h, L]);
-    b.add(U.box, '#ff6a6a', [-1.3 + (i * 2.6) / n + 0.12, h + 0.01, 0], [0.06, 0.02, L]);
+function tkts(b) {   // escalier de verre rouge de Times Square, éclairé par-dessous, kiosque TKTS dessous
+  const L = 5.6, n = 9, run = 2.6 / n;
+  // enseigne TKTS lumineuse sur les flancs, sous la pente
+  for (const sz of [-1, 1]) {
+    b.add(U.box, '#f2f2f2', [-0.75, 1.3, sz * (L / 2 + 0.02)], [1.5, 0.36, 0.02]);
+    for (let i = 0; i < 4; i++) b.add(U.box, '#e8202a', [-1.3 + i * 0.36, 1.3, sz * (L / 2 + 0.04)], [0.22, 0.26, 0.01]);
   }
-  for (let i = 0; i < 6; i++) {   // touristes assis
-    const k = ri(1, n - 1), x = -1.3 + (k * 2.6) / n, z = rand(-L / 2 + 0.4, L / 2 - 0.4), y = 0.3 + k * 0.32;
-    b.add(U.box, pick(['#3a6ac8', '#f2c230', '#2a2a3a', '#e86a9a', '#5aba7a']), [x, y + 0.3, z], [0.3, 0.5, 0.36]);
+  for (let i = 0; i < n; i++) {
+    const h = 0.3 + i * 0.32, x = 1.3 - (i + 0.5) * run;
+    b.add(U.box, '#c81a24', [x, h / 2, 0], [run + 0.02, h, L]);   // marche pleine
+    b.add(U.box, '#ff4a50', [x + run / 2, h - 0.15, 0], [0.02, 0.28, L - 0.1]);   // contremarche lumineuse
+    b.add(U.box, '#ffd0c8', [x + run / 2 - 0.03, h + 0.01, 0], [0.05, 0.02, L - 0.1]);   // nez de marche éclairé
+  }
+  // main courante sur poteaux, de chaque côté, qui suit la pente (2,9 m de haut sur 2,6 m)
+  for (const z of [-L / 2 + 0.05, L / 2 - 0.05]) {
+    for (let i = 1; i < n; i += 2) {
+      const h = 0.3 + i * 0.32, x = 1.3 - (i + 0.5) * run;
+      b.add(U.box, '#dcdcdc', [x, h + 0.45, z], [0.04, 0.9, 0.04]);
+    }
+    b.add(U.box, '#dcdcdc', [0.0, 0.3 + 4 * 0.32 + 0.92, z], [3.75, 0.05, 0.06], [0, 0, -0.84]);
+  }
+  for (let i = 0; i < 7; i++) {   // touristes assis
+    const k = ri(1, n - 1), x = 1.3 - (k + 0.5) * run, z = rand(-L / 2 + 0.4, L / 2 - 0.4), y = 0.3 + k * 0.32;
+    b.add(U.box, pick(['#3a6ac8', '#f2c230', '#2a2a3a', '#e86a9a', '#5aba7a', '#f4f0e8']), [x, y + 0.3, z], [0.3, 0.5, 0.36]);
     b.add(BALL, pick(['#f2d2b8', '#c89a70', '#8a5a3a']), [x, y + 0.7, z], [0.15, 0.17, 0.15]);
   }
-  for (const z of [-L / 2, L / 2]) b.add(U.box, '#dcdcdc', [0, 1.6, z], [2.8, 0.06, 0.06]);
 }
 
 function plaza(b) {   // tables et chaises rouges de la zone piétonne
@@ -433,6 +480,9 @@ export const DECOR = {
   hotdogCart: { len: 2.2, w: 1.6, face: true, build: hotdogCart },
   tree: { len: 2.6, w: 2.4, build: tree },
   signal: { len: 0.6, w: 0.5, face: true, build: signal },
+  bench: { len: 2.1, w: 0.9, face: true, build: bench },
+  trashcan: { len: 1.4, w: 0.8, face: true, build: trashcan },
+  alley: { len: 2.8, w: 1.4, face: true, build: alley },
   scaffold: { len: 10.4, w: 3.0, face: true, build: scaffold },
   tkts: { len: 5.8, w: 2.6, face: true, build: tkts },
   plaza: { len: 3, w: 1.2, face: true, build: plaza },
@@ -447,7 +497,7 @@ export const THEMES = {
     ground: 'sidewalk', gate: 'gate', gateEvery: [180, 300], garland: 0,
     x: { edge: 0, near: 5.3, mid: 8.4, far: 30 }, spread: { near: 0.3, mid: 0 }, mult: { near: 1.3, mid: 0.04 },
     edge: [],
-    near: [...STREET, ['subway', 0.6], ['hotdogCart', 0.6], ['scaffold', 0.5]],
+    near: [...STREET, ['subway', 0.6], ['hotdogCart', 0.6], ['scaffold', 0.5], ['bench', 0.7]],
     mid: [['decoTower', 3], ['glassTower', 1.6], ['exchange', 0.5]],
     far: [],
   },
@@ -455,7 +505,7 @@ export const THEMES = {
     ground: 'sidewalk', gate: 'gate', gateEvery: [200, 320], garland: 0,
     x: { edge: 0, near: 5.3, mid: 8.4, far: 30 }, spread: { near: 0.3, mid: 0 }, mult: { near: 1.0, mid: 0.04 },
     edge: [],
-    near: [['lamp', 1.8], ['hydrant', 0.6], ['litter', 0.8], ['newsboxes', 0.6], ['signal', 0.6], ['tkts', 0.5], ['plaza', 1.4], ['hotdogCart', 0.9], ['subway', 0.4]],
+    near: [['lamp', 1.8], ['hydrant', 0.6], ['litter', 0.8], ['newsboxes', 0.6], ['signal', 0.6], ['tkts', 0.5], ['plaza', 1.4], ['hotdogCart', 0.9], ['subway', 0.4], ['bench', 0.5]],
     mid: [['timesTower', 1]],
     far: [],
   },
@@ -463,7 +513,7 @@ export const THEMES = {
     ground: 'sidewalk', gate: 'paifang', gateEvery: [240, 380], garland: 0.5, garlandType: 'lanterns',
     x: { edge: 0, near: 5.3, mid: 8.4, far: 30 }, spread: { near: 0.3, mid: 0 }, mult: { near: 1.0, mid: 0.04 },
     edge: [],
-    near: [['lamp', 1.6], ['hydrant', 0.8], ['litter', 0.6], ['fruitStand', 1.6], ['phoneBooth', 0.8], ['newsboxes', 0.4], ['hotdogCart', 0.3]],
+    near: [['lamp', 1.6], ['hydrant', 0.8], ['litter', 0.6], ['fruitStand', 1.6], ['phoneBooth', 0.8], ['newsboxes', 0.4], ['hotdogCart', 0.3], ['alley', 1.0], ['trashcan', 0.8]],
     mid: [['tenement', 1]],
     far: [],
   },

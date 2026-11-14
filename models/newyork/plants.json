@@ -1,0 +1,66 @@
+{
+ "n_tree": {
+  "off": 0,
+  "tris": 916,
+  "parts": 2,
+  "roles": [
+   "Tree_Green.002",
+   "Tree_Wood.002"
+  ],
+  "w": 0.764,
+  "d": 0.472
+ },
+ "n_crate": {
+  "off": 38472,
+  "tris": 313,
+  "parts": 32,
+  "roles": [
+   "DarkWood.001",
+   "Wood.004"
+  ],
+  "w": 1.0,
+  "d": 1.0
+ },
+ "n_hydrant": {
+  "off": 51620,
+  "tris": 341,
+  "parts": 4,
+  "roles": [
+   "Atlas.042"
+  ],
+  "w": 0.668,
+  "d": 0.518
+ },
+ "n_bench": {
+  "off": 65944,
+  "tris": 376,
+  "parts": 10,
+  "roles": [
+   "Wood.006"
+  ],
+  "w": 2.105,
+  "d": 0.768
+ },
+ "n_trashcan": {
+  "off": 81736,
+  "tris": 322,
+  "parts": 4,
+  "roles": [
+   "LightMetal"
+  ],
+  "w": 0.657,
+  "d": 0.657
+ },
+ "n_dumpster": {
+  "off": 95260,
+  "tris": 302,
+  "parts": 14,
+  "roles": [
+   "DarkGrey",
+   "Green.001",
+   "Grey"
+  ],
+  "w": 1.203,
+  "d": 0.638
+ }
+}
