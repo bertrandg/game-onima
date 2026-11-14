@@ -16,19 +16,22 @@ function upFaces(obj) {
   obj.updateMatrixWorld(true);
   obj.traverse((m) => {
     if (!m.isMesh || m.isInstancedMesh || !m.visible) return;
-    const g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry;
+    // maillage à squelette (chevaux) : sommets placés par les os, comme à l'écran
+    const skin = m.isSkinnedMesh;
+    const g = m.geometry.index && !skin ? m.geometry.toNonIndexed() : m.geometry;
+    const idx = skin && g.index ? (i) => g.index.getX(i) : (i) => i;
+    const count = skin && g.index ? g.index.count : g.attributes.position.count;
     const p = g.attributes.position, col = g.attributes.color, a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
     const n = new THREE.Vector3(), ab = new THREE.Vector3(), ac = new THREE.Vector3();
-    for (let i = 0; i + 2 < p.count; i += 3) {
-      a.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld);
-      b.fromBufferAttribute(p, i + 1).applyMatrix4(m.matrixWorld);
-      c.fromBufferAttribute(p, i + 2).applyMatrix4(m.matrixWorld);
+    const vert = (v, i) => (skin ? m.getVertexPosition(idx(i), v) : v.fromBufferAttribute(p, i)).applyMatrix4(m.matrixWorld);
+    for (let i = 0; i + 2 < count; i += 3) {
+      vert(a, i); vert(b, i + 1); vert(c, i + 2);
       n.crossVectors(ab.subVectors(b, a), ac.subVectors(c, a));
       const area = n.length() / 2;
       if (area < 1e-4 || n.y / (2 * area) < 0.999) continue;
       if (area < MIN_AREA) continue;
       // couleur de la face : deux faces de même couleur et même matière au même niveau ne se voient pas
-      const tint = col ? [col.getX(i), col.getY(i), col.getZ(i)].map((v) => v.toFixed(2)).join() : '';
+      const tint = col ? [col.getX(idx(i)), col.getY(idx(i)), col.getZ(idx(i))].map((v) => v.toFixed(2)).join() : '';
       const look = `${m.material.uuid}:${tint}`;
       out.push({ y: (a.y + b.y + c.y) / 3, t: [[a.x, a.z], [b.x, b.z], [c.x, c.z]], look });
     }

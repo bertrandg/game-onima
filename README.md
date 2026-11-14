@@ -142,7 +142,9 @@ Platanes, cagettes, tonneaux, pains et barques de Paris : même provenance (`mod
 Arbres, bouches d'incendie, bancs, poubelles, bennes et cagettes de New York : modèles de Quaternius, même provenance
 (`models/newyork/`, détail dans `models/newyork/LICENSE.txt`).
 Banians, cagettes, ananas, tabourets et bancs de Hong Kong : modèles de Quaternius et Kenney, même provenance
-(`models/hongkong/`, détail dans `models/hongkong/LICENSE.txt`). Simplifiés et
+(`models/hongkong/`, détail dans `models/hongkong/LICENSE.txt`).
+Chevaux au galop des fiacres de Paris et des chars d'Égypte : « Horse » de Quaternius (CC0), avec son squelette et son
+animation, harnais ajouté dans Blender (`models/horse/`, détail dans `models/horse/LICENSE.txt` ; couleurs dans `js/horses.js`). Simplifiés et
 convertis dans Blender par `tools/export-plants.py`, puis recolorés dans le jeu (`js/plants.js`) : ils se fusionnent dans
 le décor sans appel de dessin supplémentaire.
 Façades de New York : pièces du « Downtown City MegaKit » (version Standard) de [Quaternius](https://quaternius.com), licence CC0

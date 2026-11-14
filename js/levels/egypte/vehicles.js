@@ -2,6 +2,9 @@ import * as THREE from 'three';
 import { Builder, U, vcMat, pick } from '../../geo.js';
 import { TRAIN_HALF_W, TRAIN_TOP, CAR_LEN, CAR_GAP, RAMP_LEN } from '../../config.js';
 import { PAINT } from './textures.js';
+import { loadHorse, horse, COATS } from '../../horses.js';
+
+await loadHorse();   // chevaux au galop (modèle à squelette) avant la construction des chars
 
 // Obstacles de l'Égypte : convois de traîneaux chargés de blocs de pierre géants (arrêtés, on court sur
 // les blocs), chars tirés par deux chevaux qui foncent vers le joueur (on saute par-dessus l'attelage),
@@ -75,6 +78,18 @@ function chariotGeo() {
     smooth.add(BALL, PAINT.gold, [sx * 1.0, 0.66, zc - 0.1], [0.1, 0.1, 0.1]);
   }
   flat.add(U.cyl, WOOD2, [0, 0.66, zc - 0.1], [0.05, 2.0, 0.05], [0, 0, Math.PI / 2]);
+  // avant de caisse arrondi, bordé d'or, et rosette ailée peinte
+  smooth.add(new THREE.CylinderGeometry(1, 1, 1, 16, 1, true, -Math.PI / 2, Math.PI), PAINT.red, [0, 1.05, zc + 0.6], [0.76, 0.7, 0.3]);
+  smooth.add(new THREE.TorusGeometry(0.76, 0.035, 6, 16, Math.PI), PAINT.gold, [0, CHARIOT_TOP - 0.02, zc + 0.6], [1, 0.4, 1], [Math.PI / 2, 0, 0]);
+  smooth.add(BALL, PAINT.gold, [0, 1.12, zc + 0.92], [0.1, 0.1, 0.03]);
+  for (const sx of [-1, 1]) flat.add(U.box, PAINT.blue, [sx * 0.2, 1.14, zc + 0.9], [0.24, 0.05, 0.02], [0, sx * -0.3, sx * 0.25]);
+  // carquois de flèches sur le flanc droit, rubans de lin qui flottent à l'arrière
+  smooth.add(U.cyl, PAINT.gold, [0.82, 1.15, zc - 0.05], [0.09, 0.75, 0.09], [0.35, 0, 0]);
+  for (let k = 0; k < 4; k++) {
+    flat.add(U.box, WOOD, [0.8 + (k % 2) * 0.04, 1.6, zc + 0.08 + k * 0.03], [0.015, 0.3, 0.015], [0.35, 0, 0]);
+    flat.add(U.box, k % 2 ? PAINT.red : '#f4ecd8', [0.8 + (k % 2) * 0.04, 1.75, zc + 0.13 + k * 0.03], [0.05, 0.08, 0.01], [0.35, 0, 0]);
+  }
+  for (const sx of [-1, 1]) flat.add(U.box, sx < 0 ? PAINT.blue : PAINT.red, [sx * 0.65, 1.3, zc - 0.75], [0.02, 0.06, 0.55], [0.25, 0, sx * 0.15]);
   flat.add(U.box, WOOD2, [0, 0.9, 0.9], [0.08, 0.08, 2.4], [0.15, 0, 0]);
   // cocher kawaii : couronne bleue khépresh, pagne blanc, rênes
   const y = 0.76;
@@ -92,42 +107,23 @@ function chariotGeo() {
   return { flat: flat.build(), smooth: smooth.build() };
 }
 
-// deux chevaux harnachés devant le char (de z = 0 à z = +3.6), plumets et couvertures brodées
-function horsesGeo() {
-  const flat = new Builder(), smooth = new Builder();
-  const coats = [['#f2ece2', '#d8cfc0'], ['#7a4a2a', '#4a2a18']];
+// attelage devant le char (de z = 0 à z = +3.6) : timon, joug sur les garrots, sangles ; les deux chevaux sont
+// des modèles animés (horses.js) à couverture rouge ou bleue, collier et plumet, posés dans buildChariot()
+const HORSE_X = 0.42, HORSE_Z = 1.95;
+function hitchGeo() {
+  const flat = new Builder();
+  flat.add(U.box, WOOD2, [0, 1.1, 1.5], [0.08, 0.08, 3.0], [-0.12, 0, 0]);   // timon jusqu'au joug
+  flat.add(U.box, WOOD2, [0, 1.5, 2.55], [1.2, 0.08, 0.1]);   // joug sur les garrots
   for (const sx of [-1, 1]) {
-    const [c1, c2] = coats[sx < 0 ? 0 : 1];
-    const x = sx * 0.45, z = 2.2;
-    smooth.add(BALL, c1, [x, 1.25, z], [0.32, 0.38, 0.85]);
-    smooth.add(U.cyl, c1, [x, 1.6, z + 0.85], [0.13, 0.75, 0.16], [-0.7, 0, 0]);
-    smooth.add(BALL, c1, [x, 1.95, z + 1.2], [0.13, 0.15, 0.3], [0.5, 0, 0]);
-    smooth.add(BALL, c2, [x, 1.86, z + 1.45], [0.1, 0.1, 0.12]);
-    for (const s2 of [-1, 1]) {
-      smooth.add(BALL, '#1a1410', [x + s2 * 0.11, 2.0, z + 1.28], [0.03, 0.04, 0.03]);
-      flat.add(U.cone4, c1, [x + s2 * 0.06, 2.12, z + 1.05], [0.04, 0.12, 0.04]);
-    }
-    flat.add(U.box, c2, [x, 1.75, z + 0.75], [0.06, 0.55, 0.12], [-0.7, 0, 0]);
-    smooth.add(U.cyl, c2, [x, 1.2, z - 0.9], [0.06, 0.5, 0.06], [0.5, 0, 0]);
-    for (const [dx, dz] of [[-0.15, 0.5], [0.15, 0.5], [-0.15, -0.5], [0.15, -0.5]]) {
-      smooth.add(U.cyl, c1, [x + dx, 0.5, z + dz], [0.06, 1.0, 0.06]);
-      smooth.add(BALL, c1, [x + dx, 0.82, z + dz], [0.09, 0.2, 0.1]);
-      flat.add(U.cyl6, '#2a2522', [x + dx, 0.04, z + dz], [0.075, 0.08, 0.075]);
-    }
-    // couverture brodée, collier, plumet d'autruche coloré
-    smooth.add(BALL, sx < 0 ? PAINT.red : PAINT.blue, [x, 1.5, z + 0.05], [0.34, 0.14, 0.6]);
-    for (let i = 0; i < 5; i++) flat.add(U.box, PAINT.gold, [x + sx * 0.33, 1.38, z - 0.4 + i * 0.22], [0.02, 0.12, 0.1]);
-    smooth.add(BALL, PAINT.gold, [x, 1.58, z + 0.62], [0.2, 0.24, 0.12], [-0.6, 0, 0]);
-    for (let i = 0; i < 3; i++) smooth.add(BALL, [PAINT.red, '#f4ecd8', PAINT.blue][i], [x, 2.28 + i * 0.12, z + 1.08 - i * 0.04], [0.06, 0.1, 0.05]);
+    flat.add(U.box, PAINT.gold, [sx * 0.6, 1.5, 2.55], [0.08, 0.12, 0.12]);   // embouts dorés
+    flat.add(U.box, '#3a2a1a', [sx * HORSE_X, 1.35, 2.55], [0.04, 0.3, 0.04]);   // sous-gorge du joug
   }
-  for (const sx of [-1, 1]) flat.add(U.box, '#3a2a1c', [sx * 0.9, 1.1, 1.2], [0.05, 0.05, 2.4]);
-  flat.add(U.box, WOOD2, [0, 1.62, 2.82], [1.3, 0.08, 0.1]);   // joug
-  return { flat: flat.build(), smooth: smooth.build() };
+  return flat.build();
 }
 
 export function egyptVehicleKit() {
   const sleds = STONES.map(sledGeo);
-  const chariot = chariotGeo(), team = horsesGeo();
+  const chariot = chariotGeo(), team = hitchGeo();
 
   function buildSleds(cars) {
     const g = new THREE.Group();
@@ -142,7 +138,14 @@ export function egyptVehicleKit() {
   function buildChariot() {
     const g = new THREE.Group();
     g.add(new THREE.Mesh(chariot.flat, vcMat), new THREE.Mesh(chariot.smooth, SMOOTH));
-    g.add(new THREE.Mesh(team.flat, vcMat), new THREE.Mesh(team.smooth, SMOOTH));
+    g.add(new THREE.Mesh(team, vcMat));
+    // chevaux blanc et bai (ou alezan) au galop, couverture rouge à droite, bleue à gauche
+    const coats = Math.random() < 0.5 ? ['white', 'bay'] : ['white', 'chestnut'];
+    [-1, 1].forEach((sx, i) => {
+      const h = horse(COATS[coats[i]], { leather: '#2a4a8a', accent: sx < 0 ? PAINT.red : PAINT.blue, metal: PAINT.gold }, { speed: 1.5 + Math.random() * 0.2 });
+      h.position.set(sx * HORSE_X, 0, HORSE_Z);
+      g.add(h);
+    });
     g.userData.len = CHARIOT_LEN;
     g.userData.top = CHARIOT_TOP;
     return g;

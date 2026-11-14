@@ -7,6 +7,7 @@ import { Obstacles } from './obstacles.js';
 import { Girl } from './girl.js';
 import { Candies, CANDY_POINTS } from './candies.js';
 import { LevelUpFx } from './fx.js';
+import { animateMixers } from './anim.js';
 import { Input } from './input.js';
 import { Sound } from './audio.js';
 import * as Scores from './scores.js';
@@ -1018,6 +1019,7 @@ function frame(now) {
     world.setShadow(player.x, obstacles.groundAt(player.x, player.z, 0, player.under), player.y, player.z);
     updateCamera(dt);
     if (obstacles.frame) obstacles.frame(dt, player, camera, { running: state === 'running', speed });
+    animateMixers(dt);   // chevaux au galop
     world.scenery.update(dt, player.z, camera, renderer.getPixelRatio());
 
     if (fx.active) {

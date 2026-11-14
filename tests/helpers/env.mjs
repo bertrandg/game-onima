@@ -11,6 +11,10 @@ export const storage = {
   clear() { this.data.clear(); this.broken = false; },
 };
 globalThis.localStorage = storage;
+// le chargeur glTF (chevaux) signale sa progression avec ProgressEvent, absent de Node
+globalThis.ProgressEvent ||= class ProgressEvent extends Event {
+  constructor(type, init = {}) { super(type); Object.assign(this, init); }
+};
 
 // contexte 2D qui accepte tout : chaque méthode renvoie encore un objet qui accepte tout
 const anything = () => new Proxy(function () {}, {
@@ -54,7 +58,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 const netFetch = globalThis.fetch;
 globalThis.fetch = async (url, ...rest) => {
-  const u = String(url);
+  const u = typeof url === 'string' ? url : url.url || String(url);   // adresse, URL ou Request (chargeur glTF)
   if (!u.startsWith('file:')) return netFetch(url, ...rest);
   const buf = await readFile(fileURLToPath(u));
   return new Response(buf);

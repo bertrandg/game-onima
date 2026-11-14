@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { Builder, U, vcMat, pick } from '../../geo.js';
 import { TRAIN_HALF_W, TRAIN_TOP, CAR_LEN, CAR_GAP, RAMP_LEN } from '../../config.js';
+import { loadHorse, horse, COATS } from '../../horses.js';
+
+await loadHorse();   // chevaux au galop (modèle à squelette) avant la construction des fiacres
 
 // Véhicules de Paris 1900 : omnibus à impériale et calèches garés (on peut courir sur le toit),
 // fiacres attelés qui arrivent vers le joueur. Même principe que les trains : une texture unique par
@@ -296,40 +299,35 @@ function coachman(b) {
   b.add(U.cyl6, '#5a3a20', [0.25, Y1 + 0.7, 0.6], [0.015, 1.1, 0.015], [-0.9, 0, 0]);   // fouet
 }
 
-// deux chevaux harnachés devant le fiacre (de z = 0 à z = +3.6)
-function horses(b) {
-  const coats = [['#f2ece2', '#d8cfc0'], ['#7a4a2a', '#4a2a18']];
-  for (const sx of [-1, 1]) {
-    const [c1, c2] = coats[sx < 0 ? 0 : 1];
-    const x = sx * 0.45, z = 2.2;
-    b.add(BALL, c1, [x, 1.25, z], [0.32, 0.38, 0.85]);                     // corps
-    b.add(U.cyl, c1, [x, 1.6, z + 0.85], [0.13, 0.75, 0.16], [-0.7, 0, 0]);   // encolure
-    b.add(BALL, c1, [x, 1.95, z + 1.2], [0.13, 0.15, 0.3], [0.5, 0, 0]);     // tête
-    b.add(U.cone4, c1, [x + 0.06, 2.12, z + 1.05], [0.04, 0.12, 0.04]);
-    b.add(U.cone4, c1, [x - 0.06, 2.12, z + 1.05], [0.04, 0.12, 0.04]);
-    b.add(U.box, c2, [x, 1.75, z + 0.75], [0.06, 0.55, 0.12], [-0.7, 0, 0]);   // crinière
-    b.add(U.cyl, c2, [x, 1.2, z - 0.9], [0.06, 0.5, 0.06], [0.5, 0, 0]);      // queue
-    for (const [dx, dz] of [[-0.15, 0.5], [0.15, 0.5], [-0.15, -0.5], [0.15, -0.5]]) {
-      b.add(U.cyl6, c1, [x + dx, 0.5, z + dz], [0.06, 1.0, 0.06]);
-      b.add(U.cyl6, '#2a2522', [x + dx, 0.04, z + dz], [0.075, 0.08, 0.075]);
-    }
-    b.add(U.box, '#2a1a10', [x, 1.45, z + 0.1], [0.68, 0.08, 0.5]);   // harnais
-    b.add(U.box, '#c8302a', [x, 1.62, z + 0.1], [0.5, 0.06, 0.3]);
-    b.add(U.box, '#d8b04a', [x, 1.98, z + 1.22], [0.28, 0.04, 0.04]);
-    // œillères, museau, panache, collier et rênes
-    for (const s2 of [-1, 1]) b.add(U.box, '#1a1a1c', [x + s2 * 0.14, 2.0, z + 1.2], [0.02, 0.1, 0.12]);
-    b.add(BALL, c2, [x, 1.86, z + 1.45], [0.1, 0.1, 0.12]);
-    b.add(U.cone4, '#c8302a', [x, 2.25, z + 1.12], [0.06, 0.2, 0.06]);
-    b.add(BALL, '#2a1a10', [x, 1.58, z + 0.62], [0.2, 0.24, 0.12], [-0.6, 0, 0]);
-    b.add(U.box, '#2a1a10', [x, 1.55, z + 0.1 - 0.9], [0.02, 0.02, 2.2], [0.25, 0, 0]);
-    for (const [dx, dz] of [[-0.15, 0.5], [0.15, 0.5], [-0.15, -0.5], [0.15, -0.5]]) {
-      b.add(BALL, c1, [x + dx, 0.82, z + dz], [0.09, 0.2, 0.1]);   // cuisse
-      b.add(BALL, '#f4f0ea', [x + dx, 0.14, z + dz], [0.08, 0.06, 0.08]);   // balzane
-    }
+// attelage devant le fiacre (de z = 0 à z = +3.6) : timon, palonnier, traits et guides ; les deux chevaux
+// sont des modèles animés (horses.js), posés dans build()
+const HORSE_X = 0.42, HORSE_Z = 1.95;
+const HARNESS = { leather: '#1c1410', accent: '#8a1e22', metal: '#d8b04a' };
+// galerie à bagages sur le toit du fiacre : rambarde de laiton, malles cerclées, carton à chapeau, parapluie
+function roofLuggage(b) {
+  const y = TRAIN_TOP;
+  for (const sx of [-1, 1]) b.add(U.box, '#d8b04a', [sx * (W / 2 - 0.08), y + 0.22, -3.2], [0.03, 0.03, 4.6]);
+  for (let i = 0; i <= 5; i++) for (const sx of [-1, 1]) b.add(U.box, '#d8b04a', [sx * (W / 2 - 0.08), y + 0.11, -0.9 - i * 0.92], [0.03, 0.22, 0.03]);
+  const trunks = [[-0.35, -1.6, 0.9, 0.42, 0.6, '#6a3a22'], [0.38, -1.9, 0.7, 0.36, 0.55, '#2c4a3a'], [-0.2, -3.0, 1.1, 0.34, 0.65, '#7a5a3a'], [0.4, -4.2, 0.6, 0.3, 0.5, '#5a2a2a']];
+  for (const [x, z, l, h, w, c] of trunks) {
+    b.add(U.box, c, [x, y + h / 2, z], [w, h, l]);
+    for (const dz of [-l / 3, l / 3]) b.add(U.box, '#c8a050', [x, y + h / 2, z + dz], [w + 0.02, h + 0.02, 0.04]);   // cerclages
   }
-  for (const sx of [-1, 1]) b.add(U.box, '#3a2a1c', [sx * 0.9, 1.1, 1.2], [0.05, 0.05, 2.4]);   // brancards
+  b.add(U.cyl, '#e8d0b8', [0.05, y + 0.18, -4.9], [0.22, 0.36, 0.22]);   // carton à chapeau
+  b.add(U.cyl, '#c8302a', [0.05, y + 0.37, -4.9], [0.23, 0.03, 0.23]);
+  b.add(U.cyl6, '#1a1a1c', [-0.45, y + 0.08, -4.3], [0.025, 1.1, 0.025], [Math.PI / 2, 0, 0.1]);   // parapluie
 }
 
+function hitchGear(b) {
+  b.add(U.box, '#3a2a1c', [0, 0.95, 1.5], [0.08, 0.08, 3.0], [-0.05, 0, 0]);   // timon entre les deux chevaux
+  b.add(U.box, '#3a2a1c', [0, 0.85, 0.35], [1.6, 0.08, 0.1]);   // palonnier
+  for (const sx of [-1, 1]) {
+    const x = sx * HORSE_X;
+    // traits de cuir du collier au palonnier, guides du collier aux mains du cocher
+    for (const dx of [-0.2, 0.2]) b.add(U.box, '#1c1410', [x + dx, 1.12, 1.55], [0.03, 0.03, 2.45], [-0.2, 0, 0]);
+    b.add(U.box, '#1c1410', [x * 0.6, 2.4, 1.7], [0.02, 0.02, 3.3], [0.42, 0, 0]);
+  }
+}
 export function parisVehicleKit() {
   const make = (l, moving) => {
     const mat = new THREE.MeshLambertMaterial({ map: drawAtlas(l) });
@@ -340,7 +338,7 @@ export function parisVehicleKit() {
       midBody: atlasBox([R.side, R.side, R.plain, R.plain, R.end, R.end]),
       leadDetail: detailGeo(true, l),
       midDetail: detailGeo(false, l),
-      team: moving ? (() => { const b = new Builder(); horses(b); coachman(b); return b.build(); })() : null,
+      team: moving ? (() => { const b = new Builder(); hitchGear(b); coachman(b); roofLuggage(b); return b.build(); })() : null,
     };
   };
   const liveries = LIVERIES.map((l) => make(l, false));
@@ -363,6 +361,13 @@ export function parisVehicleKit() {
     }
     if (moving && l.team) {
       g.add(new THREE.Mesh(l.team, vcMat));
+      // paire de chevaux assortie ou dépareillée, harnais de cuir noir à pompons rouges
+      const pair = pick([['white', 'white'], ['bay', 'bay'], ['black', 'black'], ['white', 'bay'], ['bay', 'chestnut']]);
+      [-1, 1].forEach((sx, i) => {
+        const h = horse(COATS[pair[i]], HARNESS, { speed: 1.5 + Math.random() * 0.2 });
+        h.position.set(sx * HORSE_X, 0, HORSE_Z);
+        g.add(h);
+      });
       for (const sx of [-1, 1]) {
         const m = new THREE.Mesh(glowGeo, glowMat);
         m.position.set(sx * 1.0, 2.15, 0.1);

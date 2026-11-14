@@ -1,0 +1,9 @@
+Cheval au galop (horse.glb), niveaux Paris et Égypte
+
+« Horse » de Quaternius (https://quaternius.com), trouvé sur Poly Pizza : https://poly.pizza/m/qvTrSG9pZF
+Licence CC0 1.0 (domaine public) : https://creativecommons.org/publicdomain/zero/1.0/
+
+Retravaillé dans Blender : seule l'animation de galop est gardée ; un harnais (tapis de dos, sangle,
+collier, bride, œillères, pompon) a été ajouté et attaché aux os ; les matières ont été remplacées par un
+attribut _ROLE (un rôle par sommet : robe, crins, sabots, yeux, cuir, ornement, métal) que js/horses.js
+transforme en couleurs selon la robe du cheval et le niveau.
