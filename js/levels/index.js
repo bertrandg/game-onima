@@ -46,6 +46,15 @@ export const LEVELS = [
     unlock: { level: 'egypte', score: 3500 },
     load: () => import('./hongkong/index.js'),
   },
+  {
+    id: 'mall',
+    name: 'Centre commercial',
+    subtitle: 'Six étages et des escalators',
+    icon: '🛍️',
+    item: '🛍️',
+    unlock: { level: 'hongkong', score: 4000 },
+    load: () => import('./mall/index.js'),
+  },
 ];
 
 export const levelById = (id) => LEVELS.find((l) => l.id === id) || LEVELS[0];

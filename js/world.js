@@ -71,13 +71,14 @@ export class World {
     this.scene = root;
     this.def = def;
     this.items = [];
-    const D = def.decor;
-    this.DECOR = D.DECOR;
-    this.THEMES = D.THEMES;
-    this.order = D.THEME_ORDER;
-    this.themeLen = D.THEME_LEN;
-    this.weighted = D.weighted;
-    this.special = D.prebuild();
+    // un niveau sans décor latéral ni voie (ex. le centre commercial, qui construit ses étages lui-même)
+    const D = def.decor || null;
+    this.DECOR = D && D.DECOR;
+    this.THEMES = D && D.THEMES;
+    this.order = D && D.THEME_ORDER;
+    this.themeLen = D && D.THEME_LEN;
+    this.weighted = D && D.weighted;
+    this.special = D ? D.prebuild() : {};
 
     const L = def.lights;
     const hemi = new THREE.HemisphereLight(L.sky, L.ground, L.hemi);
@@ -86,7 +87,7 @@ export class World {
     root.add(hemi, sun);
     this.hemi = hemi;
     this.sun = sun;
-    this.texMats = D.texMats || {};
+    this.texMats = (D && D.texMats) || {};
 
     this.buildTrack();
     this.scenery = def.scenery(root);
@@ -101,8 +102,9 @@ export class World {
   buildTrack() {
     this.trackGroup = new THREE.Group();
     this.scene.add(this.trackGroup);
-
     const T = this.def.track;
+    if (!T) { this.buildShadow(); return; }
+
     this.grassTex = T.ground();
     this.groundTile = T.groundTile || 10;
     this.grassTex.repeat.set(TRACK_LEN / this.groundTile, TRACK_LEN / this.groundTile);
@@ -155,7 +157,10 @@ export class World {
       this.trackGroup.add(ov);
     }
     this.trackGroup.add(new THREE.Mesh(b.build(), vcMat));
+    this.buildShadow();
+  }
 
+  buildShadow() {
     const sh = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 1.3),
       new THREE.MeshBasicMaterial({ map: TX.shadowTexture(), transparent: true, depthWrite: false }));
     sh.rotation.x = -Math.PI / 2;
@@ -272,13 +277,13 @@ export class World {
 
   update(dt, pz, speed, instant = false) {
     const ahead = pz - 250;
-    while (this.chunkCursor > ahead) {
+    while (this.DECOR && this.chunkCursor > ahead) {
       this.buildChunk(this.chunkCursor);
       this.chunkCursor -= CHUNK;
     }
     // au démarrage tout est construit d'un coup ; en course, 2 ms par image au maximum
     this.processJobs(instant ? Infinity : 2);
-    while (this.toriiCursor > ahead) {
+    while (this.DECOR && this.toriiCursor > ahead) {
       const th = this.THEMES[this.themeAt(this.toriiCursor)];
       const gate = this.special[th.gate || 'gate'];
       if (gate) {
@@ -304,12 +309,15 @@ export class World {
 
     // la voie et le sol suivent le joueur, les textures défilent
     this.trackGroup.position.z = pz;
+    if (this.grassTex) this.updateTrackTex(pz);
+    this.updatePetals(dt, pz, speed);
+  }
+
+  updateTrackTex(pz) {
     this.grassTex.offset.y = (-pz / this.groundTile) % 1;
     this.gravelTex.offset.y = (-pz / 3) % 1;
     this.sleeperTex.offset.y = (-pz / 1.3) % 1;
     if (this.overlayTex) this.overlayTex.offset.y = (-pz / this.overlayTile) % 1;
-
-    this.updatePetals(dt, pz, speed);
   }
 
   updatePetals(dt, pz, speed) {

@@ -961,7 +961,8 @@ let last = performance.now();
 const _sp = new THREE.Vector3();
 const scoreEl = $('score');
 const distEl = $('hud-dist');
-let hudScore = -1, hudDist = -1;
+const extraEl = $('hud-extra');
+let hudScore = -1, hudDist = -1, hudExtra = null;
 function frame(now) {
   requestAnimationFrame(frame);
   // intervalle borné et toujours valide (onglet en arrière-plan, horloge incohérente…)
@@ -977,6 +978,9 @@ function frame(now) {
     const sc = totalScore(), dm = Math.floor(dist);
     if (sc !== hudScore) { hudScore = sc; scoreEl.textContent = sc.toLocaleString('fr-FR'); }
     if (dm !== hudDist) { hudDist = dm; distEl.textContent = dm.toLocaleString('fr-FR'); }
+    // ligne propre au niveau (ex. l'étage du centre commercial)
+    const ex = obstacles.hudText || '';
+    if (ex !== hudExtra) { hudExtra = ex; extraEl.textContent = ex; extraEl.classList.toggle('hidden', !ex); }
     if (pendingUnlock && sc >= pendingUnlock.unlock.score) {
       celebrateUnlock(pendingUnlock);
       pendingUnlock = null;

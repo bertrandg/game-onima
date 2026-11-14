@@ -58,7 +58,7 @@ function fights(obj) {
   return [...new Set(bad)];
 }
 
-for (const id of ['japon', 'paris', 'newyork', 'egypte', 'hongkong']) {
+for (const id of ['japon', 'paris', 'newyork', 'egypte', 'hongkong', 'mall']) {
   test(`${id} : aucun dessus de véhicule ou d'obstacle ne scintille`, async () => {
     seed(3);
     const def = (await levelById(id).load()).default, kit = def.obstacleKit();

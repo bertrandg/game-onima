@@ -44,6 +44,7 @@ Aucune installation nécessaire : Three.js est chargé depuis un CDN. Le jeu doi
 | 🗽 New York | Wall Street, Times Square, Chinatown entre des gratte-ciel, statue de la Liberté ; taxis, bus touristiques et égouts | 2 300 points à Paris |
 | 🐪 Égypte | Allée des sphinx et temples, bords du Nil, souk, pyramides de Gizeh ; blocs sur traîneaux, chars et tombeau | 3 000 points à New York |
 | 🌃 Hong Kong | La nuit : néons de Mong Kok, marché de Temple Street, port Victoria et sa skyline ; minibus, taxis rouges et passerelles d'échafaudage | 3 500 points en Égypte |
+| 🛍️ Centre commercial | Six étages de boutiques (mode, jouets, high-tech, sport, maison et livres, gourmandises sous la verrière) reliés par des escalators ; îlots-vitrines, petit train, caddies et soldes | 4 000 points à Hong Kong |
 
 À New York, une bouche d'égout ouverte ne fait pas perdre : on tombe dans les égouts et la course continue sur deux quais,
 de part et d'autre d'un canal de boue mortel. Pour changer de quai, il faut sauter (en l'air, un seul swipe fait passer de
@@ -64,6 +65,14 @@ de la passerelle font retomber dans la rue, sans perdre ; la rue reste visible e
 dessiné par instanciation (un appel de dessin par matière quelle que soit sa longueur). Rien du décor ne descend sous
 10,5 m au-dessus des voies (on saute depuis les passerelles) : le niveau le déclare (`clearance`) et les tests le vérifient.
 
+Au centre commercial, six étages sont superposés, chacun avec ses boutiques et ses obstacles. Des escalators relient deux
+étages voisins : un escalator occupe une voie, et rester dans cette voie, c'est le prendre (flèche verte et panneau
+« ▲ Étage n » pour monter, flèche orange « ▼ » pour descendre ; on ne change pas de voie pendant la montée). L'aborder par
+le côté, c'est heurter sa balustrade. À l'étage où il arrive, sa voie est fermée par un totem publicitaire ou une cloison.
+Plus on monte, plus il y a de friandises : le dernier étage, celui des gourmandises sous la verrière, en regorge. L'étage
+en cours s'affiche sous le score. Les dalles et les boutiques sont dessinées par instances (rangées de six boutiques
+préparées au chargement) ; seuls l'étage du joueur et, près d'un escalator, ses voisins sont affichés.
+
 Quand on perd, pas de sang : une petite animation selon ce qui a fait perdre (rebond en arrière et étoiles après un choc
 de face, chute à plat ventre sur un obstacle bas, tournoiement après un coup sur la tête, enlisement dans la boue des égouts,
 évanouissement après un malus). Une fois l'héroïne allongée et apaisée, son âme s'envole au ciel dans un rai de lumière,
@@ -80,7 +89,9 @@ Un niveau n'est téléchargé qu'au moment où on le choisit.
      `lights`, `track` (textures du sol et de la voie, marquage au sol), `particles`, `scenery(root)` (ciel et lointain) ;
      les éléments de décor peuvent avoir des panneaux texturés (`TexBuilder`, matériaux dans `decor.texMats`) ;
    - `obstacleKit()` : véhicules (`buildVehicle`, taille propre possible), rampe, obstacles bas et haut, attelage éventuel ;
-   - `obstacles(root, opts)` (facultatif) : moteur d'obstacles propre au niveau (ex. les deux étages rue / égouts de New York, rue / passerelles de Hong Kong) ;
+   - `obstacles(root, opts)` (facultatif) : moteur d'obstacles propre au niveau (ex. les deux étages rue / égouts de New York, rue / passerelles de Hong Kong, les six étages du centre commercial) ;
+     il peut fournir `hudText` (une ligne sous le score) ;
+   - `world.decor` et `world.track` peuvent valoir `null` quand le moteur construit lui-même le décor (centre commercial) ;
    - `clearance` (facultatif) : hauteur libre au-dessus des voies que le décor doit respecter (4,5 m par défaut) ;
    - `items()` : objets à ramasser et malus.
 2. L'ajouter dans `js/levels/index.js` avec son nom, son icône, son objet et sa condition de déblocage.
@@ -106,10 +117,12 @@ npm run test:all    # les trois, à lancer avant d'envoyer une modification
   - `sewer.test.mjs` : chute, boue, rats, échelles (y compris le saut un peu trop tôt).
   - `tomb.test.mjs` : dalles effondrées, obstacles du tombeau, montée de l'escalier jusqu'à l'avenue.
   - `scaffold.test.mjs` : rampes et sauts vers les passerelles, obstacles d'en haut, planches manquantes.
+  - `mall.test.mjs` : escalators réguliers à chaque étage, voies dégagées autour, montée et descente, balustrade,
+    voie fermée à l'arrivée, plafond, et davantage de friandises en montant.
 - `tests/e2e/` : tests dans Chrome (Playwright), sur la page ouverte avec `#debug`.
   - `scenarios.test.mjs` : de vraies parties sans invincibilité ; la route est vidée, on y pose les
     obstacles voulus et on appuie sur les touches au bon moment (saut, roulade, rampe, égouts aller-retour,
-    déblocage de New York, tombeau d'Égypte, passerelles de Hong Kong…). Les outils de pilotage sont dans `tests/helpers/game.mjs`.
+    déblocage de New York, tombeau d'Égypte, passerelles de Hong Kong, escalators du centre commercial…). Les outils de pilotage sont dans `tests/helpers/game.mjs`.
   - `perf.test.mjs` : chaque niveau se joue 700 m sans erreur ni fichier manquant ; budgets d'appels de dessin et de triangles par niveau, et pas de fuite de mémoire
     graphique. Si un ajout de décor les dépasse, alléger le décor ou relever le budget en connaissance de cause.
 - `tests/load/` : chargement de chaque niveau dans Chrome.
@@ -127,7 +140,7 @@ npm run test:all    # les trois, à lancer avant d'envoyer une modification
 - `js/girl.js` : le personnage et ses animations
 - `js/audio.js` : sons et musique générés (WebAudio)
 - `js/scores.js` : tableaux des scores par niveau (stockés dans le navigateur)
-- `js/levels/` : registre des niveaux et contenu de chaque niveau (`japon.js`, `paris/`, `newyork/`, `egypte/`, `hongkong/`)
+- `js/levels/` : registre des niveaux et contenu de chaque niveau (`japon.js`, `paris/`, `newyork/`, `egypte/`, `hongkong/`, `mall/`)
 - `js/config.js` : réglages (vitesse, saut, tailles…)
 
 Ajouter `#debug` à l'URL expose `window.__onima` pour les tests.

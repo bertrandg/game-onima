@@ -249,6 +249,38 @@ test('Hong Kong : sauter du toit d\'un minibus sur la passerelle, puis redescend
   });
 });
 
+test('Centre commercial : rester dans la voie d\'un escalator fait monter d\'un étage, puis on redescend', async () => {
+  await scenario('mall', async (page) => {
+    // escalator qui monte dans la voie du joueur (pied aligné sur les dalles)
+    assert.ok(await page.evaluate(() => { const o = window.__onima, ob = o.obstacles; return !!ob.tryConn(0, 1, Math.round((o.player.z - 40) / 5.2) * 5.2, 1); }), 'escalator posé');
+    await page.waitForFunction(() => window.__onima.obstacles.floor === 1 || window.__onima.state !== 'running', null, { timeout: 30000 });
+    let s = await state(page);
+    assert.equal(s.state, 'running', `perdu (${await page.evaluate(() => window.__onima.deathKind)}) à y = ${s.y.toFixed(2)}`);
+    assert.ok(Math.abs(s.y - 6.4) < 0.05, `au deuxième étage (y = ${s.y.toFixed(2)})`);
+    assert.match(await page.textContent('#hud-extra'), /Étage 2/);
+    // escalator qui descend un peu plus loin, toujours dans sa voie (route de nouveau vidée)
+    const placed = await page.evaluate(() => {
+      window.__t.clearAhead();
+      const o = window.__onima, ob = o.obstacles;
+      return !!ob.tryConn(0, -1, Math.round((o.player.z - 45) / 5.2) * 5.2, 1);
+    });
+    assert.ok(placed, 'escalator qui descend posé');
+    await page.waitForFunction(() => window.__onima.obstacles.floor === 0 || window.__onima.state !== 'running', null, { timeout: 30000 });
+    await page.waitForFunction(() => window.__onima.player.grounded || window.__onima.state !== 'running', null, { timeout: 20000 });
+    s = await state(page);
+    assert.equal(s.state, 'running');
+    assert.ok(s.y < 0.05, `revenue au rez-de-chaussée (y = ${s.y.toFixed(2)})`);
+  });
+});
+
+test('Centre commercial : changer de voie contre la balustrade d\'un escalator est mortel', async () => {
+  await scenario('mall', async (page) => {
+    const z0 = await page.evaluate(() => { const o = window.__onima, ob = o.obstacles; return ob.tryConn(0, 1, Math.round((o.player.z - 40) / 5.2) * 5.2, 2).zNear; });
+    await page.evaluate((z0) => window.__t.when((o) => o.player.z < z0 - 8, 'ArrowRight'), z0);
+    await deadAs(page, 'bonk');
+  });
+});
+
 test('déblocage : 2300 points à Paris débloquent New York pendant la partie et à la fin', async () => {
   const storage = { 'onima.scores.v1': JSON.stringify([{ id: 'a', name: 'Test', score: 1600, date: 1 }]) };
   await scenario('paris', async (page) => {

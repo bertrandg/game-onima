@@ -21,6 +21,18 @@ function pageTools() {
     // supprime tout ce qui est devant le joueur (rue, égouts, malus) et repousse la suite à `free` mètres
     clearAhead(free = 120) {
       const { obstacles: ob, candies: c, player: p } = o();
+      if (ob.floors) {   // centre commercial : tous les étages et leurs escalators
+        for (const F of ob.floors) {
+          for (const x of F.list) if (x.mesh) F.scene.remove(x.mesh);
+          Object.assign(F, { list: [], zones: [], reserve: null, cursor: p.z - free, busy: [p.z, p.z, p.z] });
+        }
+        for (const k of ob.conns) ob.escGroup.remove(k.mesh);
+        Object.assign(ob, { conns: [], esc: null, escCursor: p.z - 1e6 });
+        ob.version++;
+        for (const f of c.fugus) c.scene.remove(f.mesh);
+        c.fugus = [];
+        return;
+      }
       for (const x of ob.list) if (x.mesh) ob.scene.remove(x.mesh);
       ob.list = [];
       ob.reserve = null;
