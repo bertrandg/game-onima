@@ -136,6 +136,10 @@ Ajouter `#debug` à l'URL expose `window.__onima` pour les tests.
 
 Illustration de la statue de la Liberté (niveau New York) : [Vecteezy.com](https://www.vecteezy.com).
 Revolver (malus de New York) : « Survival Pack » de [Quaternius](https://quaternius.com), licence CC0.
+Végétation du Japon (feuillus, cèdres, rochers) : modèles de [Quaternius](https://quaternius.com) trouvés sur
+[Poly Pizza](https://poly.pizza), licence CC0 (`models/japon/`, détail dans `models/japon/LICENSE.txt`). Simplifiés et
+convertis dans Blender par `tools/export-plants.py`, puis recolorés dans le jeu (`js/plants.js`) : ils se fusionnent dans
+le décor sans appel de dessin supplémentaire.
 Façades de New York : pièces du « Downtown City MegaKit » (version Standard) de [Quaternius](https://quaternius.com), licence CC0
 (`models/nykit/`). La texture des étages supérieurs (`models/nykit/facades.jpg`) se régénère en ouvrant
 `tools/bake-facades.html` via `serve.py`.

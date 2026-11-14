@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 import { Builder, U, pick, rand } from './geo.js';
+import { loadPlants, addPlant, surface } from './plants.js';
+
+await loadPlants();   // modèles de végétation chargés avant la construction du décor
 
 // Décor latéral. Chaque élément est construit "face à +x" (vers la voie quand il est à gauche),
 // origine au sol, centré en z. Plusieurs variantes aléatoires sont pré-construites au chargement ;
@@ -14,24 +17,32 @@ const LEAF = ['#4f8a3e', '#5c9a46', '#467d38', '#64a24c'];
 const STONE = ['#a8a59c', '#9a978e', '#b3afa4', '#8f8c84'];
 const ROOF_TILE = '#454c5a';
 const BALL = new THREE.SphereGeometry(1, 8, 6);   // petites sphères : peu de triangles, invisibles à cette taille
+const BLADE = new THREE.OctahedronGeometry(1, 0);   // feuille effilée (aplatie à l'emploi) : 8 triangles
 const ri = (a, b) => Math.floor(rand(a, b + 1));
 
 // ---------- Arbres et végétation ----------
+// Couleurs des modèles de végétation : une teinte par touffe de feuillage (morceau), légèrement
+// variée d'une facette à l'autre pour garder l'aspect facetté
+const _tc = new THREE.Color();
+function painter(trunk, leaves, { moss = null, jitter = 0.07 } = {}) {
+  const perPart = {};
+  return (role, part, i, up) => {
+    if (role === 0 && trunk) return _tc.set(trunk).multiplyScalar(1 + rand(-jitter, jitter));
+    if (moss && up > 0.4 && Math.random() < 0.8) return _tc.set(pick(moss));
+    const base = perPart[role * 1000 + part] ||= pick(leaves);
+    return _tc.set(base).multiplyScalar(1 + rand(-jitter, jitter) + (up > 0.4 ? 0.06 : -0.04));
+  };
+}
+
+// feuillu aux touffes de feuillage en nuages (modèle « tree »), h = hauteur, wide = étalement
+function leafyTree(b, h, wide, trunk, leaves, x = 0, z = 0) {
+  return addPlant(b, 'tree', [x, 0, z], h, painter(trunk, leaves), { s: [wide, wide], ry: rand(0, Math.PI * 2) });
+}
+
 function sakura(b, s = 1) {
-  const h = rand(2.0, 2.8) * s;
-  const trunk = '#6e4b3b';
-  b.add(U.cyl6, trunk, [0, h / 2, 0], [0.18 * s, h, 0.18 * s], [0, 0, rand(-0.08, 0.08)]);
-  for (let i = 0; i < 4; i++) {
-    const a = i * 1.7 + rand(0, 0.5);
-    b.add(U.cyl6, trunk, [Math.cos(a) * 0.4 * s, h * 0.82, Math.sin(a) * 0.4 * s], [0.06 * s, h * 0.5, 0.06 * s], [Math.sin(a) * 0.8, 0, -Math.cos(a) * 0.8]);
-  }
-  b.add(U.sph, pick(PINKS), [0, h + 0.55 * s, 0], [1.7 * s, 1.2 * s, 1.7 * s]);
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2 + rand(0, 0.5);
-    const r = rand(0.9, 1.6) * s;
-    b.add(U.sph, pick(PINKS), [Math.cos(a) * r, h + rand(-0.1, 0.9) * s, Math.sin(a) * r],
-      [rand(0.7, 1.15) * s, rand(0.55, 0.85) * s, rand(0.7, 1.15) * s]);
-  }
+  const m = leafyTree(b, rand(3.6, 4.4) * s, rand(1.35, 1.6), '#5e3f33', PINKS);
+  // quelques fleurs plus claires piquées sur le feuillage
+  for (const { p } of surface('tree', m, 1, 10)) b.add(U.sph0, pick(['#ffe8f0', '#ffffff', '#f7b3cc']), p.toArray(), [0.14 * s, 0.1 * s, 0.14 * s]);
   // tapis de pétales au sol
   b.add(U.cyl, '#f6c6d6', [0, 0.02, 0], [1.9 * s, 0.03, 1.9 * s]);
   for (let i = 0; i < 6; i++) b.add(U.cyl, '#fbe0ea', [rand(-2, 2) * s, 0.03, rand(-2, 2) * s], [rand(0.2, 0.4), 0.02, rand(0.2, 0.4)]);
@@ -65,43 +76,32 @@ function cedar(b, x = 0, z = 0, s = 1, y = 0) {
   b.add(U.cone8, '#3f6d45', [x, y + 6.6 * s, z], [0.7 * s, 2.2 * s, 0.7 * s]);
 }
 
+// cèdre du Japon (sugi) : conifère à étages de branches (modèle « conifer »), élancé
+const SUGI = ['#2f5536', '#335c3a', '#3a6640', '#2b4f33', '#3f6d45'];
+function sugi(b, x = 0, z = 0, s = 1) {
+  addPlant(b, 'conifer', [x, 0, z], rand(6.2, 7.6) * s, painter('#4f3628', SUGI), { s: [0.62, 0.62], ry: rand(0, Math.PI * 2) });
+}
+
 function cedarGroup(b) {
-  const n = ri(3, 6);
-  for (let i = 0; i < n; i++) cedar(b, rand(-2.8, 2.8), rand(-3.2, 3.2), rand(0.75, 1.3));
+  // un ou deux grands sugis devant, quelques cèdres simples derrière (plus loin, moins détaillés)
+  const n = ri(1, 2);
+  for (let i = 0; i < n; i++) sugi(b, rand(0.5, 2.8), (n === 1 ? 0 : i ? 2.2 : -2.2) + rand(-0.6, 0.6), rand(0.8, 1.2));
+  for (let i = 0; i < ri(1, 3); i++) cedar(b, rand(-2.8, -1), rand(-3.2, 3.2), rand(0.75, 1.2));
   for (let i = 0; i < 4; i++) b.add(U.sph, pick(LEAF), [rand(-3, 3), 0.3, rand(-3, 3)], [rand(0.5, 0.9), 0.4, rand(0.5, 0.9)]);
 }
 
 function kaki(b) {   // plaqueminier chargé de kakis orange
-  const h = rand(1.8, 2.4);
-  b.add(U.cyl6, '#5e4130', [0, h / 2, 0], [0.16, h, 0.16]);
-  for (let i = 0; i < 3; i++) {
-    const a = i * 2.1;
-    b.add(U.cyl6, '#5e4130', [Math.cos(a) * 0.35, h * 0.85, Math.sin(a) * 0.35], [0.05, 0.9, 0.05], [Math.sin(a) * 0.9, 0, -Math.cos(a) * 0.9]);
-  }
-  const blobs = [];
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2, r = rand(0.6, 1.1);
-    const p = [Math.cos(a) * r, h + rand(0.1, 0.9), Math.sin(a) * r];
-    blobs.push(p);
-    b.add(U.sph, pick(['#3f6e33', '#4b7d3a', '#36622c']), p, [0.85, 0.7, 0.85]);
-  }
-  b.add(U.sph, '#46773a', [0, h + 0.9, 0], [1.1, 0.8, 1.1]);
-  for (let i = 0; i < 16; i++) {
-    const p = pick(blobs);
-    const a = rand(0, Math.PI * 2), e = rand(-0.3, 0.6);
-    b.add(U.sph0, pick(['#f08a24', '#f59a2e', '#e8781c']), [p[0] + Math.cos(a) * 0.8, p[1] + e * 0.6, p[2] + Math.sin(a) * 0.8], [0.1, 0.09, 0.1]);
+  const m = leafyTree(b, rand(3.0, 3.6), rand(1.25, 1.45), '#5e4130', ['#3f6e33', '#4b7d3a', '#36622c', '#46773a']);
+  for (const { p, n } of surface('tree', m, 1, 18)) {
+    p.addScaledVector(n, 0.06);
+    b.add(U.sph0, pick(['#f08a24', '#f59a2e', '#e8781c']), p.toArray(), [0.11, 0.1, 0.11]);
   }
 }
 
 function momiji(b, s = 1) {   // érable du Japon aux feuilles rouges et orangées
-  const h = rand(1.6, 2.3) * s;
-  b.add(U.cyl6, '#4e3528', [0, h / 2, 0], [0.13 * s, h, 0.13 * s], [0, 0, rand(-0.1, 0.1)]);
-  const reds = ['#d8432f', '#e86a2a', '#c22a2a', '#f08a2a', '#b8261f'];
-  for (let i = 0; i < 9; i++) {
-    const a = rand(0, Math.PI * 2), r = rand(0.3, 1.5) * s;
-    b.add(U.sph, pick(reds), [Math.cos(a) * r, h + rand(0, 1.1) * s, Math.sin(a) * r], [rand(0.6, 1.0) * s, rand(0.3, 0.5) * s, rand(0.6, 1.0) * s]);
-  }
-  b.add(U.cyl, '#d8604a', [0, 0.02, 0], [1.4 * s, 0.03, 1.4 * s]);
+  leafyTree(b, rand(3.0, 3.8) * s, rand(1.4, 1.7), '#4e3528', ['#d8432f', '#e86a2a', '#c22a2a', '#f08a2a', '#b8261f']);
+  b.add(U.cyl, '#d8604a', [0, 0.02, 0], [1.6 * s, 0.03, 1.6 * s]);
+  for (let i = 0; i < 6; i++) b.add(U.cyl, pick(['#e86a2a', '#c22a2a']), [rand(-2, 2) * s, 0.03, rand(-2, 2) * s], [rand(0.2, 0.4), 0.02, rand(0.2, 0.4)]);
 }
 
 function bamboo(b) {
@@ -114,10 +114,15 @@ function bamboo(b) {
     for (let y = 1.0; y < h - 0.5; y += rand(1.3, 1.7)) {   // noeuds
       b.add(U.cyl6, '#6f9a3a', [x + lean * y, y, z - lean * y], [0.085, 0.04, 0.085], [lean, 0, lean]);
     }
-    for (let k = 0; k < 7; k++) {   // bouquets de feuilles le long du haut de la tige
-      const yy = h - rand(0, 2.6);
-      b.add(U.sph0, pick(['#6fa34a', '#5f9440', '#7db556', '#88c060', '#4f8a3e']),
-        [x + lean * yy + rand(-0.45, 0.45), yy, z - lean * yy + rand(-0.45, 0.45)], [rand(0.3, 0.55), rand(0.22, 0.38), rand(0.3, 0.55)], [rand(0, 1), rand(0, 3), rand(0, 1)]);
+    for (let k = 0; k < 5; k++) {   // bouquets de feuilles effilées et retombantes le long du haut de la tige
+      const yy = h - rand(0, 2.8);
+      const cx = x + lean * yy + rand(-0.15, 0.15), cz = z - lean * yy + rand(-0.15, 0.15);
+      const a0 = rand(0, Math.PI * 2);
+      for (let j = 0; j < 4; j++) {
+        const a = a0 + j * 1.57 + rand(-0.3, 0.3), len = rand(0.32, 0.48);
+        b.add(BLADE, pick(['#6fa34a', '#5f9440', '#7db556', '#88c060', '#4f8a3e']),
+          [cx + Math.cos(a) * len * 0.9, yy - len * 0.35, cz - Math.sin(a) * len * 0.9], [len, 0.012, len * 0.2], [0, a, -rand(0.3, 0.6)]);
+      }
     }
   }
   for (let i = 0; i < 5; i++) b.add(U.cone8, pick(LEAF), [rand(-1.4, 1.4), 0.15, rand(-1.4, 1.4)], [0.12, 0.3, 0.12]);
@@ -154,14 +159,17 @@ function ferns(b) {   // fougères
 }
 
 // ---------- Rochers, murets, clôtures ----------
+// rocher (modèles « rock1 » à « rock3 »), moussu sur les faces tournées vers le ciel
+const MOSS = ['#6f9a4f', '#7caa58', '#628c45'];
+function rock(b, key, x, z, h, mossy = Math.random() < 0.6) {
+  const stone = pick(STONE);
+  addPlant(b, key, [x, -0.04, z], h, painter(null, [stone], { moss: mossy ? MOSS : null, jitter: 0.08 }), { s: [rand(0.85, 1.15), rand(0.85, 1.15)], ry: rand(0, Math.PI * 2) });
+}
+
 function rocks(b) {
-  const n = ri(2, 4);
-  for (let i = 0; i < n; i++) {
-    const s = rand(0.35, 0.85);
-    const x = rand(-0.6, 0.6), z = rand(-0.9, 0.9);
-    b.add(U.sph0, pick(STONE), [x, s * 0.4, z], [s, s * 0.7, s * rand(0.8, 1.2)], [0, Math.random() * 3, 0]);
-    if (Math.random() < 0.6) b.add(U.sph0, pick(['#6f9a4f', '#7caa58']), [x, s * 0.72, z], [s * 0.7, s * 0.2, s * 0.7]);   // mousse
-  }
+  if (Math.random() < 0.35) { rock(b, 'rock3', 0, 0, rand(0.45, 0.6)); return; }   // amas de pierres
+  const n = ri(1, 3);
+  for (let i = 0; i < n; i++) rock(b, pick(['rock1', 'rock2']), rand(-0.4, 0.4), -0.7 + i * 0.7 + rand(-0.15, 0.15), rand(0.3, 0.6) * (i ? 0.75 : 1));
 }
 
 function stoneWall(b) {   // muret de pierres empilées, mousse sur le dessus
@@ -696,7 +704,7 @@ export const DECOR = {
   sakura: { len: 4.5, w: 4.5, build: (b) => sakura(b, 1) },
   sakuraBig: { len: 6.5, w: 6.5, build: (b) => sakura(b, 1.5) },
   pine: { len: 3.5, w: 3, build: pine },
-  cedar: { len: 3, w: 3, build: (b) => cedar(b) },
+  cedar: { len: 3, w: 3, build: (b) => sugi(b) },
   cedarGroup: { len: 8, w: 7, build: cedarGroup },
   kaki: { len: 3.6, w: 3.4, build: kaki },
   momiji: { len: 3.6, w: 3.4, build: (b) => momiji(b, rand(0.85, 1.25)) },

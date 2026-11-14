@@ -1,0 +1,13 @@
+Végétation du niveau Japon (plants.bin, plants.json)
+
+Modèles de Quaternius (https://quaternius.com), trouvés sur Poly Pizza, licence CC0 1.0 (domaine public) :
+- « Tree » : https://poly.pizza/m/9nvGuZlbpE (feuillus : cerisiers, érables, plaqueminiers)
+- « Pine Tree Autumn » : https://poly.pizza/m/n0X3N2yUFL (cèdres du Japon, recolorés en vert)
+- « Rock Medium » : https://poly.pizza/m/s1OJ3bBzqc
+- « Rock » : https://poly.pizza/m/4MUaQTcDdc
+- « Rocks » : https://poly.pizza/m/Gl3pcrdnpW
+
+Licence : https://creativecommons.org/publicdomain/zero/1.0/
+
+Simplifiés et convertis dans Blender (tools/export-plants.py) : textures et matériaux remplacés par une
+couleur par triangle, recolorée dans le jeu (js/plants.js).

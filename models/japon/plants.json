@@ -1,0 +1,55 @@
+{
+ "tree": {
+  "off": 0,
+  "tris": 905,
+  "parts": 6,
+  "roles": [
+   "Brown",
+   "Green"
+  ],
+  "w": 0.669,
+  "d": 0.407
+ },
+ "conifer": {
+  "off": 38012,
+  "tris": 641,
+  "parts": 8,
+  "roles": [
+   "Wood",
+   "Orange",
+   "LightOrange"
+  ],
+  "w": 0.636,
+  "d": 0.569
+ },
+ "rock1": {
+  "off": 64936,
+  "tris": 342,
+  "parts": 1,
+  "roles": [
+   "Rocks"
+  ],
+  "w": 1.427,
+  "d": 1.323
+ },
+ "rock2": {
+  "off": 79300,
+  "tris": 162,
+  "parts": 1,
+  "roles": [
+   "Stone"
+  ],
+  "w": 0.817,
+  "d": 0.773
+ },
+ "rock3": {
+  "off": 86104,
+  "tris": 426,
+  "parts": 7,
+  "roles": [
+   "Stone.001"
+  ],
+  "w": 2.065,
+  "d": 2.429
+ }
+}
