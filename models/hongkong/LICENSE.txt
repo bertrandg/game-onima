@@ -1,0 +1,17 @@
+Modèles du décor du niveau Hong Kong (plants.bin, plants.json)
+
+Trouvés sur Poly Pizza, tous sous licence CC0 1.0 (domaine public) :
+
+Quaternius (https://quaternius.com)
+- « Tree » : https://poly.pizza/m/i4QMw4L64D (banians, avec leurs racines aériennes ajoutées dans le jeu)
+- « Crate » : https://poly.pizza/m/3OEFd1AWfa (cagettes de fruits de Temple Street)
+- « Bench » : https://poly.pizza/m/jLxjFxFRpw (bancs de la promenade)
+- « Stool » : https://poly.pizza/m/TvaOenUAni (tabourets en plastique des dai pai dong)
+
+Kenney (https://kenney.nl)
+- « Pineapple » : https://poly.pizza/m/VFFBOLXqB2
+
+Licence : https://creativecommons.org/publicdomain/zero/1.0/
+
+Simplifiés et convertis dans Blender (tools/export-plants.py, ONIMA_LEVEL=hongkong) : textures et matériaux
+remplacés par une couleur par triangle, recolorée dans le jeu (js/plants.js).

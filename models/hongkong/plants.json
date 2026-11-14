@@ -1,0 +1,56 @@
+{
+ "h_tree": {
+  "off": 0,
+  "tris": 916,
+  "parts": 2,
+  "roles": [
+   "Tree_Green.002",
+   "Tree_Wood.002"
+  ],
+  "w": 0.764,
+  "d": 0.472
+ },
+ "h_crate": {
+  "off": 38472,
+  "tris": 155,
+  "parts": 35,
+  "roles": [
+   "DarkWood.001",
+   "Wood.004"
+  ],
+  "w": 1.0,
+  "d": 1.0
+ },
+ "h_bench": {
+  "off": 44984,
+  "tris": 376,
+  "parts": 10,
+  "roles": [
+   "Wood.006"
+  ],
+  "w": 2.105,
+  "d": 0.768
+ },
+ "h_stool": {
+  "off": 60776,
+  "tris": 250,
+  "parts": 7,
+  "roles": [
+   "Wood.007",
+   "Cushin"
+  ],
+  "w": 0.496,
+  "d": 0.519
+ },
+ "h_pineapple": {
+  "off": 71276,
+  "tris": 94,
+  "parts": 5,
+  "roles": [
+   "yellow.001",
+   "green.005"
+  ],
+  "w": 0.511,
+  "d": 0.518
+ }
+}

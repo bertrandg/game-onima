@@ -19,6 +19,8 @@ SPECS = {
               'P_loaf': 'p_loaf', 'P_boat': 'p_boat'},
     'newyork': {'N_tree': 'n_tree', 'N_crate': 'n_crate', 'N_hydrant': 'n_hydrant', 'N_bench': 'n_bench',
                 'N_trashcan': 'n_trashcan', 'N_dumpster': 'n_dumpster'},
+    'hongkong': {'H_tree': 'h_tree', 'H_crate': 'h_crate', 'H_bench': 'h_bench', 'H_stool': 'h_stool',
+                 'H_pineapple': 'h_pineapple'},
 }
 SPEC = SPECS[LEVEL]
 

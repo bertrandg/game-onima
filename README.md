@@ -140,7 +140,9 @@ Végétation, étals et potagers du Japon (feuillus, cèdres, rochers, stands, c
 [Quaternius](https://quaternius.com) et [Kenney](https://kenney.nl) trouvés sur [Poly Pizza](https://poly.pizza), licence CC0 (`models/japon/`, détail dans `models/japon/LICENSE.txt`).
 Platanes, cagettes, tonneaux, pains et barques de Paris : même provenance (`models/paris/`, détail dans `models/paris/LICENSE.txt`).
 Arbres, bouches d'incendie, bancs, poubelles, bennes et cagettes de New York : modèles de Quaternius, même provenance
-(`models/newyork/`, détail dans `models/newyork/LICENSE.txt`). Simplifiés et
+(`models/newyork/`, détail dans `models/newyork/LICENSE.txt`).
+Banians, cagettes, ananas, tabourets et bancs de Hong Kong : modèles de Quaternius et Kenney, même provenance
+(`models/hongkong/`, détail dans `models/hongkong/LICENSE.txt`). Simplifiés et
 convertis dans Blender par `tools/export-plants.py`, puis recolorés dans le jeu (`js/plants.js`) : ils se fusionnent dans
 le décor sans appel de dessin supplémentaire.
 Façades de New York : pièces du « Downtown City MegaKit » (version Standard) de [Quaternius](https://quaternius.com), licence CC0

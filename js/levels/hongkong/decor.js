@@ -2,6 +2,9 @@ import * as THREE from 'three';
 import { Builder, TexBuilder, U, pick, rand } from '../../geo.js';
 import { Painter, S, LANTERN, POT, STEAMER, BOWL } from './shapes.js';
 import { NEON, decorAtlas } from './textures.js';
+import { loadPlants, addPlant, surface } from '../../plants.js';
+
+await loadPlants('hongkong');   // modèles (banians, cagettes, fruits, tabourets, bancs) avant la construction du décor
 
 // Décor latéral de Hong Kong la nuit, en trois zones qui se suivent : la rue des néons de Mong Kok, le
 // marché de nuit de Temple Street, puis le front de mer du port Victoria. Chaque élément est construit
@@ -11,6 +14,10 @@ import { NEON, decorAtlas } from './textures.js';
 
 const BAMBOO = '#c8b070', BAMBOO2 = '#a89050', STEEL = '#3a3c48', DARK = '#1c1c28';
 const P = (b, t) => new Painter(b, t);
+const ri = (a, b) => Math.floor(rand(a, b + 1));
+// couleur d'un triangle de modèle : teinte légèrement variée, plus claire sur les faces tournées vers le ciel
+const _tc = new THREE.Color();
+const tone = (c, up = 0, j = 0.06) => _tc.set(c).multiplyScalar(1 + rand(-j, j) + (up > 0.4 ? 0.08 : -0.03));
 export const CLEARANCE = 10.5;   // hauteur libre au-dessus des voies (saut depuis une passerelle)
 
 export function makeTexMats() {
@@ -141,19 +148,13 @@ function harbour(b, t) {
   p.flat(U.box, '#4a4a58', [W / 2 - 0.3, 0.2, 0], [0.6, 0.4, BLEN]);   // bord du quai
   for (let z = -7; z <= 7; z += 2) p.flat(U.box, '#8a8e9a', [W / 2 - 0.25, 0.9, z], [0.08, 1.0, 0.08]);
   p.flat(U.box, '#a8acb8', [W / 2 - 0.25, 1.38, 0], [0.12, 0.06, BLEN]);
+  for (const z of [-6, 2]) {   // bornes d'amarrage au bord du quai, avec leur amarre
+    p.smooth(S.cylLo, '#2a2a34', [W / 2 - 0.6, 0.6, z], [0.16, 0.4, 0.16]);
+    p.smooth(S.cylLo, '#2a2a34', [W / 2 - 0.6, 0.84, z], [0.22, 0.08, 0.22]);
+  }
   for (let k = 0; k < 5; k++) p.glow(S.box, pick(['#ffe0a0', '#ff8ac0', '#7af0ff']), [rand(-6, 6), 0.05, rand(-7, 7)], [rand(0.2, 0.5), 0.01, rand(1.5, 4)]);   // reflets
   const r = Math.random();
-  if (r < 0.45) {   // Star Ferry : coque verte, pont blanc, hublots allumés
-    const x = rand(-4, 2), z = rand(-2, 2);
-    p.flat(U.box, '#2a6a4a', [x, 0.5, z], [4, 1.0, 11]);
-    p.flat(U.box, '#f4f0e8', [x, 1.5, z], [3.6, 1.0, 9.6]);
-    p.flat(U.box, '#f4f0e8', [x, 2.45, z], [3.2, 0.9, 7.6]);
-    p.flat(U.box, '#2a6a4a', [x, 3.0, z], [3.4, 0.12, 8]);
-    for (const dy of [1.5, 2.45]) p.glow(S.box, '#ffe8a8', [x + (dy > 2 ? 1.61 : 1.81), dy, z], [0.02, 0.4, dy > 2 ? 7 : 9]);
-    p.smooth(S.cyl, '#f4f0e8', [x, 3.6, z], [0.35, 1.0, 0.35]);
-    p.flat(U.box, '#e8b830', [x, 0.98, z], [4.02, 0.08, 11.02]);
-    p.glow(S.sphLo, '#ff3030', [x, 4.2, z], [0.12, 0.12, 0.12]);
-  } else if (r < 0.8) {   // jonque aux voiles rouges en ailes de chauve-souris, guirlandes d'ampoules
+  if (r < 0.45) ferry(p, rand(-4, 2), rand(-2, 2)); else if (r < 0.8) {   // jonque aux voiles rouges en ailes de chauve-souris, guirlandes d'ampoules
     const x = rand(-4, 2), z = rand(-2, 2);
     p.smooth(S.sph, '#5a3a24', [x, 0.3, z], [1.6, 0.8, 5.2]);
     p.flat(U.box, '#7a5232', [x, 0.95, z], [2.8, 0.12, 8]);
@@ -165,6 +166,42 @@ function harbour(b, t) {
       for (let k = 0; k < 8; k++) p.glow(S.sphLo, '#ffe090', [x, 1.2 + k * (mh / 8), z + mz + 2.6 - k * 0.32], [0.06, 0.06, 0.06]);
     }
   }
+}
+
+// Bac à deux ponts du port (double proue, il ne fait jamais demi-tour) : coque verte arrondie aux deux bouts,
+// pont inférieur ouvert sur des rangées de fenêtres allumées, pont supérieur à bastingage, toit à auvent,
+// cheminée, bouées orange, feux de navigation rouge et vert, sillage
+function ferry(p, x, z) {
+  const L = 11, W = 4, HULL = '#2a6a4a', WHITE = '#f4f0e8';
+  p.flat(U.box, HULL, [x, 0.5, z], [W, 1.0, L - 2]);
+  for (const s of [-1, 1]) p.smooth(S.cyl, HULL, [x, 0.5, z + s * (L / 2 - 1)], [W / 2, 1.0, 1.0]);   // bouts arrondis
+  p.flat(U.box, '#e8b830', [x, 0.98, z], [W + 0.02, 0.08, L - 1.98]);   // liston doré
+  for (const s of [-1, 1]) p.smooth(S.cyl, '#e8b830', [x, 0.98, z + s * (L / 2 - 1)], [W / 2 + 0.01, 0.08, 1.01]);
+  // pont inférieur : cabine blanche, rangée de fenêtres éclairées séparées par des montants
+  p.flat(U.box, WHITE, [x, 1.55, z], [W - 0.4, 1.1, L - 1.6]);
+  for (const sx of [-1, 1]) {
+    p.glow(S.box, '#ffe8a8', [x + sx * (W / 2 - 0.19), 1.6, z], [0.02, 0.5, L - 2.2]);
+    for (let k = 0; k < 12; k++) p.flat(U.box, WHITE, [x + sx * (W / 2 - 0.18), 1.6, z - (L - 2.2) / 2 + k * ((L - 2.2) / 11)], [0.04, 0.55, 0.08]);
+  }
+  // pont supérieur : bastingage, fenêtres, toit débordant
+  p.flat(U.box, '#e8e4dc', [x, 2.12, z], [W - 0.2, 0.06, L - 1.2]);
+  p.flat(U.box, WHITE, [x, 2.55, z], [W - 0.9, 0.8, L - 3.4]);
+  for (const sx of [-1, 1]) {
+    p.glow(S.box, '#fff0c0', [x + sx * (W / 2 - 0.44), 2.6, z], [0.02, 0.4, L - 3.8]);
+    p.flat(U.box, '#c8ccd4', [x + sx * (W / 2 - 0.12), 2.45, z], [0.03, 0.04, L - 1.4]);   // main courante
+    for (let k = 0; k < 10; k++) p.flat(U.box, '#c8ccd4', [x + sx * (W / 2 - 0.12), 2.3, z - (L - 1.6) / 2 + k * ((L - 1.6) / 9)], [0.03, 0.3, 0.03]);
+  }
+  p.flat(U.box, HULL, [x, 3.0, z], [W - 0.5, 0.1, L - 2.6]);
+  // cheminée et mât, feux de navigation, bouées
+  p.smooth(S.cyl, WHITE, [x, 3.45, z], [0.3, 0.8, 0.3]);
+  p.smooth(S.cyl, HULL, [x, 3.82, z], [0.31, 0.1, 0.31]);
+  p.smooth(S.cylLo, '#c8ccd4', [x, 3.9, z + 2.2], [0.03, 1.8, 0.03]);
+  p.glow(S.sphLo, '#ffffff', [x, 4.8, z + 2.2], [0.08, 0.08, 0.08]);
+  p.glow(S.sphLo, '#ff3030', [x - W / 2 + 0.3, 2.3, z + L / 2 - 1.6], [0.08, 0.08, 0.08]);
+  p.glow(S.sphLo, '#30ff70', [x + W / 2 - 0.3, 2.3, z + L / 2 - 1.6], [0.08, 0.08, 0.08]);
+  for (const dz of [-2.5, 0, 2.5]) p.smooth(S.torus, '#ff7a20', [x + W / 2 - 0.16, 2.3, z + dz], [0.22, 0.22, 0.22], [0, Math.PI / 2, 0]);
+  // sillage d'écume
+  for (const s of [-1, 1]) p.glow(S.box, '#a8c8e0', [x + s * (W / 2 + 0.3), 0.06, z - L / 2 + 0.5], [0.15, 0.01, 2.6], [0, s * 0.3, 0]);
 }
 
 // ---------- Mobilier de rue ----------
@@ -210,19 +247,22 @@ function minibusStop(b, t) {   // arrêt de minibus : panneau vert et rouge rét
   p.glow(S.box, '#ff4040', [0.07, 2.42, 0], [0.02, 0.24, 0.84]);
 }
 
-function banyan(b, t) {   // figuier des banyans : tronc noueux, racines aériennes, feuillage sombre
+function banyan(b, t) {   // figuier des banyans (modèle « h_tree ») : feuillage sombre, racines aériennes pendantes
   const p = P(b, t);
   p.flat(U.box, '#3a3846', [0, 0.15, 0], [1.6, 0.3, 1.6]);   // bac
-  p.smooth(S.cyl, '#5a4a3a', [0, 1.8, 0], [0.35, 3.6, 0.35]);
-  for (let k = 0; k < 7; k++) {
-    const a = k * 0.9;
-    p.smooth(S.cylLo, '#6a5a48', [Math.cos(a) * 0.9, 2.2, Math.sin(a) * 0.9], [0.03, 2.6 + (k % 3) * 0.4, 0.03]);
+  p.flat(U.box, '#2e2c38', [0, 0.31, 0], [1.4, 0.02, 1.4]);
+  const leaf = {}, h = rand(5.4, 6.4);
+  const m = addPlant(b, 'h_tree', [0, 0.3, 0], h, (role, part, i, up) => role === 1
+    ? tone('#5a4a3a', up)
+    : tone(leaf[part] ||= pick(['#2a5a3a', '#346a44', '#2e6040', '#244e34']), up), { s: [1.0, 1.0], ry: rand(0, Math.PI * 2) });
+  // racines aériennes : fines lianes qui tombent du dessous du feuillage vers le sol
+  let n = 0;
+  for (const { p: q, n: nor } of surface('h_tree', m, 0, 40)) {
+    if (nor.y > -0.3 || n >= 6) continue;
+    const len = Math.max(0.6, q.y - rand(0.6, 2.2));
+    p.smooth(S.cylLo, '#6a5a48', [q.x, q.y - len / 2, q.z], [0.025, len, 0.025]);
+    n++;
   }
-  for (let k = 0; k < 6; k++) {
-    const a = k * 1.05;
-    p.smooth(S.sph, k % 2 ? '#2a5a3a' : '#346a44', [Math.cos(a) * 1.0, 4.0 + (k % 3) * 0.4, Math.sin(a) * 1.0], [1.1, 0.8, 1.1]);
-  }
-  p.smooth(S.sph, '#2e6040', [0, 4.6, 0], [1.3, 0.9, 1.3]);
 }
 
 // étal du marché de nuit : bâche rayée éclairée par en dessous, ampoules, marchandises
@@ -232,13 +272,33 @@ function marketStall(b, t) {
   for (const [x, z] of [[0.95, -1.5], [0.95, 1.5], [-0.95, -1.5], [-0.95, 1.5]]) p.flat(U.box, STEEL, [x, 1.25, z], [0.06, 2.5, 0.06]);
   p.lit('tarp', [0, 2.6, 0], [3.4, 2.4], '#ffd8c0', Math.PI / 2, 1.25);
   for (let k = 0; k < 5; k++) p.glow(S.sphLo, '#fff0b0', [0.4, 2.25, -1.2 + k * 0.6], [0.07, 0.09, 0.07]);
-  const goods = pick(['clothes', 'toys', 'lanterns']);
-  for (let k = 0; k < 8; k++) {
+  const goods = pick(['clothes', 'toys', 'lanterns', 'fruit', 'fruit']);
+  if (goods === 'fruit') {   // cagettes de fruits (modèles « h_crate », « h_orange », « h_pineapple »)
+    const wood = (role, part, i, up) => tone(role ? '#c8a46a' : '#8a6a42', up);
+    for (let k = 0; k < 3; k++) {
+      const z = -0.95 + k * 0.95, x = rand(0.05, 0.3);
+      addPlant(b, 'h_crate', [x, 0.9, z], 0.26, wood, { s: [1.7, 1.9], ry: rand(-0.05, 0.05) });
+      if (Math.random() < 0.35) {   // ananas couchés
+        for (let j = 0; j < 2; j++) addPlant(b, 'h_pineapple', [x + rand(-0.1, 0.1), 1.13, z - 0.12 + j * 0.24], 0.26, (role, part, i, up) => (role ? tone('#3a8a3a', up) : tone('#e8b830', up, 0.04)), { ry: rand(0, 6) });
+      } else {   // pyramide d'oranges ou de mandarines (formes simples : 20 triangles chacune)
+        const c = pick([['#ff8a1a', '#ffa02a'], ['#ff6a1a', '#ff8a2a'], ['#e8d040', '#f0e050']]);
+        for (let j = 0; j < 8; j++) b.add(U.sph0, pick(c), [x + rand(-0.15, 0.15), 1.18 + (j > 5 ? 0.07 : 0), z + rand(-0.17, 0.17)], [0.06, 0.055, 0.06]);
+      }
+    }
+    for (let k = 0; k < 2; k++) p.smooth(S.sphLo, '#2a7a3a', [rand(-0.5, -0.2), 1.08, -0.6 + k * 1.2], [0.18, 0.15, 0.22]);   // pastèques
+    p.flat(U.box, '#f4f0e8', [0.78, 1.25, 0.6], [0.02, 0.26, 0.4]);   // pancarte des prix
+    p.flat(U.box, '#c8202a', [0.79, 1.25, 0.6], [0.01, 0.06, 0.3]);
+  } else for (let k = 0; k < 8; k++) {
     const z = -1.3 + k * 0.37;
-    if (goods === 'clothes') p.flat(U.box, pick(['#ff8ab0', '#8ad0ff', '#fff0a0', '#a8f0b0', '#c86a4a', '#6a4ab0']), [0.3, 0.97, z], [0.9, 0.12, 0.32]);
-    else if (goods === 'toys') p.smooth(S.sphLo, pick(['#ff5a8a', '#ffd040', '#5ad0ff', '#7af08a']), [rand(-0.3, 0.5), 1.05, z], [0.13, 0.13, 0.13]);
+    if (goods === 'clothes') {   // t-shirts pendus à une tringle sous la bâche, piles pliées sur le comptoir
+      p.flat(U.box, pick(['#ff8ab0', '#8ad0ff', '#fff0a0', '#a8f0b0', '#c86a4a', '#6a4ab0']), [0.3, 0.97, z], [0.9, 0.12, 0.32]);
+      const c = pick(['#ff5a8a', '#5ab0ff', '#ffe060', '#7af08a', '#ffffff', '#2a2a3a']);
+      p.flat(U.box, c, [0.85, 1.75, z], [0.02, 0.5, 0.3]);
+      p.flat(U.box, c, [0.85, 1.95, z], [0.02, 0.12, 0.42]);   // manches
+    } else if (goods === 'toys') p.smooth(S.sphLo, pick(['#ff5a8a', '#ffd040', '#5ad0ff', '#7af08a']), [rand(-0.3, 0.5), 1.05, z], [0.13, 0.13, 0.13]);
     else p.glow(LANTERN(), pick(['#ff3a3a', '#ff9a3a', '#ffd040']), [0.5, 1.6, z], [0.3, 0.42, 0.3]);
   }
+  if (goods === 'clothes') p.flat(U.box, STEEL, [0.85, 2.05, 0], [0.03, 0.03, 3.0]);   // tringle
   p.glow(S.box, '#fff4d0', [0.75, 0.95, 0], [0.02, 0.05, 2.9]);
 }
 
@@ -255,7 +315,12 @@ function daiPaiDong(b, t) {
   // table pliante et tabourets
   p.flat(U.box, '#e8e4dc', [0.6, 0.72, 1.4], [0.8, 0.04, 0.8]);
   p.flat(U.box, STEEL, [0.6, 0.36, 1.4], [0.06, 0.72, 0.06]);
-  for (const [dx, dz] of [[0.6, 0.8], [0.6, 2.0], [0.05, 1.4]]) p.smooth(S.cyl, '#e8302a', [dx, 0.22, dz], [0.17, 0.44, 0.17]);
+  // tabourets en plastique rouges ou bleus (modèle « h_stool ») autour de la table
+  for (const [dx, dz] of [[0.6, 0.8], [0.6, 2.0], [0.05, 1.4], [1.1, 1.4]]) {
+    if (Math.random() < 0.2) continue;
+    const c = pick(['#e8302a', '#e8302a', '#2a6ad8']);
+    addPlant(b, 'h_stool', [dx, 0, dz], 0.45, (role, part, i, up) => tone(c, up, 0.03), { s: [1.25, 1.25], ry: rand(0, 6) });
+  }
 }
 
 function promLamp(b, t) {   // lampadaire de la promenade : trois globes blancs
@@ -269,10 +334,9 @@ function promLamp(b, t) {   // lampadaire de la promenade : trois globes blancs
   }
 }
 
-function bench(b) {   // banc de la promenade face au port
-  b.add(U.box, '#8a6a48', [0, 0.45, 0], [0.5, 0.06, 1.9]);
-  b.add(U.box, '#8a6a48', [-0.25, 0.75, 0], [0.06, 0.5, 1.9]);
-  for (const z of [-0.8, 0.8]) b.add(U.box, STEEL, [0, 0.22, z], [0.5, 0.44, 0.06]);
+function bench(b) {   // banc en lattes (modèle « h_bench ») face au port, parfois avec un sac oublié
+  addPlant(b, 'h_bench', [0, 0, 0], 0.85, (role, part, i, up) => tone('#8a6a48', up), { s: [0.95, 1], ry: -Math.PI / 2 });
+  if (Math.random() < 0.25) b.add(U.box, pick(['#c8302a', '#2a6ad8', '#f2d040']), [-0.05, 0.55, rand(-0.6, 0.6)], [0.25, 0.22, 0.3]);
 }
 
 function flowers(b, t) {   // pots de fleurs et petits arbres en pot devant les boutiques
