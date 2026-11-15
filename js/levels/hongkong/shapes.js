@@ -73,6 +73,11 @@ export class Painter {
     push(this.t, 'glow', S.plane, color, p, [size[0], size[1], 1], [-tilt, rotY, 0], region, 'YXZ');
     return this;
   }
+  // reflet posé à plat sur le sol mouillé (matière additive : le noir ne compte pas), size = [en x, en z]
+  refl(region, p, size, color) {
+    push(this.t, 'add', S.plane, color, p, [size[0], size[1], 1], [-Math.PI / 2, 0, 0], region);
+    return this;
+  }
   // n'importe quelle géométrie peinte et déjà éclairée (eau du port la nuit…)
   litGeo(geo, region, p, s = [1, 1, 1], r = [0, 0, 0], color = '#ffffff') { push(this.t, 'glow', geo, color, p, s, r, region); return this; }
 }

@@ -64,6 +64,9 @@ sauter, linge à passer en roulade, réservoirs d'eau à éviter, et des friandi
 de la passerelle font retomber dans la rue, sans perdre ; la rue reste visible et continue en dessous. Le plancher est
 dessiné par instanciation (un appel de dessin par matière quelle que soit sa longueur). Rien du décor ne descend sous
 10,5 m au-dessus des voies (on saute depuis les passerelles) : le niveau le déclare (`clearance`) et les tests le vérifient.
+Les rez-de-chaussée sont des boutiques en retrait sous l'auvent (pharmacie, café, produits séchés, électronique,
+bijouterie, boulangerie, restaurant de dim sum, supérette, ou rideau de fer), chacune avec son caisson lumineux ; les
+néons et les vitrines se reflètent sur le trottoir mouillé (matière additive `add` de l'atlas).
 
 Au centre commercial, six étages sont superposés, chacun avec ses boutiques et ses obstacles. Des escalators relient deux
 étages voisins : un escalator occupe une voie, et rester dans cette voie, c'est le prendre (flèche verte et panneau
@@ -157,7 +160,7 @@ Végétation, étals et potagers du Japon (feuillus, cèdres, rochers, stands, c
 Platanes, cagettes, tonneaux, pains et barques de Paris : même provenance (`models/paris/`, détail dans `models/paris/LICENSE.txt`).
 Arbres, bouches d'incendie, bancs, poubelles, bennes et cagettes de New York : modèles de Quaternius, même provenance
 (`models/newyork/`, détail dans `models/newyork/LICENSE.txt`).
-Banians, cagettes, ananas, tabourets et bancs de Hong Kong : modèles de Quaternius et Kenney, même provenance
+Banians, cagettes, ananas, tabourets, bancs, climatiseurs et feux de Hong Kong : modèles de Quaternius, Kenney et Kay Lousberg, même provenance
 (`models/hongkong/`, détail dans `models/hongkong/LICENSE.txt`).
 Palmiers dattiers d'Égypte : trois « Palm Tree » de Quaternius, même provenance, simplifiés et recolorés
 (`models/egypte/`, détail dans `models/egypte/LICENSE.txt`).

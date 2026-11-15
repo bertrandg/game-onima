@@ -20,7 +20,7 @@ SPECS = {
     'newyork': {'N_tree': 'n_tree', 'N_crate': 'n_crate', 'N_hydrant': 'n_hydrant', 'N_bench': 'n_bench',
                 'N_trashcan': 'n_trashcan', 'N_dumpster': 'n_dumpster'},
     'hongkong': {'H_tree': 'h_tree', 'H_crate': 'h_crate', 'H_bench': 'h_bench', 'H_stool': 'h_stool',
-                 'H_pineapple': 'h_pineapple'},
+                 'H_pineapple': 'h_pineapple', 'H_traffic': 'h_traffic', 'H_ac': 'h_ac'},
     'egypte': {'E_palm1': 'e_palm1', 'E_palm2': 'e_palm2', 'E_palm3': 'e_palm3', 'E_palmfar': 'e_palmfar'},
     'mall': {'M_monstera': 'm_monstera', 'M_fern': 'm_fern', 'M_strelitzia': 'm_strelitzia', 'M_tuft': 'm_tuft',
              'M_dress': 'm_dress', 'M_bench': 'm_bench'},

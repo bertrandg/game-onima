@@ -56,8 +56,8 @@ function neonRect(g, x, y, w, h, col, r = 8) {
   g.restore();
 }
 
-// ---------- Atlas du décor (1024 × 1024) ----------
-const A = 1024;
+// ---------- Atlas du décor (1024 × 2048) ----------
+const A = 1024, AH = 2048;
 export const REG = {
   facadeA: [0, 0, 256, 512], facadeB: [256, 0, 256, 512], facadeC: [512, 0, 256, 512],
   neonV0: [768, 0, 64, 256], neonV1: [832, 0, 64, 256], neonV2: [896, 0, 64, 256], neonV3: [960, 0, 64, 256],
@@ -66,13 +66,23 @@ export const REG = {
   shops: [0, 512, 512, 128], shutters: [0, 640, 512, 128],
   neonH2: [512, 512, 256, 96], neonH3: [512, 608, 256, 96], neonH4: [768, 512, 256, 96], neonH5: [768, 608, 256, 96],
   water: [512, 704, 256, 256], windows: [768, 704, 256, 256], skyline: [0, 768, 512, 256],
+  // deuxième moitié : façades carrelées de vieux immeubles, intérieurs de boutiques, caissons lumineux, reflet
+  facadeD: [0, 1024, 256, 512], facadeE: [256, 1024, 256, 512],
+  streak: [512, 1024, 64, 256],
+  shut0: [0, 640, 128, 128], shut1: [128, 640, 128, 128], shut2: [256, 640, 128, 128], shut3: [384, 640, 128, 128],
 };
+// intérieurs de boutiques du rez-de-chaussée (in0…in7) et caissons d'enseigne (sign0…sign7)
+for (let i = 0; i < 8; i++) {
+  REG['in' + i] = [i * 128, 1536, 128, 128];
+  REG['sign' + i] = [(i % 4) * 256, 1664 + Math.floor(i / 4) * 64, 256, 64];
+}
+export const INTERIORS = 8, SIGNS = 8;
 const INSET = 2;
 export const uv = (name) => {
   const [x, y, w, h] = REG[name];
-  return [(x + INSET) / A, 1 - (y + h - INSET) / A, (x + w - INSET) / A, 1 - (y + INSET) / A];
+  return [(x + INSET) / A, 1 - (y + h - INSET) / AH, (x + w - INSET) / A, 1 - (y + INSET) / AH];
 };
-export const PLAIN_UV = (() => { const [x, y, w, h] = REG.plain; return [(x + w / 2) / A, 1 - (y + h / 2) / A]; })();
+export const PLAIN_UV = (() => { const [x, y, w, h] = REG.plain; return [(x + w / 2) / A, 1 - (y + h / 2) / AH]; })();
 
 // grille de fenêtres de nuit : allumées (chaudes, froides, télévision bleue), éteintes, rideaux, climatiseurs
 function windowGrid(g, x, y, w, h, { cols, rows, wall, frame, lit = 0.6, ac = 0.35, balcony = false }) {
@@ -108,7 +118,7 @@ function windowGrid(g, x, y, w, h, { cols, rows, wall, frame, lit = 0.6, ac = 0.
   for (let i = 0; i < 10; i++) { g.fillStyle = 'rgba(0,0,0,0.15)'; g.fillRect(x + rnd(0, w), y + rnd(0, h * 0.5), rnd(2, 5), rnd(40, 160)); }
 }
 
-export const decorAtlas = () => canvasTex(A, A, (g) => {
+export const decorAtlas = () => canvasTex(A, AH, (g) => {
   // façade A : immeuble de bureaux et d'habitations, carrelage gris-bleu
   let [x, y, w, h] = REG.facadeA;
   windowGrid(g, x, y, w, h, { cols: 4, rows: 6, wall: '#4a5068', frame: '#2a2e40', lit: 0.62, ac: 0.4 });
@@ -204,7 +214,83 @@ export const decorAtlas = () => canvasTex(A, A, (g) => {
   // bande de skyline lointaine
   [x, y, w, h] = REG.skyline;
   g.fillStyle = '#1a1e3a'; g.fillRect(x, y, w, h);
+
+  // façade D : vieil immeuble à mosaïque vert d'eau, cages de fenêtres, linge
+  [x, y, w, h] = REG.facadeD;
+  windowGrid(g, x, y, w, h, { cols: 4, rows: 6, wall: '#4a7a72', frame: '#24403c', lit: 0.58, ac: 0.45, balcony: true });
+  mosaic(g, x, y, w, h, ['rgba(255,255,255,0.06)', 'rgba(0,0,0,0.08)']);
+  // façade E : carrelage jaune moutarde, grilles de fenêtres en fer forgé
+  [x, y, w, h] = REG.facadeE;
+  windowGrid(g, x, y, w, h, { cols: 3, rows: 6, wall: '#8a7440', frame: '#3a2e1a', lit: 0.6, ac: 0.35 });
+  mosaic(g, x, y, w, h, ['rgba(255,240,200,0.07)', 'rgba(0,0,0,0.08)']);
+  for (let r = 0; r < 6; r++) for (let c = 0; c < 3; c++) {   // grilles
+    const cw = w / 3, rh = h / 6, gx = x + c * cw + cw * 0.12, gy = y + r * rh + rh * 0.14;
+    g.strokeStyle = 'rgba(20,20,26,0.8)'; g.lineWidth = 2;
+    for (let k = 0; k <= 6; k++) { g.beginPath(); g.moveTo(gx + k * cw * 0.76 / 6, gy); g.lineTo(gx + k * cw * 0.76 / 6, gy + rh * 0.64); g.stroke(); }
+    g.beginPath(); g.moveTo(gx, gy + rh * 0.32); g.lineTo(gx + cw * 0.76, gy + rh * 0.32); g.stroke();
+  }
+  // traînée de reflet sur la chaussée mouillée (fond noir : matière additive)
+  [x, y, w, h] = REG.streak;
+  g.fillStyle = '#000000'; g.fillRect(x, y, w, h);
+  for (let k = 0; k < 40; k++) {
+    const yy = y + (k / 40) * h, a = Math.sin((k / 40) * Math.PI) * rnd(0.55, 1);
+    const grd = g.createLinearGradient(x, 0, x + w, 0);
+    grd.addColorStop(0, 'rgba(255,255,255,0)'); grd.addColorStop(0.5, `rgba(255,255,255,${a.toFixed(2)})`); grd.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grd; g.fillRect(x + rnd(-4, 4), yy, w, h / 40 * rnd(0.4, 1));
+  }
+  // intérieurs de boutiques
+  INTERIOR_PAINTERS.forEach((fn, i) => { [x, y, w, h] = REG['in' + i]; g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip(); fn(g, x, y, w, h); g.restore(); });
+  // caissons lumineux des enseignes
+  const signs = [['藥房', 'PHARMACY', '#2a9a5a', '#ffffff'], ['茶餐廳', 'CAFÉ', '#e8302a', '#fff4c0'], ['海味', 'DRIED SEAFOOD', '#8a4a1a', '#ffe0a0'], ['電器', 'ELECTRONICS', '#1a4ab8', '#e8f4ff'],
+    ['金行', 'GOLD', '#c8202a', '#ffd84a'], ['餅家', 'BAKERY', '#f2c230', '#6a2a10'], ['酒樓', 'DIM SUM', '#a81a2a', '#ffe8a0'], ['便利店', '24H', '#ff7a1a', '#ffffff']];
+  signs.forEach(([cjk, lat, bg, fg], i) => {
+    [x, y, w, h] = REG['sign' + i];
+    const grd = g.createLinearGradient(0, y, 0, y + h);
+    grd.addColorStop(0, bg); grd.addColorStop(1, shadeCss(bg, 0.75));
+    g.fillStyle = grd; g.fillRect(x, y, w, h);
+    g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 2; g.strokeRect(x + 3, y + 3, w - 6, h - 6);
+    g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = `900 34px ${CJK}`; g.fillText(cjk, x + w * 0.36, y + h / 2 + 1);
+    g.font = `900 14px ${LATIN}`; g.fillText(lat, x + w * 0.8, y + h / 2 + 1);
+  });
 });
+
+// petits carreaux de mosaïque sur un mur
+function mosaic(g, x, y, w, h, cols) {
+  for (let j = 0; j < h; j += 6) for (let i = 0; i < w; i += 6) if (Math.random() < 0.35) { g.fillStyle = pickOf(cols); g.fillRect(x + i, y + j, 5, 5); }
+}
+function shadeCss(hex, k) {
+  const c = new THREE.Color(hex).multiplyScalar(k);
+  return '#' + c.getHexString();
+}
+// lumière de fond d'un intérieur (dégradé du plafond vers le sol)
+function room(g, x, y, w, h, top, bottom) {
+  const grd = g.createLinearGradient(0, y, 0, y + h);
+  grd.addColorStop(0, top); grd.addColorStop(1, bottom);
+  g.fillStyle = grd; g.fillRect(x, y, w, h);
+  g.fillStyle = 'rgba(255,255,255,0.7)'; for (let k = 0; k < 3; k++) g.fillRect(x + 12 + k * 40, y + 4, 26, 4);   // néons du plafond
+}
+function shelves(g, x, y, w, h, rows, cols, colors, top = 22) {
+  for (let r = 0; r < rows; r++) {
+    const yy = y + top + r * ((h - top - 30) / rows);
+    g.fillStyle = 'rgba(80,60,50,0.8)'; g.fillRect(x + 4, yy + 14, w - 8, 3);
+    for (let c = 0; c < cols; c++) { g.fillStyle = pickOf(colors); g.fillRect(x + 8 + c * ((w - 16) / cols), yy + rnd(0, 4), (w - 16) / cols - 3, 12 - rnd(0, 4)); }
+  }
+}
+function person(g, x, y, col) {
+  g.fillStyle = col; g.fillRect(x - 9, y, 18, 40);
+  g.beginPath(); g.arc(x, y - 7, 8, 0, Math.PI * 2); g.fill();
+}
+const INTERIOR_PAINTERS = [
+  (g, x, y, w, h) => { room(g, x, y, w, h, '#f4fff8', '#b8d8c4'); shelves(g, x, y, w, h, 4, 8, ['#3ac87a', '#ffffff', '#e8302a', '#2a7ad8', '#ffd040']); g.fillStyle = '#2a9a5a'; g.fillRect(x + w / 2 - 6, y + 20, 12, 30); g.fillRect(x + w / 2 - 15, y + 29, 30, 12); },   // pharmacie
+  (g, x, y, w, h) => { room(g, x, y, w, h, '#fff0d0', '#c89a6a'); for (let k = 0; k < 3; k++) { g.fillStyle = '#e8302a'; g.fillRect(x + 8 + k * 40, y + 18, 34, 26); g.fillStyle = '#fff4c0'; for (let l = 0; l < 4; l++) g.fillRect(x + 12 + k * 40, y + 22 + l * 6, 26, 2); } for (let k = 0; k < 3; k++) { g.fillStyle = '#5a3a2a'; g.fillRect(x + 6 + k * 42, y + 92, 34, 6); g.fillRect(x + 20 + k * 42, y + 98, 6, 26); } person(g, x + 40, y + 70, 'rgba(60,40,40,0.8)'); person(g, x + 90, y + 74, 'rgba(40,40,60,0.8)'); },   // café
+  (g, x, y, w, h) => { room(g, x, y, w, h, '#ffe8c0', '#a87a4a'); for (let k = 0; k < 9; k++) { g.fillStyle = pickOf(['#8a4a1a', '#c8783a', '#6a3a1a', '#e8b060']); g.fillRect(x + 6 + k * 13, y + 14, 9, rnd(20, 40)); } for (let k = 0; k < 6; k++) { g.fillStyle = 'rgba(255,255,255,0.5)'; g.fillRect(x + 6 + k * 20, y + 80, 16, 26); g.fillStyle = pickOf(['#c8783a', '#e8c070', '#8a4a1a']); g.fillRect(x + 8 + k * 20, y + 88, 12, 16); } },   // produits séchés
+  (g, x, y, w, h) => { room(g, x, y, w, h, '#e8f0ff', '#8a98b8'); for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) { g.fillStyle = '#141420'; g.fillRect(x + 6 + c * 30, y + 16 + r * 26, 26, 20); g.fillStyle = pickOf(['#3a8aff', '#ff4fa8', '#3ff0ff', '#7aff8a', '#ffd040']); g.fillRect(x + 8 + c * 30, y + 18 + r * 26, 22, 16); } g.fillStyle = '#c8ccd4'; g.fillRect(x + 6, y + 100, w - 12, 8); },   // électronique
+  (g, x, y, w, h) => { room(g, x, y, w, h, '#fff4d0', '#8a1a1a'); g.fillStyle = '#6a0a14'; g.fillRect(x, y + 50, w, h - 50); for (let k = 0; k < 3; k++) { g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(x + 8 + k * 40, y + 56, 34, 30); for (let l = 0; l < 6; l++) { g.fillStyle = pickOf(['#ffd84a', '#ffe890', '#f2c230']); g.fillRect(x + 12 + k * 40 + (l % 3) * 10, y + 62 + Math.floor(l / 3) * 12, 7, 7); } } },   // bijouterie
+  (g, x, y, w, h) => { room(g, x, y, w, h, '#fff8e0', '#d8a86a'); for (let r = 0; r < 3; r++) for (let c = 0; c < 7; c++) { g.fillStyle = '#e8b040'; g.beginPath(); g.arc(x + 14 + c * 16, y + 32 + r * 22, 6, 0, Math.PI * 2); g.fill(); g.fillStyle = '#ffd860'; g.beginPath(); g.arc(x + 14 + c * 16, y + 32 + r * 22, 3.5, 0, Math.PI * 2); g.fill(); } g.fillStyle = 'rgba(255,255,255,0.4)'; g.fillRect(x + 6, y + 96, w - 12, 20); },   // boulangerie (tartelettes)
+  (g, x, y, w, h) => { room(g, x, y, w, h, '#ffe0c8', '#a8302a'); for (let k = 0; k < 3; k++) { g.fillStyle = '#ff3a3a'; g.beginPath(); g.ellipse(x + 22 + k * 42, y + 20, 9, 11, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#ffd040'; g.fillRect(x + 20 + k * 42, y + 30, 4, 6); } for (let k = 0; k < 2; k++) { g.fillStyle = '#f4f0e8'; g.beginPath(); g.ellipse(x + 36 + k * 56, y + 96, 24, 8, 0, 0, Math.PI * 2); g.fill(); } person(g, x + 30, y + 64, 'rgba(60,30,30,0.8)'); person(g, x + 100, y + 66, 'rgba(30,30,60,0.8)'); },   // restaurant de dim sum
+  (g, x, y, w, h) => { room(g, x, y, w, h, '#ffffff', '#d8e0e8'); for (let k = 0; k < 3; k++) { g.fillStyle = '#e8f4ff'; g.fillRect(x + 6 + k * 40, y + 14, 36, 70); g.strokeStyle = '#8a98a8'; g.strokeRect(x + 6 + k * 40, y + 14, 36, 70); for (let l = 0; l < 4; l++) for (let m = 0; m < 4; m++) { g.fillStyle = pickOf(['#e8302a', '#3ac87a', '#2a7ad8', '#ffd040', '#ff8ab0']); g.fillRect(x + 9 + k * 40 + m * 8, y + 18 + l * 16, 6, 10); } } shelves(g, x, y + 70, w, 58, 2, 10, ['#e8302a', '#ffd040', '#3ac87a', '#ff8a3a'], 4); },   // supérette 24 h
+];
 
 // ---------- Sol ----------
 // chaussée mouillée : bitume sombre, flaques qui reflètent les néons

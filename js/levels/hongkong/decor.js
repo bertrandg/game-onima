@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { Builder, TexBuilder, U, pick, rand } from '../../geo.js';
 import { Painter, S, LANTERN, POT, STEAMER, BOWL } from './shapes.js';
-import { NEON, decorAtlas } from './textures.js';
-import { loadPlants, addPlant, surface } from '../../plants.js';
+import { NEON, decorAtlas, INTERIORS, SIGNS } from './textures.js';
+import { loadPlants, addPlant, surface, plant } from '../../plants.js';
 
-await loadPlants('hongkong');   // modèles (banians, cagettes, fruits, tabourets, bancs) avant la construction du décor
+await loadPlants('hongkong');   // modèles (banians, cagettes, fruits, tabourets, bancs, feux, climatiseurs) avant la construction du décor
 
 // Décor latéral de Hong Kong la nuit, en trois zones qui se suivent : la rue des néons de Mong Kok, le
 // marché de nuit de Temple Street, puis le front de mer du port Victoria. Chaque élément est construit
@@ -25,6 +25,8 @@ export function makeTexMats() {
   return {
     eg: new THREE.MeshLambertMaterial({ map: atlas, vertexColors: true }),
     glow: new THREE.MeshBasicMaterial({ map: atlas, vertexColors: true }),
+    // reflets des néons et des vitrines sur le sol mouillé : ajoutés à la lumière, sans masquer le sol
+    add: new THREE.MeshBasicMaterial({ map: atlas, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }),
   };
 }
 
@@ -38,6 +40,13 @@ const TRI = (() => {
   return g;
 })();
 
+// couleur du reflet de chaque enseigne sur le sol mouillé (atténuée : la matière est additive)
+const REFL = { neonV0: '#ff6a3a', neonV1: '#ffe04a', neonV2: '#3aff8a', neonV3: '#ff4aa8',
+  neonH0: '#ff4a4a', neonH1: '#3af0ff', neonH2: '#ffd040', neonH3: '#b06aff', neonH4: '#3aff8a', neonH5: '#ff4aa8' };
+// traînée de reflet sur le trottoir sous une enseigne (vers la voie et vers le joueur, qui arrive par +z)
+const SIDEWALK_Y = 0.135;
+function streak(p, F, z, w, len, color, x0 = 0.3) { p.refl('streak', [F + x0 + w / 2, SIDEWALK_Y, z + len * 0.3], [w, len], color); }
+
 // ---------- Enseignes au néon ----------
 // lame verticale perpendiculaire à la façade (lisible depuis la voie : faces ±z), accrochée en x = F
 function bladeSign(p, F, y, z, region, h = 5.5) {
@@ -46,6 +55,7 @@ function bladeSign(p, F, y, z, region, h = 5.5) {
   p.lit(region, [xc, y, z + 0.116], [w, h], '#ffffff', 0);
   p.lit(region, [xc, y, z - 0.116], [w, h], '#ffffff', Math.PI);
   for (const dy of [h / 2 - 0.4, -h / 2 + 0.4]) p.flat(U.box, STEEL, [F + 0.15, y + dy, z], [0.3, 0.08, 0.08]);
+  if (REFL[region]) streak(p, F, z, 1.4, rand(3.5, 5), REFL[region], 0.4);
 }
 // grand panneau en porte-à-faux au-dessus du trottoir, de x = F jusqu'à F + len
 function boardSign(p, F, y, z, region, len) {
@@ -56,15 +66,54 @@ function boardSign(p, F, y, z, region, len) {
   // potence d'acier qui le tient à la façade
   p.flat(U.box, STEEL, [F + len * 0.45, y + h / 2 + 0.5, z], [len * 0.9, 0.1, 0.1], [0, 0, -0.18]);
   p.flat(U.box, STEEL, [F + 0.25, y + h / 2 + 0.2, z], [0.12, 0.8, 0.12]);
+  if (REFL[region]) streak(p, F, z, Math.min(len, 3.2), rand(4, 6), REFL[region], 0.5);
 }
 const V = ['neonV0', 'neonV1', 'neonV2', 'neonV3'], H = ['neonH0', 'neonH1', 'neonH2', 'neonH3', 'neonH4', 'neonH5'];
 
 // ---------- Immeubles (16 m le long de la rue, 10 m de profondeur, façade en x = +5) ----------
 const BW = 10, BLEN = 16, F = BW / 2;
+// Rez-de-chaussée : quatre boutiques de 4 m en retrait sous l'auvent, séparées par des piliers. Ouvertes
+// (intérieur peint et éclairé : pharmacie, café, produits séchés, électronique, bijouterie, boulangerie,
+// restaurant, supérette), avec comptoir, caisson lumineux et lumière qui déborde sur le trottoir mouillé ;
+// ou fermées par un rideau de fer.
+function shopfronts(p, closed) {
+  for (let z = -8; z <= 8; z += 4) {   // piliers carrelés
+    p.flat(U.box, '#34323e', [F - 0.35, GF / 2, z], [0.7, GF, 0.36]);
+    p.flat(U.box, '#4a4858', [F - 0.02, 0.3, z], [0.08, 0.6, 0.4]);
+  }
+  for (let k = 0; k < 4; k++) {
+    const zc = -6 + k * 4, i = ri(0, INTERIORS - 1), sign = 'sign' + (i % SIGNS);   // l'enseigne annonce la boutique
+    p.flat(U.box, '#141018', [F + 0.1, 3.5, zc], [0.2, 0.8, 3.64]);   // caisson d'enseigne
+    if (Math.random() < closed) {
+      p.lit('shut' + ri(0, 3), [F - 0.12, 1.55, zc], [3.64, 3.1], '#c8c4d0');
+      p.lit('sign' + ri(0, SIGNS - 1), [F + 0.205, 3.5, zc], [3.5, 0.7], '#6a6670');
+      continue;
+    }
+    p.lit(sign, [F + 0.205, 3.5, zc], [3.5, 0.7]);
+    p.lit('in' + i, [F - DEPTH + 0.01, 1.55, zc], [3.64, 3.1]);
+    p.flat(U.box, '#6a6470', [F - DEPTH / 2, 0.13, zc], [DEPTH, 0.02, 3.64]);   // sol de la boutique
+    p.glow(S.box, '#fff4e0', [F - DEPTH / 2, 3.08, zc], [0.5, 0.04, 3.2]);    // plafonnier
+    // comptoir ou étal devant l'entrée, selon la boutique
+    const side = pick([-1, 1]), cz = zc + side * 1.0;
+    if (i === 2) for (let j = 0; j < 3; j++) {   // paniers de produits séchés
+      p.flat(U.box, '#8a6a42', [F - 0.3, 0.45, zc - 1.1 + j * 1.1], [0.5, 0.6, 0.8]);
+      p.smooth(S.sphLo, pick(['#c8783a', '#8a4a1a', '#e8c070']), [F - 0.3, 0.78, zc - 1.1 + j * 1.1], [0.22, 0.08, 0.34]);
+    } else if (i === 7 || i === 0) {   // présentoir à l'entrée
+      p.flat(U.box, '#e8e8f0', [F - 0.35, 0.65, cz], [0.5, 1.3, 1.2]);
+      for (let j = 0; j < 3; j++) p.glow(S.box, pick(['#ff6a6a', '#6ad08a', '#6aa8ff', '#ffd860']), [F - 0.09, 0.4 + j * 0.35, cz], [0.02, 0.22, 1.0]);
+    } else {
+      p.flat(U.box, i === 4 ? '#5a0a14' : '#3a3036', [F - 0.45, 0.5, cz], [0.5, 1.0, 1.4]);
+      p.glow(S.box, i === 4 ? '#ffe8a0' : '#f4f0e8', [F - 0.45, 1.01, cz], [0.46, 0.02, 1.36]);
+    }
+    streak(p, F, zc, 2.6, 3.6, '#c8a878', 0.1);   // la boutique éclaire le trottoir
+  }
+}
+
+const GF = 4.0, DEPTH = 1.2;   // rez-de-chaussée : hauteur et profondeur des boutiques en retrait
 function building(p, { facade, H: height, tint = '#ffffff', shops = 'shops' }) {
-  p.flat(U.box, '#22243a', [0, height / 2, 0], [BW, height, BLEN]);
-  // rez-de-chaussée : vitrines éclairées ou rideaux de fer, sous un auvent souligné de tubes lumineux
-  p.lit(shops, [F + 0.01, 2.0, 0], [BLEN, 4], '#d8d0e0');
+  p.flat(U.box, '#22243a', [0, (height + GF) / 2, 0], [BW, height - GF, BLEN]);
+  p.flat(U.box, '#1c1c28', [-DEPTH / 2, GF / 2, 0], [BW - DEPTH, GF, BLEN]);
+  shopfronts(p, shops === 'shutters' ? 0.6 : 0.2);
   p.flat(U.box, '#16161e', [F + 0.7, 4.3, 0], [1.4, 0.22, BLEN]);
   for (let k = 0; k < 4; k++) p.glow(S.box, pick(['#fff0d0', '#d8f0ff']), [F + 1.35, 4.18, -6 + k * 4], [0.06, 0.05, 2.8]);
   // étages : façade de nuit peinte, deux panneaux de 8 m par étage de 16 m
@@ -83,21 +132,40 @@ function building(p, { facade, H: height, tint = '#ffffff', shops = 'shops' }) {
   p.glow(S.sphLo, '#ff3030', [0, height + 0.8, 7.5], [0.15, 0.15, 0.15]);   // feu de balisage
 }
 
+// climatiseurs en saillie (modèle « h_ac ») accrochés sous les fenêtres, quelques gouttes de condensation
+function acUnits(p, height, n) {
+  for (let k = 0; k < n; k++) {
+    const y = 5.6 + ((Math.random() * Math.min(height - 9, 14)) / 2.67 | 0) * 2.67, z = rand(-7, 7);
+    p.flat(U.box, '#4a4e58', [F + 0.2, y - 0.05, z], [0.4, 0.04, 0.9]);   // console
+    if (k % 2) {   // un sur deux en simple boîte (les étages élevés sont vus de loin)
+      p.flat(U.box, '#c8ccd2', [F + 0.25, y + 0.25, z], [0.5, 0.45, 0.8]);
+      p.flat(U.box, '#5a5e68', [F + 0.51, y + 0.25, z], [0.02, 0.32, 0.6]);
+      continue;
+    }
+    addPlant(p.b, 'h_ac', [F + 0.05, y, z], 0.55, (role, part, i, up, c) => (c[0] > 110 && c[2] < 80 ? '#b8784a' : c[0] < 50 ? '#2a2c34' : tone('#c8ccd2', up)), { s: [1.05, 0.95], ry: Math.PI / 2 });
+  }
+}
+// cages de fenêtres en fer (vieux immeubles) : barreaux devant quelques fenêtres des premiers étages
+function cages(p, height) {
+  for (let k = 0; k < 5; k++) {
+    const y = 6.3 + ri(0, Math.min(4, ((height - 9) / 2.67) | 0)) * 2.67, z = rand(-6.5, 6.5), w = 1.6, h = 1.6;
+    p.flat(U.box, '#2a2c34', [F + 0.25, y - h / 2, z], [0.5, 0.06, w]);
+    p.flat(U.box, '#2a2c34', [F + 0.25, y + h / 2, z], [0.5, 0.06, w]);
+    for (let j = 0; j <= 5; j++) p.flat(U.box, '#3a3c48', [F + 0.5, y, z - w / 2 + j * (w / 5)], [0.03, h, 0.03]);
+    if (Math.random() < 0.6) p.smooth(S.sphLo, pick(['#3a7a3a', '#4a8a44']), [F + 0.3, y - h / 2 + 0.25, z + rand(-0.4, 0.4)], [0.22, 0.2, 0.22]);   // plante sur le rebord
+  }
+}
+
 // tour de la rue des néons : façade carrelée ou vitrée, lames et panneaux lumineux, enseigne sur le toit
 function towerNeon(b, t) {
   const p = P(b, t);
   const height = 4.5 + 16 * pick([2, 2, 3]);
-  building(p, { facade: pick(['facadeA', 'facadeA', 'facadeB']), H: height, tint: pick(['#ffffff', '#f0e8ff', '#fff0e8']) });
+  building(p, { facade: pick(['facadeA', 'facadeA', 'facadeB', 'facadeD', 'facadeE']), H: height, tint: pick(['#ffffff', '#f0e8ff', '#fff0e8']) });
   const blades = 2 + ((Math.random() * 2) | 0);
   for (let i = 0; i < blades; i++) bladeSign(p, F, rand(8, 18), -6 + i * (12 / Math.max(1, blades - 1)) + rand(-0.5, 0.5), pick(V), rand(4.5, 6.5));
   if (Math.random() < 0.85) boardSign(p, F, rand(7.5, 11), rand(-3, 3), pick(H), rand(3.4, 4.4));
   if (Math.random() < 0.5) boardSign(p, F, rand(13, 16), rand(-4, 4), pick(H), rand(2.6, 3.4));
-  // climatiseurs en saillie sur la façade
-  for (let k = 0; k < 8; k++) {
-    const y = 6 + ((Math.random() * (height - 9)) | 0), z = rand(-7, 7);
-    p.flat(U.box, '#c8ccd2', [F + 0.25, y, z], [0.5, 0.45, 0.8]);
-    p.flat(U.box, '#5a5e68', [F + 0.51, y, z], [0.02, 0.32, 0.6]);
-  }
+  acUnits(p, height, 8);
   // enseigne géante sur le toit, face à la rue (vue de loin)
   if (Math.random() < 0.5) {
     const y = height + 3.5, r = pick(H);
@@ -119,7 +187,9 @@ function glassTower(b, t) {
 function tenement(b, t) {
   const p = P(b, t);
   const height = 4.5 + 16 * pick([1, 2, 2]);
-  building(p, { facade: 'facadeB', H: height, tint: pick(['#ffffff', '#ffe8f0', '#e8fff0']), shops: pick(['shops', 'shops', 'shutters']) });
+  building(p, { facade: pick(['facadeB', 'facadeD', 'facadeE']), H: height, tint: pick(['#ffffff', '#ffe8f0', '#e8fff0']), shops: pick(['shops', 'shops', 'shutters']) });
+  acUnits(p, height, 5);
+  cages(p, height);
   bladeSign(p, F, rand(7.5, 10), rand(-6, 6), pick(V), 4.5);
   // perches à linge qui sortent des fenêtres
   for (let k = 0; k < 6; k++) {
@@ -213,6 +283,38 @@ function lamp(b, t) {   // réverbère à crosse, lumière orangée au sodium
   p.flat(U.box, '#2e3a36', [1.05, 6.66, 0], [0.6, 0.16, 0.32]);
   p.glow(S.box, '#ffb060', [1.05, 6.56, 0], [0.5, 0.04, 0.26]);
   p.glow(S.sphLo, '#ffd8a0', [1.05, 6.5, 0], [0.12, 0.05, 0.1]);
+}
+
+// feu de signalisation (modèle « h_traffic ») : mât sombre, feux allumés, bouton d'appel jaune
+const LIGHTS = (() => {   // positions (relatives) des feux rouges et verts du modèle
+  let m = null;
+  return () => {
+    if (m) return m;
+    const md = plant('h_traffic'), acc = { red: [0, 0, 0, 0], green: [0, 0, 0, 0] };
+    for (let i = 0; i < md.n; i++) {
+      const c = md.col.subarray(i * 3, i * 3 + 3), k = c[0] > 150 && c[1] < 80 ? 'red' : c[1] > 80 && c[0] < 40 ? 'green' : null;
+      if (!k) continue;
+      for (let j = 0; j < 3; j++) { acc[k][0] += md.pos[i * 9 + j * 3]; acc[k][1] += md.pos[i * 9 + j * 3 + 1]; acc[k][2] += md.pos[i * 9 + j * 3 + 2]; }
+      acc[k][3] += 3;
+    }
+    return (m = Object.fromEntries(Object.entries(acc).filter(([, a]) => a[3]).map(([k, a]) => [k, [a[0] / a[3], a[1] / a[3], a[2] / a[3]]])));
+  };
+})();
+function trafficLight(b, t) {
+  const p = P(b, t), H = 3.6, on = pick(['red', 'green']);
+  const paint = (role, part, i, up, c) => {
+    if (c[0] > 150 && c[1] < 80) return on === 'red' ? '#ff3030' : '#4a1a1a';
+    if (c[1] > 80 && c[0] < 40) return on === 'green' ? '#30ff80' : '#1a3a2a';
+    if (c[0] > 150 && c[1] > 100) return '#1e2026';   // boîtiers
+    return tone('#3a4844', up);
+  };
+  const m = addPlant(b, 'h_traffic', [0, 0, 0], H, paint, { ry: Math.PI / 2 });
+  const L = LIGHTS()[on];
+  if (L) {
+    const q = new THREE.Vector3(...L).applyMatrix4(m);
+    p.glow(S.sphLo, on === 'red' ? '#ff4040' : '#40ff90', [q.x, q.y, q.z], [0.09, 0.09, 0.09]);
+    streak(p, -0.3, q.z, 0.8, 2.6, on === 'red' ? '#ff3030' : '#30ff80', 0);
+  }
 }
 
 function railing(b) {   // barrière de trottoir verte, typique de Hong Kong
@@ -397,6 +499,7 @@ export const DECOR = {
   harbour: { len: BLEN, w: 20, face: true, build: harbour },
   lamp: { len: 0.6, w: 0.6, face: true, build: lamp },
   railing: { len: 5, w: 0.3, face: true, build: railing },
+  trafficLight: { len: 0.9, w: 0.9, face: true, build: trafficLight },
   newsstand: { len: 2.3, w: 1.6, face: true, build: newsstand },
   bin: { len: 0.6, w: 0.6, face: true, build: bin },
   minibusStop: { len: 0.9, w: 0.4, face: true, build: minibusStop },
@@ -415,7 +518,7 @@ export const THEMES = {
     ground: 'hkSidewalk', gate: 'neonGantry', gateEvery: [170, 280], garland: 0,
     x: { edge: 0, near: 5.4, mid: 9.6, far: 30 }, spread: { near: 0.3, mid: 0 }, mult: { near: 1.2, mid: 0.0 },
     edge: [],
-    near: [['lamp', 2], ['railing', 1.4], ['newsstand', 0.5], ['bin', 0.6], ['minibusStop', 0.5], ['banyan', 0.4], ['flowers', 0.5]],
+    near: [['lamp', 2], ['railing', 1.4], ['newsstand', 0.5], ['bin', 0.6], ['minibusStop', 0.5], ['banyan', 0.4], ['flowers', 0.5], ['trafficLight', 0.6]],
     mid: [['towerNeon', 3], ['glassTower', 1]],
     far: [],
   },

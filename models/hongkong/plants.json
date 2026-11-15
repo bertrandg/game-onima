@@ -52,5 +52,28 @@
   ],
   "w": 0.511,
   "d": 0.518
+ },
+ "h_traffic": {
+  "off": 75224,
+  "tris": 508,
+  "parts": 214,
+  "roles": [
+   "citybits_texture.003"
+  ],
+  "w": 0.239,
+  "d": 0.206
+ },
+ "h_ac": {
+  "off": 96560,
+  "tris": 283,
+  "parts": 80,
+  "roles": [
+   "LightGrey.001",
+   "Grey.003",
+   "Black.003",
+   "Orange.002"
+  ],
+  "w": 1.499,
+  "d": 1.112
  }
 }

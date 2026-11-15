@@ -7,6 +7,10 @@ Quaternius (https://quaternius.com)
 - « Crate » : https://poly.pizza/m/3OEFd1AWfa (cagettes de fruits de Temple Street)
 - « Bench » : https://poly.pizza/m/jLxjFxFRpw (bancs de la promenade)
 - « Stool » : https://poly.pizza/m/TvaOenUAni (tabourets en plastique des dai pai dong)
+- « Air Conditioner » : https://poly.pizza/m/amFuyE3IF6 (climatiseurs des façades, simplifié)
+
+Kay Lousberg
+- « Traffic light » : https://poly.pizza/m/Q6k7Izx6YD (feux de signalisation de Mong Kok)
 
 Kenney (https://kenney.nl)
 - « Pineapple » : https://poly.pizza/m/VFFBOLXqB2
