@@ -294,8 +294,7 @@ const INTERIOR_PAINTERS = [
 
 // ---------- Sol ----------
 // Chaussée et trottoirs : photos de Poly Haven (models/hongkong/LICENSE.txt) préparées pour la nuit. Asphalte
-// fissuré et flaques qui reflètent les néons (road.jpg, 3 m par répétition), petits carreaux du trottoir
-// (sidewalk.jpg, 2,4 m).
+// fissuré (road.jpg, 3 m par répétition), petits carreaux du trottoir (sidewalk.jpg, 2,4 m).
 function photoTex(name) {
   const t = new THREE.TextureLoader().load(new URL('../../../models/hongkong/' + name, import.meta.url).href);
   t.colorSpace = THREE.SRGBColorSpace;

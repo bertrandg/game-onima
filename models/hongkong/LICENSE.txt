@@ -21,6 +21,6 @@ Simplifiés et convertis dans Blender (tools/export-plants.py, ONIMA_LEVEL=hongk
 remplacés par une couleur par triangle, recolorée dans le jeu (js/plants.js).
 
 Sol (road.jpg, sidewalk.jpg) : photos de Poly Haven (https://polyhaven.com), licence CC0 1.0, réduites et
-teintées pour la nuit ; flaques aux reflets de néons ajoutées sur la chaussée :
+teintées pour la nuit :
 - « Asphalt 02 » de Rob Tuytel : https://polyhaven.com/a/asphalt_02 (chaussée)
 - « Square Tiles » de Charlotte Baglioni : https://polyhaven.com/a/square_tiles (trottoirs)
