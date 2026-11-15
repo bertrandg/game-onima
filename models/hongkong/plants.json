@@ -75,5 +75,36 @@
   ],
   "w": 1.499,
   "d": 1.112
+ },
+ "h_minibus": {
+  "off": 108448,
+  "tris": 2645,
+  "parts": 31,
+  "roles": [
+   "FFFFFF",
+   "1A1A1A",
+   "78909C",
+   "455A64",
+   "FF9800",
+   "795548",
+   "F44336"
+  ],
+  "w": 1.128,
+  "d": 2.322
+ },
+ "h_taxi": {
+  "off": 219540,
+  "tris": 3056,
+  "parts": 15,
+  "roles": [
+   "Black.004",
+   "Grey.004",
+   "Yellow",
+   "Windows",
+   "Headlights",
+   "TailLights"
+  ],
+  "w": 1.379,
+  "d": 3.221
  }
 }

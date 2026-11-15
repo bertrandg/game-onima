@@ -1,6 +1,6 @@
 Modèles du décor du niveau Hong Kong (plants.bin, plants.json)
 
-Trouvés sur Poly Pizza, tous sous licence CC0 1.0 (domaine public) :
+Trouvés sur Poly Pizza, sous licence CC0 1.0 (domaine public) sauf mention contraire :
 
 Quaternius (https://quaternius.com)
 - « Tree » : https://poly.pizza/m/i4QMw4L64D (banians, avec leurs racines aériennes ajoutées dans le jeu)
@@ -8,6 +8,7 @@ Quaternius (https://quaternius.com)
 - « Bench » : https://poly.pizza/m/jLxjFxFRpw (bancs de la promenade)
 - « Stool » : https://poly.pizza/m/TvaOenUAni (tabourets en plastique des dai pai dong)
 - « Air Conditioner » : https://poly.pizza/m/amFuyE3IF6 (climatiseurs des façades, simplifié)
+- « Taxi » : https://poly.pizza/m/x43lOScTpN (taxis rouges, recolorés)
 
 Kay Lousberg
 - « Traffic light » : https://poly.pizza/m/Q6k7Izx6YD (feux de signalisation de Mong Kok)
@@ -16,6 +17,10 @@ Kenney (https://kenney.nl)
 - « Pineapple » : https://poly.pizza/m/VFFBOLXqB2
 
 Licence : https://creativecommons.org/publicdomain/zero/1.0/
+
+Sous licence CC-BY 3.0 (https://creativecommons.org/licenses/by/3.0/) :
+- « Van » de jeremy : https://poly.pizza/m/9hUUD2DWk1v (minibus, tourné, aplati à la largeur d'une voie
+  et recoloré crème au toit rouge ou vert)
 
 Simplifiés et convertis dans Blender (tools/export-plants.py, ONIMA_LEVEL=hongkong) : textures et matériaux
 remplacés par une couleur par triangle, recolorée dans le jeu (js/plants.js).

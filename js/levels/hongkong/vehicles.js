@@ -1,72 +1,96 @@
 import * as THREE from 'three';
 import { Builder, U, vcMat, pick } from '../../geo.js';
 import { TRAIN_HALF_W, TRAIN_TOP, RAMP_LEN } from '../../config.js';
+import { loadPlants, addPlant, plant } from '../../plants.js';
+
+await loadPlants('hongkong');
 
 // Obstacles de Hong Kong : minibus (« public light bus » crème au toit rouge ou vert) garés en file, toit
-// plat où l'on court ; taxis rouges qui foncent vers le joueur (un seul à la fois) ; rampes de planches
-// sur tréteaux de bambou ; barrières de chantier. Fenêtres et phares allumés : matière lumineuse.
+// où l'on court ; taxis rouges et argent qui foncent vers le joueur (un seul à la fois) ; rampes de planches
+// sur tréteaux de bambou ; barrières de chantier. Minibus et taxi sont des modèles de Poly Pizza
+// (models/hongkong/LICENSE.txt) recolorés ; phares, feux et intérieur éclairé : matière lumineuse.
 
 const W = TRAIN_HALF_W * 2;
 const BALL = new THREE.SphereGeometry(1, 12, 8);
-const SMOOTH = new THREE.MeshLambertMaterial({ vertexColors: true });
 const GLOW = new THREE.MeshBasicMaterial({ vertexColors: true });
 const BUS_LEN = 7.0, BUS_GAP = 1.2;
 const TAXI_LEN = 4.6, TAXI_TOP = 1.55;
 
-// ---------- Minibus (avant vers +z, toit plat à TRAIN_TOP) ----------
+// Modèle posé dans la boîte de l'obstacle : largeur `w` (carrosserie, rétroviseurs en plus), hauteur `h`,
+// longueur `len`, avant en z = 0, arrière vers -z. Renvoie la matrice appliquée.
+function place(b, key, { w, h, len, body }, paint) {
+  const m = plant(key);
+  let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9, bx0 = 1e9, bx1 = -1e9;
+  for (let i = 0; i < m.n * 3; i++) {
+    const x = m.pos[i * 3], z = m.pos[i * 3 + 2];
+    x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z);
+    if (m.role[(i / 3) | 0] === body) { bx0 = Math.min(bx0, x); bx1 = Math.max(bx1, x); }
+  }
+  const sx = w / (h * (bx1 - bx0)), sz = len / (h * (z1 - z0));
+  const M = addPlant(b, key, [-(bx0 + bx1) / 2 * h * sx, 0, -z1 * h * sz], h, paint, { s: [sx, sz] });
+  return M;
+}
+
+// Hauteur relative (0 = sol, 1 = toit) du centre du triangle i d'un modèle
+const triY = (m, i) => (m.pos[i * 9 + 1] + m.pos[i * 9 + 4] + m.pos[i * 9 + 7]) / 3;
+
+// Triangles des rôles `roles` du modèle, déplacés par M et légèrement décollés vers l'extérieur, en matière
+// lumineuse (phares, feux arrière) : couleur color[rôle]
+function glowRoles(g, key, M, color) {
+  const m = plant(key), pos = [], col = [];
+  const v = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()], n = new THREE.Vector3(), e = new THREE.Vector3();
+  const c = new THREE.Color();
+  for (let i = 0; i < m.n; i++) {
+    const want = color[m.role[i]];
+    if (!want) continue;
+    for (let k = 0; k < 3; k++) v[k].fromArray(m.pos, i * 9 + k * 3).applyMatrix4(M);
+    n.subVectors(v[1], v[0]).cross(e.subVectors(v[2], v[0])).normalize().multiplyScalar(0.012);
+    c.set(want);
+    for (let k = 0; k < 3; k++) { pos.push(v[k].x + n.x, v[k].y + n.y, v[k].z + n.z); col.push(c.r, c.g, c.b); }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(pos.map(() => 0), 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.parts.push(geo);
+}
+
+// ---------- Minibus (« public light bus » : modèle de jeremy, Poly Pizza, CC-BY ; avant vers +z) ----------
+// Rôles du modèle : 0 carrosserie, 1 pneus et intérieur, 2 pare-chocs, 3 vitres et montants, 4 phares,
+// 5 sièges, 6 feux arrière. Carrosserie crème, toit et bandeau au-dessus des vitres rouges ou verts.
 function minibusGeo(roof) {
-  const f = new Builder(), s = new Builder(), g = new Builder();
-  const zc = -BUS_LEN / 2, CREAM = '#f2ecd8';
-  f.add(U.box, CREAM, [0, 1.15, zc], [W, 1.5, BUS_LEN - 0.2]);
-  f.add(U.box, roof, [0, 2.25, zc], [W - 0.04, 0.7, BUS_LEN - 0.3]);
-  f.add(U.box, '#2a2a30', [0, 0.4, zc], [W, 0.2, BUS_LEN - 0.1]);
-  // vitres éclairées de l'intérieur, passagers en silhouette
-  for (const sx of [-1, 1]) {
-    g.add(U.box, '#f0f4e0', [sx * (W / 2 + 0.005), 1.55, zc - 0.3], [0.02, 0.62, BUS_LEN - 1.8]);
-    for (let k = 0; k < 5; k++) f.add(U.box, '#3a3a44', [sx * (W / 2 + 0.012), 1.45, zc + 2 - k * 1.1], [0.02, 0.36, 0.3]);
-    for (let k = 0; k < 6; k++) f.add(U.box, CREAM, [sx * (W / 2 + 0.014), 1.55, zc + 2.65 - k * 1.08], [0.02, 0.66, 0.06]);
-    for (const z of [zc + BUS_LEN / 2 - 1.3, zc - BUS_LEN / 2 + 1.3]) {
-      s.add(U.cyl, '#1a1a1c', [sx * (W / 2 - 0.12), 0.42, z], [0.42, 0.3, 0.42], [0, 0, Math.PI / 2]);
-      s.add(U.cyl, '#b8bcc0', [sx * (W / 2 + 0.02), 0.42, z], [0.2, 0.04, 0.2], [0, 0, Math.PI / 2]);
-    }
-  }
-  // avant : pare-brise, panneau de destination orange, phares ; arrière : feux rouges
-  g.add(U.box, '#c8d8e8', [0, 1.6, -0.05], [W - 0.2, 0.7, 0.02]);
-  f.add(U.box, '#1a1a1c', [0, 2.15, -0.06], [1.4, 0.26, 0.04]);
-  g.add(U.box, '#ff9a2a', [0, 2.15, -0.03], [1.3, 0.18, 0.02]);
-  for (const sx of [-1, 1]) {
-    g.add(U.box, '#fff8e0', [sx * 0.8, 0.75, -0.04], [0.3, 0.16, 0.02]);
-    g.add(U.box, '#ff2a2a', [sx * 0.85, 0.85, -BUS_LEN + 0.06], [0.2, 0.3, 0.02]);
-  }
-  f.add(U.box, '#b8bcc0', [0, 0.45, -0.02], [W, 0.18, 0.08]);
-  return { flat: f.build(), smooth: s.build(), glow: g.build() };
+  const f = new Builder(), g = new Builder();
+  const m = plant('h_minibus');
+  const M = place(f, 'h_minibus', { w: W - 0.1, h: TRAIN_TOP, len: BUS_LEN, body: 0 }, (role, part, i) => {
+    if (role === 0) return triY(m, i) > 0.86 ? roof : '#f2ecd8';
+    if (role === 3) return '#3a4048';
+    if (role === 5) return '#5a3a2e';
+    if (role === 2) return '#9aa0a8';
+    return null;
+  });
+  glowRoles(g, 'h_minibus', M, { 4: '#fff6d8', 6: '#ff2a2a' });
+  // intérieur éclairé, vu par les vitres (sièges en silhouette devant) : cloison centrale et fond
+  g.add(U.box, '#d8cfa8', [0, 1.75, -BUS_LEN / 2 - 0.2], [0.02, 0.9, BUS_LEN - 1.8]);
+  g.add(U.box, '#b8ae88', [0, 1.75, -BUS_LEN + 0.35], [W - 0.4, 0.9, 0.02]);
+  return { flat: f.build(), glow: g.build() };
 }
 
-// ---------- Taxi rouge (4,6 m, avant vers +z) ----------
+// ---------- Taxi rouge (modèle de Quaternius, Poly Pizza, CC0 ; avant vers +z) ----------
+// Rôles : 0 noir (pneus, joints), 1 gris (jantes, pare-chocs), 2 carrosserie, 3 vitres, 4 phares, 5 feux.
+// Carrosserie rouge et toit argenté comme les taxis de Kowloon, enseigne « TAXI » lumineuse.
 function taxiGeo() {
-  const f = new Builder(), s = new Builder(), g = new Builder();
-  const zc = -TAXI_LEN / 2, R = '#d8202a', SILVER = '#d8dcdf';
-  f.add(U.box, R, [0, 0.68, zc], [1.82, 0.62, TAXI_LEN - 0.2]);
-  f.add(U.box, SILVER, [0, 1.22, zc - 0.25], [1.64, 0.55, 2.3]);
-  f.add(U.box, SILVER, [0, TAXI_TOP - 0.03, zc - 0.25], [1.58, 0.06, 2.2]);
-  f.add(U.box, '#26303a', [0, 1.2, zc + 0.92], [1.5, 0.46, 0.06], [-0.45, 0, 0]);
-  for (const sx of [-1, 1]) {
-    for (const dz of [-0.75, 0.3]) f.add(U.box, '#26303a', [sx * 0.825, 1.22, zc + dz], [0.02, 0.4, 0.9]);
-    for (const z of [zc + 1.35, zc - 1.35]) {
-      s.add(U.cyl, '#1a1a1c', [sx * 0.86, 0.36, z], [0.36, 0.26, 0.36], [0, 0, Math.PI / 2]);
-      s.add(U.cyl, SILVER, [sx * 0.99, 0.36, z], [0.16, 0.02, 0.16], [0, 0, Math.PI / 2]);
-    }
-    g.add(U.box, '#fff6d0', [sx * 0.66, 0.72, 0.03], [0.34, 0.16, 0.04]);
-    g.add(U.box, '#ff2a2a', [sx * 0.75, 0.75, -TAXI_LEN + 0.08], [0.24, 0.14, 0.04]);
-  }
-  f.add(U.box, SILVER, [0, 0.42, 0.04], [1.9, 0.18, 0.14]);
-  // enseigne « TAXI » lumineuse sur le toit
-  g.add(U.box, '#fff4b0', [0, TAXI_TOP + 0.12, zc - 0.1], [0.8, 0.2, 0.3]);
-  f.add(U.box, '#1a1a1c', [0, TAXI_TOP + 0.12, zc + 0.06], [0.5, 0.08, 0.01]);
-  return { flat: f.build(), smooth: s.build(), glow: g.build() };
+  const f = new Builder(), g = new Builder();
+  const m = plant('h_taxi');
+  const M = place(f, 'h_taxi', { w: 1.85, h: 1.5, len: TAXI_LEN, body: 2 }, (role, part, i) => {
+    if (role === 2) return triY(m, i) > 0.68 ? '#d8dcdf' : '#d8202a';
+    if (role === 3) return '#26303a';
+    return null;
+  });
+  glowRoles(g, 'h_taxi', M, { 4: '#fff6d0', 5: '#ff2a2a' });
+  return { flat: f.build(), glow: g.build() };
 }
 
-const meshes = (m) => [new THREE.Mesh(m.flat, vcMat), new THREE.Mesh(m.smooth, SMOOTH), new THREE.Mesh(m.glow, GLOW)];
+const meshes = (m) => [new THREE.Mesh(m.flat, vcMat), new THREE.Mesh(m.glow, GLOW)];
 
 export function hongKongVehicleKit() {
   const buses = ['#d8202a', '#2a8a4a'].map(minibusGeo);

@@ -160,7 +160,8 @@ Végétation, étals et potagers du Japon (feuillus, cèdres, rochers, stands, c
 Platanes, cagettes, tonneaux, pains et barques de Paris : même provenance (`models/paris/`, détail dans `models/paris/LICENSE.txt`).
 Arbres, bouches d'incendie, bancs, poubelles, bennes et cagettes de New York : modèles de Quaternius, même provenance
 (`models/newyork/`, détail dans `models/newyork/LICENSE.txt`).
-Banians, cagettes, ananas, tabourets, bancs, climatiseurs et feux de Hong Kong : modèles de Quaternius, Kenney et Kay Lousberg, même provenance ;
+Banians, cagettes, ananas, tabourets, bancs, climatiseurs, feux et taxis de Hong Kong : modèles de Quaternius, Kenney et Kay Lousberg, même provenance ;
+minibus : « Van » de jeremy sur Poly Pizza, licence [CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/) ;
 chaussée et trottoirs : photos de [Poly Haven](https://polyhaven.com), licence CC0 (`models/hongkong/`, détail dans `models/hongkong/LICENSE.txt`).
 Palmiers dattiers d'Égypte : trois « Palm Tree » de Quaternius, même provenance, simplifiés et recolorés
 (`models/egypte/`, détail dans `models/egypte/LICENSE.txt`).
