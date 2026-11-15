@@ -5,6 +5,7 @@ import { LANES } from '../../config.js';
 import { FLOORS } from './themes.js';
 import { FLOOR_H, SLAB, CEIL, MOD, LANE_HX, WALK_X, ROOF_Y, TOP } from './dims.js';
 import { shopGeos, plaqueGeo, atlasTexture, SHOP_W, FRONT_X } from './shops.js';
+import { facadeTexture, mergeClad } from './facades.js';
 
 // Les étages du centre commercial : dalles (sol carrelé dessus, plafond et luminaires dessous), boutiques
 // des deux côtés de la galerie et, au dernier étage, la verrière. Tout est en maillages instanciés (un
@@ -22,26 +23,10 @@ const hash = (n) => { const x = Math.sin(n * 91.7 + 17.3) * 43758.5453; return x
 
 const GLOW = new THREE.MeshBasicMaterial({ vertexColors: true });
 
-// carrelage : damier de dalles de 1,3 m (deux tons de gris clair veinés), teinté par la couleur de l'étage
-function tileTexture() {
-  const c = document.createElement('canvas');
-  c.width = c.height = 256;
-  const g = c.getContext('2d');
-  for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
-    g.fillStyle = (i + j) % 2 ? '#e4e4e4' : '#ffffff';
-    g.fillRect(i * 128, j * 128, 128, 128);
-  }
-  g.strokeStyle = 'rgba(150,150,150,0.16)'; g.lineWidth = 2;   // veines du marbre
-  for (let k = 0; k < 9; k++) {
-    g.beginPath();
-    let x = (k * 53) % 256, y = (k * 97) % 256;
-    g.moveTo(x, y);
-    for (let s = 0; s < 6; s++) { x += 18 + ((k * 7 + s * 13) % 20); y += ((k + s) % 3 - 1) * 16; g.lineTo(x, y); }
-    g.stroke();
-  }
-  g.fillStyle = '#b4b4b4';   // joints
-  for (const p of [0, 127]) { g.fillRect(p, 0, 2, 256); g.fillRect(0, p, 256, 2); }
-  const t = new THREE.CanvasTexture(c);
+// sol : dalles de pierre polie (photo Poly Haven désaturée, models/mall/floor.jpg), teintées par la couleur
+// de l'étage
+function floorTexture() {
+  const t = new THREE.TextureLoader().load(new URL('../../../models/mall/floor.jpg', import.meta.url).href);
   t.colorSpace = THREE.SRGBColorSpace;
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.anisotropy = 8;
@@ -129,8 +114,9 @@ function blockGeos(f, order) {
     flat: mergeGeometries(shops.map((s, j) => at(s.flat, j)), false),
     glow: mergeGeometries(shops.map((s, j) => at(s.glow, j)), false),
     sign: mergeGeometries([...shops.flatMap((s, j) => s.sign.map((t) => at(t.geo, j))), at(plaque, 0), at(plaque, 3)], false),
+    clad: mergeClad(shops.map((s, j) => s.clad && at(s.clad, j))),
   };
-  for (const s of shops) { s.flat.dispose(); s.glow.dispose(); s.sign.forEach((t) => t.geo.dispose()); }
+  for (const s of shops) { s.flat.dispose(); s.glow.dispose(); s.sign.forEach((t) => t.geo.dispose()); if (s.clad) s.clad.dispose(); }
   return out;
 }
 
@@ -144,8 +130,10 @@ function inst(group, geo, mat, n) {
 
 export class MallShell {
   constructor(root) {
-    this.tileMat = new THREE.MeshLambertMaterial({ map: tileTexture(), vertexColors: true });
-    this.signMat = new THREE.MeshBasicMaterial({ map: atlasTexture(), vertexColors: true });
+    this.tileMat = new THREE.MeshLambertMaterial({ map: floorTexture(), vertexColors: true });
+    // lettres seules des enseignes : fond transparent, découpé (pas de tri des transparences)
+    this.signMat = new THREE.MeshBasicMaterial({ map: atlasTexture(), vertexColors: true, alphaTest: 0.4 });
+    this.cladMat = new THREE.MeshLambertMaterial({ map: facadeTexture(), vertexColors: true });
     this.floors = FLOORS.map((F, f) => {
       const slab = new THREE.Group(), shops = new THREE.Group();
       slab.position.y = shops.position.y = f * FLOOR_H;
@@ -164,7 +152,7 @@ export class MallShell {
       }
       for (const order of ORDERS) {
         const g = blockGeos(f, order);
-        L.blocks.push([g.flat, g.glow, g.sign].map((geo, i) => inst(shops, geo, [vcMat, GLOW, this.signMat][i], (N_BLOCK + 2) * 2)));
+        L.blocks.push([g.flat, g.glow, g.sign, g.clad].map((geo, i) => inst(shops, geo, [vcMat, GLOW, this.signMat, this.cladMat][i], (N_BLOCK + 2) * 2)));
       }
       if (f === TOP) {
         const r = roofGeos();

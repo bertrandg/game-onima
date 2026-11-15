@@ -16,7 +16,7 @@ const BUDGET = {
   'egypte (tombeau)': { calls: 215, triangles: 900000 },   // maximum relevé pendant la chute (deux étages affichés)
   hongkong: { calls: 240, triangles: 740000 },
   'hongkong (passerelles)': { calls: 235, triangles: 570000 },
-  mall: { calls: 270, triangles: 810000 },   // relevé en novembre 2026 en montant les six étages (deux ou trois étages affichés près des escalators)
+  mall: { calls: 270, triangles: 1000000 },   // relevé en novembre 2026 en montant les six étages (deux ou trois étages affichés près des escalators) ; façades détaillées : jusqu'à 915 000
 };
 // autre étage : voie où poser l'ouverture (New York : bouches sur les côtés seulement), ou passerelle au-dessus
 const BELOW = { newyork: { name: 'newyork (égouts)', lane: 0 }, egypte: { name: 'egypte (tombeau)', lane: 1 }, hongkong: { name: 'hongkong (passerelles)', above: true } };

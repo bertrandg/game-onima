@@ -1,0 +1,21 @@
+Textures et modèles du centre commercial
+
+Textures (facades.jpg, floor.jpg) : photos de Poly Haven (https://polyhaven.com), licence CC0 1.0,
+réduites, éclaircies et désaturées, regroupées en une planche de 2 × 2 matières pour les façades :
+- « Marble 01 » de Rob Tuytel : https://polyhaven.com/a/marble_01 (parement de pierre, et sol)
+- « Oak Wood Planks » de Dimitrios Savva : https://polyhaven.com/a/oak_wood_planks (parement de chêne)
+- « Stair Planks » de Rob Tuytel : https://polyhaven.com/a/stair_planks (lattes de bois sombre)
+- « Whitewashed Brick » de Charlotte Baglioni : https://polyhaven.com/a/whitewashed_brick (brique blanchie)
+
+Modèles (plants.bin, plants.json) trouvés sur Poly Pizza, licence CC0 1.0 :
+- « Houseplant » de Quaternius : https://poly.pizza/m/bfLOqIV5uP (monstera)
+- « Houseplant » de Quaternius : https://poly.pizza/m/IBLX2Jz90O (fougère en pot)
+- « Houseplant » de Quaternius : https://poly.pizza/m/dveIJ0xNpX (oiseau de paradis)
+- « Plant Big » de Quaternius : https://poly.pizza/m/MbhbP7JrTI (touffe des jardinières)
+- « Mannequin » de reyshapes : https://poly.pizza/m/tYwjQJvcFX (mannequin de couturière)
+- « Bench » de Quaternius : https://poly.pizza/m/jLxjFxFRpw (bancs de la galerie)
+
+Licence : https://creativecommons.org/publicdomain/zero/1.0/
+
+Modèles convertis dans Blender (tools/export-plants.py, ONIMA_LEVEL=mall) : textures et matériaux
+remplacés par une couleur par triangle, recolorée dans le jeu (js/plants.js).

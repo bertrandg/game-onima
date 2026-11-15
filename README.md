@@ -70,8 +70,11 @@ Au centre commercial, six étages sont superposés, chacun avec ses boutiques et
 « ▲ Étage n » pour monter, flèche orange « ▼ » pour descendre ; on ne change pas de voie pendant la montée). L'aborder par
 le côté, c'est heurter sa balustrade. À l'étage où il arrive, sa voie est fermée par un totem publicitaire ou une cloison.
 Plus on monte, plus il y a de friandises : le dernier étage, celui des gourmandises sous la verrière, en regorge. L'étage
-en cours s'affiche sous le score. Les dalles et les boutiques sont dessinées par instances (rangées de six boutiques
-préparées au chargement) ; seuls l'étage du joueur et, près d'un escalator, ses voisins sont affichés.
+en cours s'affiche sous le score. Chaque boutique a son style de façade (pierre et liseré doré, chêne, lattes de bois
+sombre et laiton, brique blanchie et verrière d'atelier, store rayé, néons, cubes de couleur), son enseigne en lettres
+lumineuses ou en caisson et une enseigne-drapeau ronde à son pictogramme, lisible depuis la galerie. Les dalles et les
+boutiques sont dessinées par instances (rangées de six boutiques préparées au chargement) ; seuls l'étage du joueur et,
+près d'un escalator, ses voisins sont affichés.
 
 Quand on perd, pas de sang : une petite animation selon ce qui a fait perdre (rebond en arrière et étoiles après un choc
 de face, chute à plat ventre sur un obstacle bas, tournoiement après un coup sur la tête, enlisement dans la boue des égouts,
@@ -156,6 +159,9 @@ Arbres, bouches d'incendie, bancs, poubelles, bennes et cagettes de New York : m
 (`models/newyork/`, détail dans `models/newyork/LICENSE.txt`).
 Banians, cagettes, ananas, tabourets et bancs de Hong Kong : modèles de Quaternius et Kenney, même provenance
 (`models/hongkong/`, détail dans `models/hongkong/LICENSE.txt`).
+Plantes d'intérieur, mannequins de couturière et bancs du centre commercial : modèles de Quaternius et reyshapes, même
+provenance ; parements des façades (marbre, chêne, lattes, brique blanchie) et sol : photos de
+[Poly Haven](https://polyhaven.com), licence CC0 (`models/mall/`, détail dans `models/mall/LICENSE.txt`).
 Chevaux au galop des fiacres de Paris et des chars d'Égypte : « Horse » de Quaternius (CC0), avec son squelette et son
 animation, harnais ajouté dans Blender (`models/horse/`, détail dans `models/horse/LICENSE.txt` ; couleurs dans `js/horses.js`). Simplifiés et
 convertis dans Blender par `tools/export-plants.py`, puis recolorés dans le jeu (`js/plants.js`) : ils se fusionnent dans

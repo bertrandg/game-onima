@@ -1,12 +1,14 @@
 import * as THREE from 'three';
 import { Builder, TexBuilder, U } from '../../geo.js';
 import { FLOORS, floorLabel } from './themes.js';
+import { CladBuilder, buildFacade, letterColors } from './facades.js';
+import { potPlant, dressForm, bench } from './models.js';
 
 // Boutiques du centre commercial. Chaque boutique est un module de SHOP_W mètres le long de la galerie,
 // construit une fois au chargement (pour le côté gauche, vitrine tournée vers +x) puis répété par
-// instances : la façade (pilastre, bandeau, enseigne, vitrines), l'intérieur (sol, murs, plafond, spots)
-// et l'étalage propre au type de boutique. Trois géométries par boutique : facettes (couleurs), parties
-// lumineuses (écrans, spots, néons) et enseigne (atlas de textes).
+// instances : la façade (voir facades.js), l'intérieur (sol, murs, plafond, spots) et l'étalage propre au
+// type de boutique. Quatre géométries par boutique : facettes (couleurs), parties lumineuses (écrans,
+// spots, néons), parements texturés et enseignes (atlas de textes).
 
 export const SHOP_W = 7.8;          // largeur d'une boutique le long de la galerie
 export const FRONT_X = 5.6;         // la vitrine, de part et d'autre de la galerie
@@ -16,19 +18,26 @@ const IN_H = 4.6;                   // plafond des boutiques (le bandeau de l'en
 const HW = SHOP_W / 2 - 0.2;        // demi-largeur intérieure
 
 // ---------- Atlas des textes ----------
-// enseignes des 36 boutiques, panneaux des escalators, publicités des totems, plaques d'étage
-const COLS = 3, ROWS = 24, AW = 1024, AH = 1536, SW = AW / COLS, SH = AH / ROWS;
+// enseignes des 36 boutiques (caisson et lettres seules), panneaux des escalators, publicités des totems,
+// plaques d'étage ; en bas, les pastilles des enseignes-drapeaux (9 × 4 cases carrées)
+const COLS = 3, ROWS = 32, SH = 64, AW = 1024, AH = ROWS * SH + 512, SW = AW / COLS;
+const BLADE = 112, BLADE_Y = ROWS * SH;
 export const SLOT = {
   shop: (f, i) => f * 6 + i,
   up: (to) => 36 + (to - 1),         // « ▲ Étage n », to = 1..5
   down: (to) => 41 + to,             // « ▼ Étage n », to = 0..4
   ad: (i) => 46 + i,                 // 6 publicités
   plaque: (f) => 52 + f,
+  letters: (f, i) => 58 + f * 6 + i, // lettres seules (fond transparent), posées sur le parement
 };
 export function slotUV(i) {
   const c = i % COLS, r = Math.floor(i / COLS);
   const pad = 2;
   return [(c * SW + pad) / AW, 1 - ((r + 1) * SH - pad) / AH, ((c + 1) * SW - pad) / AW, 1 - (r * SH + pad) / AH];
+}
+export function bladeUV(f, i) {
+  const n = f * 6 + i, x = (n % 9) * BLADE, y = BLADE_Y + Math.floor(n / 9) * BLADE;
+  return [(x + 2) / AW, 1 - (y + BLADE - 2) / AH, (x + BLADE - 2) / AW, 1 - (y + 2) / AH];
 }
 const ADS = [
   { t: 'SOLDES -50%', bg: '#e8202a', fg: '#ffffff' },
@@ -48,18 +57,31 @@ function roundRect(g, x, y, w, h, r) {
   g.closePath();
 }
 
-function drawSlot(g, i, text, bg, fg, { border = null, size = 34 } = {}) {
+function drawSlot(g, i, text, bg, fg, { border = null, size = 34, edge = null } = {}) {
   const c = i % COLS, r = Math.floor(i / COLS), x = c * SW, y = r * SH;
-  g.fillStyle = bg;
-  g.fillRect(x, y, SW, SH);
+  if (bg) { g.fillStyle = bg; g.fillRect(x, y, SW, SH); }
   if (border) { g.strokeStyle = border; g.lineWidth = 4; roundRect(g, x + 5, y + 5, SW - 10, SH - 10, 10); g.stroke(); }
-  g.fillStyle = fg;
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   let s = size;
   g.font = `800 ${s}px "Nunito", "Trebuchet MS", system-ui, sans-serif`;
   while (s > 16 && g.measureText(text).width > SW - 26) { s -= 2; g.font = `800 ${s}px "Nunito", "Trebuchet MS", system-ui, sans-serif`; }
+  if (edge) { g.strokeStyle = edge; g.lineWidth = 5; g.lineJoin = 'round'; g.strokeText(text, x + SW / 2, y + SH / 2 + 2); }
+  g.fillStyle = fg;
   g.fillText(text, x + SW / 2, y + SH / 2 + 2);
+}
+
+// pastille d'une enseigne-drapeau : pictogramme de la boutique sur un disque à sa couleur
+function drawBlade(g, f, i, s) {
+  const n = f * 6 + i, x = (n % 9) * BLADE, y = BLADE_Y + Math.floor(n / 9) * BLADE, c = BLADE / 2;
+  g.fillStyle = s.bg;
+  g.beginPath(); g.arc(x + c, y + c, c - 1, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = s.fg; g.lineWidth = 5;
+  g.beginPath(); g.arc(x + c, y + c, c - 7, 0, Math.PI * 2); g.stroke();
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = `62px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+  g.fillStyle = s.fg;
+  g.fillText(s.icon, x + c, y + c + 4);
 }
 
 export function atlasTexture() {
@@ -71,6 +93,11 @@ export function atlasTexture() {
   for (let t = 0; t <= 4; t++) drawSlot(g, SLOT.down(t), `▼ ${floorLabel(t)} · ${FLOORS[t].name}`, '#c8501a', '#ffffff', { border: '#ffd0a0', size: 30 });
   ADS.forEach((a, i) => drawSlot(g, SLOT.ad(i), a.t, a.bg, a.fg, { border: '#ffffff' }));
   FLOORS.forEach((F, f) => drawSlot(g, SLOT.plaque(f), `${F.icon} ${floorLabel(f)}`, '#ffffff', F.accent, { border: F.accent, size: 36 }));
+  FLOORS.forEach((F, f) => F.shops.forEach((s, i) => {
+    const { fill, edge } = letterColors(s);
+    drawSlot(g, SLOT.letters(f, i), s.name, null, fill, { edge, size: 40 });
+    drawBlade(g, f, i, s);
+  }));
   g.fillStyle = '#ffffff'; g.fillRect(0, AH - 8, 8, 8);   // coin blanc : affiches teintées par la couleur des sommets
   const t = new THREE.CanvasTexture(cv);
   t.colorSpace = THREE.SRGBColorSpace;
@@ -134,8 +161,9 @@ function screen(F, G, x, y, z, w, h, c) {   // écran plat tourné vers la galer
 // ---------- Étalages par type de boutique ----------
 const DISPLAYS = {
   dress(F, G, s, n) {
-    mannequin(F, -6.4, -2.4, pc(n), '#f4e4d8', true);
-    mannequin(F, -6.4, 2.4, pc(n + 3), '#f4e4d8', true);
+    dressForm(F, [-6.5, 0, -2.4], pc(n));
+    dressForm(F, [-6.5, 0, 2.4], pc(n + 3));
+    for (const z of [-2.4, 2.4]) F.add(U.cone8, pc(n + (z > 0 ? 3 : 0)), [-6.5, 0.98, z], [0.36, 0.62, 0.36]);   // jupe
     rack(F, -10.3, -3.2, 3.2, [pc(n), pc(n + 1), '#ffffff', pc(n + 4)], n);
     table(F, -8.2, 0, 1.6, 1.0);
     stacks(F, -8.2, 0, 3, [pc(n + 2), '#ffffff', pc(n + 5)]);
@@ -190,11 +218,12 @@ const DISPLAYS = {
     for (let r = 0; r < 3; r++) for (let i = 0; i < 8; i++) F.add(U.cyl, pc(n + i + r * 2), [-10.4, 0.56 + r * 0.87, -3 + i * 0.85], [0.22, 0.12, 0.22]);
   },
   plush(F, G, s, n) {
-    const bear = (x, y, z, k, c) => {
-      ball(F, x, y + 0.45 * k, z, 0.45 * k, c);
-      ball(F, x, y + 1.05 * k, z, 0.32 * k, c);
-      for (const d of [-1, 1]) { ball(F, x, y + 1.33 * k, z + d * 0.22 * k, 0.11 * k, c); ball(F, x + 0.2 * k, y + 0.6 * k, z + d * 0.38 * k, 0.15 * k, c); }
-      ball(F, x + 0.27 * k, y + 1.0 * k, z, 0.12 * k, '#f4e4d0');
+    const bear = (x, y, z, k, c) => {   // petits oursons des étagères : sphères moins fines
+      const b = (bx, by, bz, r, col) => F.add(k < 0.5 ? U.sph0 : U.sph, col, [bx, by, bz], [r, r, r]);
+      b(x, y + 0.45 * k, z, 0.45 * k, c);
+      b(x, y + 1.05 * k, z, 0.32 * k, c);
+      for (const d of [-1, 1]) { b(x, y + 1.33 * k, z + d * 0.22 * k, 0.11 * k, c); b(x + 0.2 * k, y + 0.6 * k, z + d * 0.38 * k, 0.15 * k, c); }
+      b(x + 0.27 * k, y + 1.0 * k, z, 0.12 * k, '#f4e4d0');
       for (const d of [-1, 1]) F.add(U.sph0, '#1a1010', [x + 0.27 * k, y + 1.12 * k, z + d * 0.12 * k], [0.04 * k, 0.04 * k, 0.04 * k]);
     };
     bear(-6.6, 0, -2.4, 1.0, '#c88a5a');
@@ -449,15 +478,16 @@ const DISPLAYS = {
     G.add(U.box, '#ff3a6a', [-10.85, 4.1, 0], [0.02, 0.08, 6.5]);
   },
   plants(F, G, s, n) {
-    for (let i = 0; i < 9; i++) {
-      const x = -6.6 - (i % 3) * 1.8, z = -2.8 + Math.floor(i / 3) * 2.8, k = 0.6 + hash(n + i) * 0.6;
-      F.add(U.cyl, ['#c86a3a', '#f4f0e8', '#3a3a40'][i % 3], [x, 0.25 * k, z], [0.3 * k, 0.5 * k, 0.3 * k]);
-      F.add(U.sph, ['#3a8a3a', '#5aa84a', '#2a6a3a'][i % 3], [x, 0.85 * k, z], [0.5 * k, 0.6 * k, 0.5 * k]);
+    const keys = ['m_monstera', 'm_fern', 'm_strelitzia'], pots = ['#c86a3a', '#f4f0e8', '#3a3a40'];
+    for (let i = 0; i < 6; i++) {
+      const x = -6.8 - (i % 2) * 2.6, z = -2.6 + Math.floor(i / 2) * 2.6, k = 0.8 + hash(n + i) * 0.5;
+      if (i % 2) F.add(U.box, '#e8dcc8', [x, 0.25, z], [0.9, 0.5, 0.9]);   // gradin
+      potPlant(F, keys[i % 3], [x, i % 2 ? 0.5 : 0, z], k, { pot: pots[(i + n) % 3], ry: i * 1.3, green: i });
     }
     for (let i = 0; i < 4; i++) {   // plantes suspendues
       const z = -2.6 + i * 1.75;
       F.add(U.box, '#e8e4dc', [-9, 4.1, z], [0.01, 1.0, 0.01]);
-      F.add(U.cyl, '#f4f0e8', [-9, 3.5, z], [0.2, 0.25, 0.2]);
+      F.add(U.cyl6, '#f4f0e8', [-9, 3.5, z], [0.2, 0.25, 0.2]);
       F.add(U.sph0, '#4a9a3a', [-9, 3.3, z], [0.35, 0.45, 0.35]);
     }
   },
@@ -523,11 +553,10 @@ const DISPLAYS = {
 // petit mobilier de la galerie devant certaines boutiques (x entre -5.4 et -4.2, hors des voies)
 const PROPS = [
   (F, G, f) => {   // banc et plante
-    F.add(U.box, '#b08a5a', [-4.9, 0.45, -1.2], [0.5, 0.08, 1.8]);
-    for (const z of [-1.9, -0.5]) F.add(U.box, '#4a4a52', [-4.9, 0.22, z], [0.45, 0.44, 0.08]);
-    F.add(U.box, '#e8e4dc', [-4.9, 0.35, 1.4], [0.8, 0.7, 0.8]);
-    F.add(U.sph, '#3a8a3a', [-4.9, 1.1, 1.4], [0.5, 0.55, 0.5]);
-    F.add(U.sph0, '#4aa84a', [-4.8, 1.55, 1.3], [0.3, 0.35, 0.3]);
+    bench(F, [-5.05, 0, -1.0], 1.8);
+    F.add(U.box, '#e8e4dc', [-4.95, 0.3, 1.5], [0.8, 0.6, 0.8]);
+    F.add(U.box, '#5a3e2a', [-4.95, 0.61, 1.5], [0.7, 0.02, 0.7]);
+    potPlant(F, 'm_tuft', [-4.95, 0.6, 1.5], 1.1, { green: f });
   },
   (F, G, f) => {   // poubelle de tri et plan du centre
     F.add(U.cyl, '#9aa0a8', [-5.0, 0.45, -1.5], [0.25, 0.9, 0.25]);
@@ -537,35 +566,21 @@ const PROPS = [
     G.add(U.box, FLOORS[f].accent, [-5.02, 1.65, 1.5], [0.01, 0.2, 0.75]);
   },
   () => {},
-  (F, G, f) => {   // grande plante en pot carré
+  (F, G, f) => {   // grande plante dans un bac carré
     F.add(U.box, '#f4f0e8', [-4.9, 0.4, 0], [0.9, 0.8, 0.9]);
-    F.add(U.box, '#3a3a40', [-4.9, 0.81, 0], [0.8, 0.02, 0.8]);
-    F.add(U.cyl6, '#6a4a2a', [-4.9, 1.4, 0], [0.06, 1.2, 0.06]);
-    F.add(U.sph, '#2a7a3a', [-4.9, 2.2, 0], [0.7, 0.6, 0.7]);
+    F.add(U.box, FLOORS[f].accent, [-4.9, 0.78, 0], [0.92, 0.05, 0.92]);
+    potPlant(F, 'm_strelitzia', [-4.9, 0.55, 0], 1.6, { pot: '#f4f0e8', green: f + 1 });
   },
 ];
 
-// Une boutique complète (côté gauche) : { flat, glow, sign } ; sign = [{ key, geo }] du TexBuilder
+// Une boutique complète (côté gauche) : { flat, glow, sign, clad } ; sign = [{ key, geo }] du TexBuilder
 export function shopGeos(f, i) {
-  const F = new Builder(), G = new Builder(), T = new TexBuilder();
+  const F = new Builder(), G = new Builder(), T = new TexBuilder(), C = new CladBuilder();
   const s = FLOORS[f].shops[i], n = f * 6 + i;
-  const PIL = '#ece6dc';
-  // pilastre entre deux boutiques (une seule par module, côté +z) avec la plaque de l'étage
-  F.add(U.box, PIL, [-5.55, CLEAR_H / 2, SHOP_W / 2], [0.36, CLEAR_H, 0.5]);
-  F.add(U.box, '#d8d0c4', [-5.5, 0.15, SHOP_W / 2], [0.46, 0.3, 0.6]);
-  // bandeau de l'enseigne et liseré lumineux
-  F.add(U.box, s.bg, [-5.72, (IN_H + CLEAR_H) / 2, 0], [0.2, CLEAR_H - IN_H, SHOP_W - 0.5]);
-  T.quad('sign', [-5.615, IN_H + 0.72, 0], [5.6, 0.95], slotUV(SLOT.shop(f, i)));
-  G.add(U.box, s.fg, [-5.6, IN_H + 0.06, 0], [0.04, 0.05, SHOP_W - 0.7]);
-  // vitrines : socles, montants et imposte (l'entrée au milieu)
-  for (const sz of [-1, 1]) {
-    F.add(U.box, s.bg, [-5.75, 0.25, sz * 2.55], [0.25, 0.5, 2.3]);
-    F.add(U.box, '#d8dce4', [-5.75, 2.3, sz * 1.45], [0.12, 4.6, 0.12]);
-    F.add(U.box, '#d8dce4', [-5.75, 2.3, sz * (HW - 0.02)], [0.12, 4.6, 0.12]);
-    G.add(U.box, '#e8f6ff', [-5.76, 2.5, sz * 2.55], [0.02, 0.04, 2.2]);   // reflet sur la vitre
-  }
-  F.add(U.box, '#d8dce4', [-5.75, 3.7, 0], [0.12, 0.1, SHOP_W - 0.5]);
-  F.add(U.box, s.fg, [-6.0, 0.015, 0], [0.8, 0.03, 2.2]);   // paillasson
+  // pilastre commun entre deux boutiques (côté +z) avec, un sur trois, la plaque de l'étage
+  F.add(U.box, '#ece6dc', [-5.5, CLEAR_H / 2, SHOP_W / 2], [0.44, CLEAR_H, 0.5]);
+  F.add(U.box, '#d8d0c4', [-5.45, 0.15, SHOP_W / 2], [0.52, 0.3, 0.6]);
+  buildFacade(C, F, G, T, s, { shop: slotUV(SLOT.shop(f, i)), letters: slotUV(SLOT.letters(f, i)), blade: bladeUV(f, i) });
   // intérieur : sol, murs, plafond et spots
   F.add(U.box, s.wall, [-8.4, 0.005, 0], [5.0, 0.01, SHOP_W - 0.4]);
   F.add(U.box, s.wall, [-BACK_X, IN_H / 2, 0], [0.12, IN_H, SHOP_W - 0.4]);
@@ -574,12 +589,12 @@ export function shopGeos(f, i) {
   for (const [x, z] of [[-7, -2.2], [-7, 2.2], [-9.6, -2.2], [-9.6, 2.2]]) G.add(U.cyl6, '#fffbe8', [x, IN_H - 0.01, z], [0.18, 0.02, 0.18]);
   (DISPLAYS[s.kind] || DISPLAYS.toys)(F, G, s, n);
   PROPS[n % PROPS.length](F, G, f);
-  return { flat: F.build(), glow: G.parts.length ? G.build() : null, sign: T.build() };
+  return { flat: F.build(), glow: G.parts.length ? G.build() : null, sign: T.build(), clad: C.build() };
 }
 
 // Plaque de l'étage sur un pilastre sur quatre (côté galerie)
 export function plaqueGeo(f) {
   const T = new TexBuilder();
-  T.quad('sign', [-5.36, 3.0, SHOP_W / 2], [1.4, 0.32], slotUV(SLOT.plaque(f)));
+  T.quad('sign', [-5.275, 3.0, SHOP_W / 2], [1.4, 0.32], slotUV(SLOT.plaque(f)));
   return T.build()[0].geo;
 }

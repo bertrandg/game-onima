@@ -1,0 +1,68 @@
+{
+ "m_monstera": {
+  "off": 0,
+  "tris": 449,
+  "parts": 12,
+  "roles": [
+   "Black",
+   "Brown.001",
+   "Plant_Green"
+  ],
+  "w": 1.322,
+  "d": 1.384
+ },
+ "m_fern": {
+  "off": 18860,
+  "tris": 492,
+  "parts": 58,
+  "roles": [
+   "Black.001",
+   "Brown.002",
+   "Plant_Green.001"
+  ],
+  "w": 1.208,
+  "d": 1.247
+ },
+ "m_strelitzia": {
+  "off": 39524,
+  "tris": 652,
+  "parts": 64,
+  "roles": [
+   "Grey.001",
+   "Brown.003",
+   "Plant_Green.002"
+  ],
+  "w": 1.085,
+  "d": 1.095
+ },
+ "m_tuft": {
+  "off": 66908,
+  "tris": 360,
+  "parts": 18,
+  "roles": [
+   "Leaves"
+  ],
+  "w": 0.769,
+  "d": 0.832
+ },
+ "m_dress": {
+  "off": 82028,
+  "tris": 462,
+  "parts": 13,
+  "roles": [
+   "Material.001"
+  ],
+  "w": 0.278,
+  "d": 0.201
+ },
+ "m_bench": {
+  "off": 101432,
+  "tris": 376,
+  "parts": 187,
+  "roles": [
+   "Wood.008"
+  ],
+  "w": 2.105,
+  "d": 0.768
+ }
+}

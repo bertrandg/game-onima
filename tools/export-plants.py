@@ -21,6 +21,8 @@ SPECS = {
                 'N_trashcan': 'n_trashcan', 'N_dumpster': 'n_dumpster'},
     'hongkong': {'H_tree': 'h_tree', 'H_crate': 'h_crate', 'H_bench': 'h_bench', 'H_stool': 'h_stool',
                  'H_pineapple': 'h_pineapple'},
+    'mall': {'M_monstera': 'm_monstera', 'M_fern': 'm_fern', 'M_strelitzia': 'm_strelitzia', 'M_tuft': 'm_tuft',
+             'M_dress': 'm_dress', 'M_bench': 'm_bench'},
 }
 SPEC = SPECS[LEVEL]
 
