@@ -46,7 +46,10 @@ function activate(c) {
   scene.fog.near = 80;
   scene.fog.far = 270;
   girl.setPalettes(c.def.palettes);
+  girl.setOutfit(c.def.outfit || 'dress');   // ex. combinaison et skis sur la piste
 }
+// voies du niveau actif (trois par défaut, six sur la piste de ski)
+const lanes = () => (ctx && ctx.def.lanes) || LANES;
 
 // un même niveau demandé deux fois pendant son chargement (flèches puis Jouer) n'est construit qu'une fois
 const pendingLoads = {};
@@ -63,7 +66,7 @@ async function buildLevel(id) {
   c.world = new World(root, def.world);
   c.candies = new Candies(root, def.items());
   // un niveau peut fournir son propre moteur d'obstacles (ex. New York et ses égouts)
-  const opts = { onHorn: () => sound.horn(), candies: c.candies, kit: def.obstacleKit(), world: c.world, sound, fog: scene.fog, fogColor: def.fog };
+  const opts = { onHorn: () => sound.horn(), candies: c.candies, kit: def.obstacleKit(), world: c.world, sound, fog: scene.fog, fogColor: def.fog, girl };
   c.obstacles = def.obstacles ? def.obstacles(root, opts) : new Obstacles(root, opts);
   contexts[meta.id] = c;
   const prev = ctx;
@@ -93,12 +96,13 @@ const camLook = new THREE.Vector3(0, 1.2, 0);
 
 function resetPlayer() {
   deathZoom = 0;
+  const lane = (ctx && ctx.def.startLane) ?? 1;
   Object.assign(player, {
-    lane: 1, x: 0, y: 0, z: 0, vy: 0, h: PLAYER_H, grounded: true, coyote: 0, under: false,
+    lane, x: lanes()[lane], y: 0, z: 0, vy: 0, h: PLAYER_H, grounded: true, coyote: 0, under: false,
     jumpBuf: 0, slideT: 0, slideQueued: false,
   });
   girl.reset();
-  girl.root.position.set(0, 0, 0);
+  girl.root.position.set(player.x, 0, 0);
 }
 
 function resetWorld() {
@@ -505,16 +509,19 @@ const active = () => state === 'running';
 // un niveau peut changer la voie visée (ex. au-dessus du canal des égouts, on saute de 2 voies)
 function moveLane(d) {
   const to = obstacles.laneTarget ? obstacles.laneTarget(player, d) : player.lane + d;
-  if (to < 0 || to > 2 || to === player.lane) return;
+  if (to < 0 || to >= lanes().length || to === player.lane) return;
   player.lane = to;
   sound.lane();
   laneFx(d);
 }
-new Input({
-  left() { moveLane(-1); },
-  right() { moveLane(1); },
-  up() { player.jumpBuf = 0.15; },
+// un niveau peut prendre les directions en l'air (ex. figures après un saut à ski)
+const air = (dir) => !!(obstacles.airInput && obstacles.airInput(player, dir));
+const input = new Input({
+  left() { if (!air('left')) moveLane(-1); },
+  right() { if (!air('right')) moveLane(1); },
+  up() { if (!air('up')) player.jumpBuf = 0.15; },
   down() {
+    if (air('down')) return;
     if (!player.grounded) { player.vy = Math.min(player.vy, FAST_DROP_V); player.slideQueued = true; }
     else if (player.slideT <= 0) { player.slideT = SLIDE_TIME; sound.slide(); }
   },
@@ -846,16 +853,21 @@ function deathKind(crash) {
 // ---------- Physique ----------
 function step(dt) {
   speed = speedAt(dist) * Math.min(1, 0.35 + runTime * 0.75);
+  if (obstacles.speedFactor) speed *= obstacles.speedFactor(player);   // ex. plus vite dans les passages raides
   player.z -= speed * dt;
   dist += speed * dt;
   obstacles.move(dt);
 
-  player.x += (LANES[player.lane] - player.x) * (1 - Math.exp(-dt * 16));
+  player.x += (lanes()[player.lane] - player.x) * (1 - Math.exp(-dt * (ctx.def.laneRate || 16)));
+  // niveau à direction maintenue (piste de ski) : tant que ← ou → reste enfoncé, on enchaîne les virages
+  // jusqu'au bord, une voie dès que la précédente est presque atteinte
+  if (ctx.def.holdLanes && input.held && Math.abs(lanes()[player.lane] - player.x) < 0.45) moveLane(input.held);
   player.jumpBuf -= dt;
   player.coyote -= dt;
   if (player.slideT > 0) player.slideT -= dt;
 
-  if (player.jumpBuf > 0 && (player.grounded || player.coyote > 0)) {
+  // un niveau peut n'autoriser le saut qu'à certains endroits (ex. sur une bosse ou un tremplin, à ski)
+  if (player.jumpBuf > 0 && (player.grounded || player.coyote > 0) && (!obstacles.canJump || obstacles.canJump(player))) {
     // saut spécial du niveau (ex. au pied d'une échelle des égouts : bond jusqu'à la surface)
     player.vy = (obstacles.jumpBoost && obstacles.jumpBoost(player)) || JUMP_V;
     player.grounded = false;
@@ -1019,7 +1031,7 @@ function frame(now) {
     girl.animate(mode, dt, { speed, slideFrac: 1 - Math.max(0, player.slideT) / SLIDE_TIME, vy: player.vy });
     girl.root.position.set(player.x, player.y, player.z);
     girl.root.visible = state !== 'menu';
-    girl.root.rotation.y = state === 'running' ? (LANES[player.lane] - player.x) * -0.12 : 0;
+    girl.root.rotation.y = state === 'running' ? (lanes()[player.lane] - player.x) * -0.12 : 0;
     world.setShadow(player.x, obstacles.groundAt(player.x, player.z, 0, player.under), player.y, player.z);
     updateCamera(dt);
     if (obstacles.frame) obstacles.frame(dt, player, camera, { running: state === 'running', speed });

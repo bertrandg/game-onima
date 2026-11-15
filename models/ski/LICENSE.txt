@@ -1,0 +1,24 @@
+Modèles du décor de la piste de ski (plants.bin, plants.json)
+
+Trouvés sur Poly Pizza, sous licence CC0 1.0 (domaine public) :
+
+Quaternius (https://quaternius.com)
+- « Pine » : https://poly.pizza/m/igSu0cPoBz (grands sapins, neige ajoutée sur le dessus des branches dans le jeu)
+- « Pine Trees » : https://poly.pizza/m/oYtDty0fR6 (bosquets de jeunes sapins)
+- « Pine Tree with Snow » : https://poly.pizza/m/17vQv2X5rh
+- « Birch Tree with Snow » : https://poly.pizza/m/R4NgnzZHcK
+- « Rock Large » : https://poly.pizza/m/54jZKTAt5p, « Rock Medium » : https://poly.pizza/m/JQxF95498B,
+  « Rock » : https://poly.pizza/m/R2UjZAX3By (rochers, recolorés gris et enneigés)
+
+Licence : https://creativecommons.org/publicdomain/zero/1.0/
+
+Sous licence CC-BY 3.0 (https://creativecommons.org/licenses/by/3.0/) :
+- « Ski lift pole » de Poly by Google : https://poly.pizza/m/1nMSE0mYj_C (pylônes de télésiège, matelas de
+  protection ajouté dans le jeu)
+- « Chairlift » de Poly by Google : https://poly.pizza/m/eZGTtPqn_Wd (sièges du télésiège)
+
+Simplifiés et convertis dans Blender (tools/export-plants.py, ONIMA_LEVEL=ski) : textures et matériaux
+remplacés par une couleur par triangle, recolorée dans le jeu (js/plants.js).
+
+Fond (montblanc.jpg) : illustration du Mont Blanc et de ses sommets souriants au coucher du soleil,
+fournie pour le jeu.

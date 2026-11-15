@@ -55,6 +55,15 @@ export const LEVELS = [
     unlock: { level: 'hongkong', score: 4000 },
     load: () => import('./mall/index.js'),
   },
+  {
+    id: 'ski',
+    name: 'Piste de ski',
+    subtitle: 'Face au Mont Blanc',
+    icon: '⛷️',
+    item: '☕',
+    unlock: { level: 'mall', score: 4500 },
+    load: () => import('./ski/index.js'),
+  },
 ];
 
 export const levelById = (id) => LEVELS.find((l) => l.id === id) || LEVELS[0];

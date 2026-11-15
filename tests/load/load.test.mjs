@@ -9,7 +9,7 @@ let B;
 before(async () => { B = await openBrowser(); });
 after(async () => { await B?.close(); });
 
-for (const id of ['japon', 'paris', 'newyork', 'egypte', 'hongkong', 'mall']) {
+for (const id of ['japon', 'paris', 'newyork', 'egypte', 'hongkong', 'mall', 'ski']) {
   test(`${id} : se charge et démarre sans erreur`, async () => {
     const { page, ctx, problems } = await startLevel(B.browser, B.server, id, { invincible: true });
     try {

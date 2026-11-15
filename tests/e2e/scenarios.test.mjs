@@ -281,6 +281,56 @@ test('Centre commercial : changer de voie contre la balustrade d\'un escalator e
   });
 });
 
+// piste de ski : route vidée, ni télésiège ni dameuse ni bosse posés d'ici la fin du scénario
+const SKI_CLEAR = 'for (const x of ob.list) ob.dropObj(x); ob.list = []; ob.busy = new Array(6).fill(o.player.z); ' +
+  'for (const f of o.candies.fugus) o.candies.scene.remove(f.mesh); o.candies.fugus = []; ' +
+  'ob.lift = null; ob.catRes = null; ob.lastFeature = z; ob.cursor = z - 400;';
+
+test('Piste de ski : pas de saut sur le plat ; au bord du tremplin, saut parfait jusqu\'à la barre de slide', async () => {
+  await scenario('ski', async (page) => {
+    await page.evaluate(() => window.__t.press('ArrowUp'));
+    await page.waitForTimeout(300);
+    assert.ok((await state(page)).y < 0.05, 'aucun saut sur la neige plate');
+    await put(page, SKI_CLEAR + `const k = ob.addKicker(o.player.lane, z, o.speed);
+      ob.addRail(o.player.lane, k.zFar - Math.max(5, o.speed * 0.25), Math.max(26, o.speed * 1.4));
+      window.__lip = k.zFar;`, 40);
+    const zLip = await page.evaluate(() => window.__lip);
+    await page.evaluate((zLip) => window.__t.when((o) => o.player.z < zLip + 0.5, 'ArrowUp'), zLip);
+    // (renvoyer des booléens : la barre elle-même, avec son maillage, ne se transmet pas au test)
+    await page.waitForFunction(() => !!window.__onima.obstacles.grind || window.__onima.state !== 'running', null, { timeout: 30000 });
+    assert.equal((await state(page)).state, 'running');
+    assert.ok(await page.evaluate(() => !!window.__onima.obstacles.grind), 'sur la barre de slide');
+    await passed(page, zLip, 70);
+    assert.equal((await state(page)).state, 'running', await page.evaluate(() => `défaite : ${window.__onima.deathKind}, ${JSON.stringify(window.__onima.obstacles.list.map((x) => [x.what || x.kind, x.lane, Math.round(x.zNear - window.__onima.player.z)]))}, voie ${window.__onima.player.lane}`));
+  });
+});
+
+test('Piste de ski : garder → enfoncé enchaîne les virages jusqu\'au bord, un appui bref ne change que d\'une voie', async () => {
+  await scenario('ski', async (page) => {
+    await put(page, SKI_CLEAR, 40);
+    const start = (await state(page)).lane;
+    await page.keyboard.down('ArrowRight');
+    await page.waitForFunction(() => window.__onima.player.lane === 5, null, { timeout: 15000 });
+    await page.keyboard.up('ArrowRight');
+    await page.waitForTimeout(600);
+    assert.equal((await state(page)).lane, 5, `de la voie ${start} jusqu'au bord, et pas plus loin`);
+    await page.keyboard.press('ArrowLeft');
+    await page.waitForTimeout(900);
+    assert.equal((await state(page)).lane, 4, 'appui bref : une seule voie');
+  });
+});
+
+test('Piste de ski : l\'arche se passe en position de recherche ; un skieur arrêté dans la voie fait tomber', async () => {
+  await scenario('ski', async (page) => {
+    const z = await put(page, SKI_CLEAR + 'ob.addArch(z);', 40);
+    await page.evaluate((z) => window.__t.when((o) => o.player.z < z + 6, 'ArrowDown'), z);
+    await passed(page, z, 4);
+    assert.equal((await state(page)).state, 'running');
+    await put(page, SKI_CLEAR + 'ob.addSkier(o.player.lane, z, "stand");', 40);
+    await deadAs(page, 'bonk');
+  });
+});
+
 test('déblocage : 2300 points à Paris débloquent New York pendant la partie et à la fin', async () => {
   const storage = { 'onima.scores.v1': JSON.stringify([{ id: 'a', name: 'Test', score: 1600, date: 1 }]) };
   await scenario('paris', async (page) => {

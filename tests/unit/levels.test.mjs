@@ -8,7 +8,7 @@ beforeEach(() => storage.clear());
 const L = (id) => levelById(id);
 
 test('registre des niveaux : identifiants uniques, chargement et présentation', () => {
-  assert.deepEqual(LEVELS.map((l) => l.id), ['japon', 'paris', 'newyork', 'egypte', 'hongkong', 'mall']);
+  assert.deepEqual(LEVELS.map((l) => l.id), ['japon', 'paris', 'newyork', 'egypte', 'hongkong', 'mall', 'ski']);
   for (const l of LEVELS) {
     assert.equal(typeof l.load, 'function', l.id);
     assert.ok(l.name && l.icon && l.item, l.id);
@@ -64,6 +64,14 @@ test('Centre commercial à 4000 points à Hong Kong', () => {
   assert.equal(isUnlocked(L('mall'), Scores), false);
   Scores.addScore('hongkong', 'Ben', 4000);
   assert.equal(isUnlocked(L('mall'), Scores), true);
+});
+
+test('Piste de ski à 4500 points au centre commercial', () => {
+  Scores.addScore('hongkong', 'Aiko', 9999);
+  Scores.addScore('mall', 'Aiko', 4499);
+  assert.equal(isUnlocked(L('ski'), Scores), false);
+  Scores.addScore('mall', 'Ben', 4500);
+  assert.equal(isUnlocked(L('ski'), Scores), true);
 });
 
 test('le code secret débloque tout', () => {

@@ -1,0 +1,100 @@
+{
+ "s_pine": {
+  "off": 0,
+  "tris": 1646,
+  "parts": 166,
+  "roles": [
+   "Bark_NormalTree.001",
+   "Leaves_Pine.001"
+  ],
+  "w": 0.736,
+  "d": 0.713
+ },
+ "s_pines": {
+  "off": 69132,
+  "tris": 3666,
+  "parts": 60,
+  "roles": [
+   "Wood.011",
+   "Green.004"
+  ],
+  "w": 2.258,
+  "d": 2.189
+ },
+ "s_pinesnow": {
+  "off": 223104,
+  "tris": 1695,
+  "parts": 850,
+  "roles": [
+   "Wood.010",
+   "Snow",
+   "Green.003"
+  ],
+  "w": 0.375,
+  "d": 0.417
+ },
+ "s_birch": {
+  "off": 294296,
+  "tris": 1806,
+  "parts": 938,
+  "roles": [
+   "White",
+   "Black.005",
+   "Green.005",
+   "Snow.001",
+   "DarkGreen.001"
+  ],
+  "w": 0.235,
+  "d": 0.382
+ },
+ "s_rock1": {
+  "off": 370148,
+  "tris": 222,
+  "parts": 49,
+  "roles": [
+   "Atlas.006"
+  ],
+  "w": 2.333,
+  "d": 2.23
+ },
+ "s_rock2": {
+  "off": 379472,
+  "tris": 522,
+  "parts": 36,
+  "roles": [
+   "Rocks.001"
+  ],
+  "w": 1.477,
+  "d": 1.501
+ },
+ "s_rock3": {
+  "off": 401396,
+  "tris": 456,
+  "parts": 81,
+  "roles": [
+   "Atlas.007"
+  ],
+  "w": 0.622,
+  "d": 0.491
+ },
+ "s_pylon": {
+  "off": 420548,
+  "tris": 774,
+  "parts": 225,
+  "roles": [
+   "lambert3SG"
+  ],
+  "w": 0.41,
+  "d": 0.457
+ },
+ "s_chair": {
+  "off": 453056,
+  "tris": 1784,
+  "parts": 24,
+  "roles": [
+   "Mat.002"
+  ],
+  "w": 0.654,
+  "d": 0.291
+ }
+}

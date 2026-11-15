@@ -18,6 +18,7 @@ const BUDGET = {
   hongkong: { calls: 250, triangles: 740000 },
   'hongkong (passerelles)': { calls: 245, triangles: 570000 },
   mall: { calls: 270, triangles: 1000000 },   // relevé en novembre 2026 en montant les six étages (deux ou trois étages affichés près des escalators) ; façades détaillées : jusqu'à 915 000
+  ski: { calls: 240, triangles: 1050000 },   // relevé en novembre 2026 : 207 appels, 903 000 triangles (forêt de sapins enneigés, massif du Mont-Blanc)
 };
 // autre étage : voie où poser l'ouverture (New York : bouches sur les côtés seulement), ou passerelle au-dessus
 const BELOW = { newyork: { name: 'newyork (égouts)', lane: 0 }, egypte: { name: 'egypte (tombeau)', lane: 1 }, hongkong: { name: 'hongkong (passerelles)', above: true } };
@@ -49,7 +50,7 @@ const within = (name, got) => {
   assert.ok(got.triangles <= b.triangles, `${name} : ${got.triangles} triangles (budget ${b.triangles})`);
 };
 
-for (const id of ['japon', 'paris', 'newyork', 'egypte', 'hongkong', 'mall']) {
+for (const id of ['japon', 'paris', 'newyork', 'egypte', 'hongkong', 'mall', 'ski']) {
   test(`${id} : se joue sans erreur, dans le budget de dessin, sans fuite de mémoire graphique`, async () => {
     const { page, ctx, problems } = await startLevel(B.browser, B.server, id, { invincible: true });
     try {

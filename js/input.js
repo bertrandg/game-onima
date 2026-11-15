@@ -4,6 +4,9 @@ export class Input {
     this.h = handlers;
     this.isActive = isActive;
     this.start = null;
+    // direction maintenue (touche gauche/droite gardée enfoncée, ou doigt resté posé après un swipe latéral)
+    this.held = 0;
+    this.heldKey = null;
 
     window.addEventListener('keydown', (e) => {
       if (e.target instanceof HTMLInputElement) return;
@@ -17,8 +20,13 @@ export class Input {
       if (!action) return;
       if (action !== 'pause' && !this.isActive()) return;
       e.preventDefault();
+      if ((action === 'left' || action === 'right') && !e.repeat) { this.held = action === 'left' ? -1 : 1; this.heldKey = k.toLowerCase(); }
       if (!e.repeat) this.h[action]?.();
     });
+    window.addEventListener('keyup', (e) => {
+      if (this.heldKey && e.key.toLowerCase() === this.heldKey) { this.held = 0; this.heldKey = null; }
+    });
+    window.addEventListener('blur', () => { this.held = 0; this.heldKey = null; });
 
     const ignore = (e) => e.target.closest && e.target.closest('button, input, a, .screen');
     window.addEventListener('pointerdown', (e) => {
@@ -32,10 +40,10 @@ export class Input {
       const th = Math.max(24, Math.min(window.innerWidth, window.innerHeight) * 0.04);
       if (Math.max(Math.abs(dx), Math.abs(dy)) < th) return;
       s.fired = true;
-      if (Math.abs(dx) > Math.abs(dy)) this.h[dx > 0 ? 'right' : 'left']?.();
+      if (Math.abs(dx) > Math.abs(dy)) { this.held = dx > 0 ? 1 : -1; this.heldKey = null; this.h[dx > 0 ? 'right' : 'left']?.(); }
       else this.h[dy < 0 ? 'up' : 'down']?.();
     });
-    const end = () => { this.start = null; };
+    const end = () => { this.start = null; if (!this.heldKey) this.held = 0; };
     window.addEventListener('pointerup', end);
     window.addEventListener('pointercancel', end);
   }

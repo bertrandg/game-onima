@@ -45,6 +45,7 @@ Aucune installation nécessaire : Three.js est chargé depuis un CDN. Le jeu doi
 | 🐪 Égypte | Allée des sphinx et temples, bords du Nil, souk, pyramides de Gizeh ; blocs sur traîneaux, chars et tombeau | 3 000 points à New York |
 | 🌃 Hong Kong | La nuit : néons de Mong Kok, marché de Temple Street, port Victoria et sa skyline ; minibus, taxis rouges et passerelles d'échafaudage | 3 500 points en Égypte |
 | 🛍️ Centre commercial | Six étages de boutiques (mode, jouets, high-tech, sport, maison et livres, gourmandises sous la verrière) reliés par des escalators ; îlots-vitrines, petit train, caddies et soldes | 4 000 points à Hong Kong |
+| ⛷️ Piste de ski | Une piste rouge face au Mont Blanc, entre sapins enneigés et rochers ; six voies, bosses, tremplins, barres de slide, télésièges et dameuse | 4 500 points au centre commercial |
 
 À New York, une bouche d'égout ouverte ne fait pas perdre : on tombe dans les égouts et la course continue sur deux quais,
 de part et d'autre d'un canal de boue mortel. Pour changer de quai, il faut sauter (en l'air, un seul swipe fait passer de
@@ -79,6 +80,21 @@ lumineuses ou en caisson et une enseigne-drapeau ronde à son pictogramme, lisib
 boutiques sont dessinées par instances (rangées de six boutiques préparées au chargement) ; seuls l'étage du joueur et,
 près d'un escalator, ses voisins sont affichés.
 
+Sur la piste de ski, l'héroïne est à ski (combinaison, skis freeride larges, bâtons, masque). Elle glisse sur six
+voies sans marquage, entre les jalons (tête orange fluo à droite, comme sur les pistes françaises) ; changer de voie est
+un virage, avec gerbe de neige vers l'extérieur et traces laissées dans le velours de la dameuse. Garder ← ou →
+enfoncé (ou le doigt posé après le swipe) enchaîne les virages jusqu'au bord. On ne saute que sur une bosse ou un
+tremplin, d'autant plus haut qu'on saute tard (au sommet de la bosse, au bord du tremplin, et même un peu après) :
+un saut parfait au tremplin atteint la barre de slide en hauteur, couverte de friandises. En l'air, les directions
+font des figures qui s'enchaînent (← → vrille, ↑ salto arrière, ↓ salto avant) au lieu de changer de voie. Obstacles :
+skieurs et snowboardeurs arrêtés, pylônes de télésiège protégés par des matelas (sièges qui défilent au-dessus),
+panneaux « Ralentir », filets à franchir depuis les bosses, arches gonflables à passer en position de recherche (↓),
+dameuse qui remonte la piste ; malus : la dynamite de déclenchement d'avalanche. La pente et les virages sont un
+effet d'affichage (`js/levels/ski/bend.js`) : chaque matière du niveau déplace ses sommets selon leur distance au
+joueur (la piste plonge derrière une rupture de pente et tourne à gauche ou à droite), tandis que le jeu reste
+calculé sur une piste droite et plate. Au fond, une image fixe du Mont Blanc au coucher du soleil
+(`models/ski/montblanc.jpg`). L'altitude s'affiche sous le score.
+
 Quand on perd, pas de sang : une petite animation selon ce qui a fait perdre (rebond en arrière et étoiles après un choc
 de face, chute à plat ventre sur un obstacle bas, tournoiement après un coup sur la tête, enlisement dans la boue des égouts,
 évanouissement après un malus). Une fois l'héroïne allongée et apaisée, son âme s'envole au ciel dans un rai de lumière,
@@ -96,7 +112,10 @@ Un niveau n'est téléchargé qu'au moment où on le choisit.
      les éléments de décor peuvent avoir des panneaux texturés (`TexBuilder`, matériaux dans `decor.texMats`) ;
    - `obstacleKit()` : véhicules (`buildVehicle`, taille propre possible), rampe, obstacles bas et haut, attelage éventuel ;
    - `obstacles(root, opts)` (facultatif) : moteur d'obstacles propre au niveau (ex. les deux étages rue / égouts de New York, rue / passerelles de Hong Kong, les six étages du centre commercial) ;
-     il peut fournir `hudText` (une ligne sous le score) ;
+     il peut fournir `hudText` (une ligne sous le score), et des crochets facultatifs : `canJump(p)` (saut permis
+     seulement à certains endroits), `airInput(p, dir)` (directions prises en l'air), `speedFactor(p)` ;
+   - `lanes` (positions des voies, trois par défaut), `startLane`, `laneRate` (vivacité du changement de voie),
+     `holdLanes` (direction maintenue = virages enchaînés) et `outfit` (`'ski'` : tenue de ski de l'héroïne) ;
    - `world.decor` et `world.track` peuvent valoir `null` quand le moteur construit lui-même le décor (centre commercial) ;
    - `clearance` (facultatif) : hauteur libre au-dessus des voies que le décor doit respecter (4,5 m par défaut) ;
    - `items()` : objets à ramasser et malus.
@@ -123,6 +142,9 @@ npm run test:all    # les trois, à lancer avant d'envoyer une modification
   - `sewer.test.mjs` : chute, boue, rats, échelles (y compris le saut un peu trop tôt).
   - `tomb.test.mjs` : dalles effondrées, obstacles du tombeau, montée de l'escalier jusqu'à l'avenue.
   - `scaffold.test.mjs` : rampes et sauts vers les passerelles, obstacles d'en haut, planches manquantes.
+  - `ski.test.mjs` : six voies, pente et virages d'affichage, sauts seulement sur bosse ou tremplin (plus amples au
+    dernier moment), barre de slide atteinte par un saut parfait, filets franchissables, toujours un passage,
+    figures en l'air, bosses régulières.
   - `mall.test.mjs` : escalators réguliers à chaque étage, voies dégagées autour, montée et descente, balustrade,
     voie fermée à l'arrivée, plafond, et davantage de friandises en montant.
 - `tests/e2e/` : tests dans Chrome (Playwright), sur la page ouverte avec `#debug`.
@@ -168,6 +190,9 @@ Palmiers dattiers d'Égypte : trois « Palm Tree » de Quaternius, même provena
 Plantes d'intérieur, mannequins de couturière et bancs du centre commercial : modèles de Quaternius et reyshapes, même
 provenance ; parements des façades (marbre, chêne, lattes, brique blanchie) et sol : photos de
 [Poly Haven](https://polyhaven.com), licence CC0 (`models/mall/`, détail dans `models/mall/LICENSE.txt`).
+Piste de ski : sapins et rochers de Quaternius (CC0), pylône et siège de télésiège de Poly by Google
+(CC-BY 3.0), sur Poly Pizza, recolorés et enneigés (`models/ski/`, détail dans `models/ski/LICENSE.txt`) ; skieurs,
+tremplins, dameuse, arches et chalets modélisés dans le jeu ; fond : illustration du Mont Blanc fournie pour le jeu.
 Chevaux au galop des fiacres de Paris et des chars d'Égypte : « Horse » de Quaternius (CC0), avec son squelette et son
 animation, harnais ajouté dans Blender (`models/horse/`, détail dans `models/horse/LICENSE.txt` ; couleurs dans `js/horses.js`). Simplifiés et
 convertis dans Blender par `tools/export-plants.py`, puis recolorés dans le jeu (`js/plants.js`) : ils se fusionnent dans

@@ -25,6 +25,8 @@ SPECS = {
     'egypte': {'E_palm1': 'e_palm1', 'E_palm2': 'e_palm2', 'E_palm3': 'e_palm3', 'E_palmfar': 'e_palmfar'},
     'mall': {'M_monstera': 'm_monstera', 'M_fern': 'm_fern', 'M_strelitzia': 'm_strelitzia', 'M_tuft': 'm_tuft',
              'M_dress': 'm_dress', 'M_bench': 'm_bench'},
+    'ski': {'S_pine': 's_pine', 'S_pines': 's_pines', 'S_pinesnow': 's_pinesnow', 'S_birch': 's_birch',
+            'S_rock1': 's_rock1', 'S_rock2': 's_rock2', 'S_rock3': 's_rock3', 'S_pylon': 's_pylon', 'S_chair': 's_chair'},
 }
 SPEC = SPECS[LEVEL]
 

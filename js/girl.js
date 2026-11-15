@@ -3,6 +3,13 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Héroïne chibi aux oreilles de chat : cheveux vert très sombre, kimono vert, longue jupe bordeaux
 const COL = {
+  boot: '#f4f4f8',
+  bootDark: '#2a2a34',
+  buckle: '#b8bcc8',
+  skiBase: '#1a1a22',
+  binding: '#3a3a44',
+  goggle: '#ff8a2a',
+  pole: '#d8dce4',
   skin: '#ffe1cc',
   hair: '#1f3a39',
   hairDark: '#152928',
@@ -262,16 +269,48 @@ export class Girl {
     const B = this.body;
 
     // ---------- Jambes (surtout cachées par la longue jupe) ----------
+    // tenue de ski : cuisse, genou, tibia, chaussure et ski (la cheville garde le ski à plat)
+    this.knees = [];
+    this.ankles = [];
+    this.skis = [];
     this.legs = [-1, 1].map((sx) => {
       const leg = group(B, [sx * 0.09, 0.62, 0]);
-      add(leg, cyl(0.055, 0.05, 0.56), m(COL.skin), [0, -0.28, 0]);
-      add(leg, sph, m(COL.shoe), [0, -0.59, -0.03], [0.07, 0.055, 0.115]);
+      const dl = group(leg);
+      add(dl, cyl(0.055, 0.05, 0.56), m(COL.skin), [0, -0.28, 0]);
+      add(dl, sph, m(COL.shoe), [0, -0.59, -0.03], [0.07, 0.055, 0.115]);
+      const sl = group(leg);
+      add(sl, cyl(0.085, 0.075, 0.3, 12), pal.skirt, [0, -0.15, 0]);
+      const knee = group(sl, [0, -0.3, 0]);
+      add(knee, sph, pal.skirt, [0, 0, 0], [0.078, 0.078, 0.078]);
+      add(knee, cyl(0.075, 0.09, 0.2, 12), pal.skirt, [0, -0.1, 0]);
+      add(knee, cyl(0.095, 0.095, 0.035, 12), pal.sash, [0, -0.2, 0]);   // guêtre sur la chaussure
+      const ankle = group(knee, [0, -0.28, 0]);
+      // chaussure de ski : coque haute, crochets, semelle
+      add(ankle, new THREE.BoxGeometry(0.15, 0.2, 0.26), m(COL.boot), [0, 0.07, -0.02]);
+      add(ankle, new THREE.BoxGeometry(0.155, 0.06, 0.3), m(COL.bootDark), [0, -0.0, -0.03]);
+      for (const y of [0.04, 0.11]) add(ankle, new THREE.BoxGeometry(0.16, 0.018, 0.04), m(COL.buckle), [0, y, -0.1]);
+      // ski freeride large à double spatule (pointe vers -z), fixation
+      const ski = group(ankle, [0, -0.05, 0]);
+      add(ski, new THREE.BoxGeometry(0.17, 0.03, 1.5), pal.ribbon, [0, 0, -0.02]);
+      add(ski, new THREE.BoxGeometry(0.172, 0.012, 1.5), m(COL.skiBase), [0, -0.02, -0.02]);
+      add(ski, new THREE.BoxGeometry(0.06, 0.032, 1.3), m('#ffffff'), [sx * 0.035, 0.002, -0.05]);   // bande décorative
+      for (const e of [-1, 1]) {   // spatules relevées aux deux bouts
+        add(ski, new THREE.BoxGeometry(0.165, 0.03, 0.24), pal.ribbon, [0, 0.05, e * 0.84 - 0.02], [1, 1, 1], [-e * 0.45, 0, 0]);
+        add(ski, new THREE.BoxGeometry(0.15, 0.03, 0.08), m(COL.bootDark), [0, 0.1, e * 0.94 - 0.02], [1, 1, 1], [-e * 0.9, 0, 0]);
+      }
+      add(ski, new THREE.BoxGeometry(0.12, 0.05, 0.42), m(COL.binding), [0, 0.03, -0.02]);
+      add(ski, new THREE.BoxGeometry(0.08, 0.06, 0.08), m('#e83a3a'), [0, 0.05, 0.2]);
+      this.knees.push(knee);
+      this.ankles.push(ankle);
+      this.skis.push(ski);
+      leg.userData = { dress: dl, suit: sl };
       return leg;
     });
 
     // ---------- Longue jupe bordeaux ----------
-    add(B, cyl(0.2, 0.36, 0.74, 20), pal.skirt, [0, 0.5, 0]);
-    add(B, cyl(0.205, 0.215, 0.09, 20), pal.skirtDark, [0, 0.87, 0]);
+    const Bd = (this.dress = group(B));
+    add(Bd, cyl(0.2, 0.36, 0.74, 20), pal.skirt, [0, 0.5, 0]);
+    add(Bd, cyl(0.205, 0.215, 0.09, 20), pal.skirtDark, [0, 0.87, 0]);
     // plis de la jupe et ourlet
     // (fusionnés en une seule géométrie : 1 appel de dessin)
     const pleats = [];
@@ -284,39 +323,54 @@ export class Girl {
       _o.updateMatrix();
       pleats.push(new THREE.BoxGeometry(0.012, 0.72, 0.012).applyMatrix4(_o.matrix));
     }
-    add(B, mergeGeometries(pleats), pal.skirtDark);
-    add(B, cyl(0.362, 0.366, 0.05, 20), pal.skirtDark, [0, 0.16, 0]);
+    add(Bd, mergeGeometries(pleats), pal.skirtDark);
+    add(Bd, cyl(0.362, 0.366, 0.05, 20), pal.skirtDark, [0, 0.16, 0]);
 
     // ---------- Kimono vert ----------
-    add(B, cyl(0.16, 0.22, 0.42), pal.top, [0, 1.08, 0]);
-    add(B, cyl(0.22, 0.26, 0.12), pal.top, [0, 0.89, 0]);
-    add(B, cyl(0.262, 0.264, 0.035, 20), pal.sash, [0, 0.83, 0]);       // liseré du bas de la veste
+    add(Bd, cyl(0.16, 0.22, 0.42), pal.top, [0, 1.08, 0]);
+    add(Bd, cyl(0.22, 0.26, 0.12), pal.top, [0, 0.89, 0]);
+    add(Bd, cyl(0.262, 0.264, 0.035, 20), pal.sash, [0, 0.83, 0]);       // liseré du bas de la veste
     // ceinture nouée : noeud sur le côté et deux pans qui pendent
-    add(B, cyl(0.228, 0.228, 0.07, 20), pal.sash, [0, 0.93, 0]);
-    const knot = group(B, [0.13, 0.93, -0.18]);
+    add(Bd, cyl(0.228, 0.228, 0.07, 20), pal.sash, [0, 0.93, 0]);
+    const knot = group(Bd, [0.13, 0.93, -0.18]);
     add(knot, sph, pal.sash, [0, 0, 0], [0.04, 0.035, 0.03]);
     for (const sx of [-1, 1]) add(knot, sph, pal.sash, [sx * 0.05, 0.005, 0], [0.05, 0.025, 0.018], [0, 0, -sx * 0.35]);
     add(knot, new THREE.BoxGeometry(0.03, 0.2, 0.01), pal.sash, [-0.015, -0.11, 0], [1, 1, 1], [0, 0, 0.12]);
     add(knot, new THREE.BoxGeometry(0.03, 0.16, 0.01), pal.sash, [0.025, -0.09, 0.005], [1, 1, 1], [0, 0, -0.18]);
     // petite bourse à remèdes d'apothicaire, à la hanche
-    const pouch = group(B, [-0.25, 0.78, 0.04]);
+    const pouch = group(Bd, [-0.25, 0.78, 0.04]);
     add(pouch, sph, m('#a8845a'), [0, 0, 0], [0.075, 0.09, 0.06]);
     add(pouch, cyl(0.04, 0.05, 0.03, 10), m('#8a6a44'), [0, 0.08, 0]);
     add(pouch, cyl(0.006, 0.006, 0.16, 6), m('#5a4030'), [0.01, 0.15, 0], [1, 1, 1], [0, 0, -0.2]);
     add(pouch, sph, m('#e8556c'), [0, 0.02, -0.06], [0.018, 0.018, 0.01]);
     // col croisé blanc et bleu pâle
-    add(B, new THREE.TorusGeometry(0.12, 0.03, 8, 20), m(COL.collar), [0, 1.28, 0], [1, 1, 1], [Math.PI / 2, 0, 0]);
+    add(Bd, new THREE.TorusGeometry(0.12, 0.03, 8, 20), m(COL.collar), [0, 1.28, 0], [1, 1, 1], [Math.PI / 2, 0, 0]);
     for (const sx of [-1, 1]) {
       // les deux pans partent des côtés du cou et se rejoignent en V sur la poitrine
-      add(B, new THREE.BoxGeometry(0.06, 0.2, 0.02), m(sx < 0 ? COL.collarBlue : COL.collar), [sx * 0.042, 1.195, -0.168 - (sx > 0 ? 0.004 : 0)], [1, 1, 1], [0.22, 0, -sx * 0.48]);
+      add(Bd, new THREE.BoxGeometry(0.06, 0.2, 0.02), m(sx < 0 ? COL.collarBlue : COL.collar), [sx * 0.042, 1.195, -0.168 - (sx > 0 ? 0.004 : 0)], [1, 1, 1], [0.22, 0, -sx * 0.48]);
     }
     // bandoulière en diagonale (devant et dans le dos)
-    add(B, new THREE.BoxGeometry(0.065, 0.56, 0.02), pal.sash, [0.0, 1.06, -0.2], [1, 1, 1], [0.15, 0, 0.6]);
-    add(B, new THREE.BoxGeometry(0.065, 0.56, 0.02), pal.sash, [0.0, 1.06, 0.205], [1, 1, 1], [-0.15, 0, -0.6]);
+    add(Bd, new THREE.BoxGeometry(0.065, 0.56, 0.02), pal.sash, [0.0, 1.06, -0.2], [1, 1, 1], [0.15, 0, 0.6]);
+    add(Bd, new THREE.BoxGeometry(0.065, 0.56, 0.02), pal.sash, [0.0, 1.06, 0.205], [1, 1, 1], [-0.15, 0, -0.6]);
     // liserés foncés du col croisé
     for (const sx of [-1, 1]) {
-      add(B, new THREE.BoxGeometry(0.02, 0.22, 0.02), pal.sash, [sx * 0.075, 1.19, -0.172], [1, 1, 1], [0.22, 0, -sx * 0.48]);
+      add(Bd, new THREE.BoxGeometry(0.02, 0.22, 0.02), pal.sash, [sx * 0.075, 1.19, -0.172], [1, 1, 1], [0.22, 0, -sx * 0.48]);
     }
+
+    // ---------- Combinaison de ski ----------
+    const Bs = (this.suit = group(B));
+    add(Bs, cyl(0.17, 0.2, 0.2, 18), pal.skirt, [0, 0.66, 0]);                 // bassin (pantalon)
+    add(Bs, cyl(0.205, 0.205, 0.05, 18), pal.sash, [0, 0.77, 0]);               // ceinture
+    add(Bs, cyl(0.17, 0.215, 0.5, 18), pal.top, [0, 1.03, 0]);                  // veste
+    add(Bs, cyl(0.222, 0.222, 0.06, 18), pal.top, [0, 0.8, 0]);                 // bas de veste
+    add(Bs, cyl(0.11, 0.15, 0.12, 16), pal.cuff, [0, 1.3, 0]);                  // col montant (tour de cou)
+    add(Bs, new THREE.BoxGeometry(0.018, 0.42, 0.02), pal.sash, [0, 1.05, -0.205], [1, 1, 1], [0.08, 0, 0]);   // fermeture éclair
+    add(Bs, new THREE.BoxGeometry(0.1, 0.07, 0.02), pal.sash, [-0.1, 1.12, -0.195], [1, 1, 1], [0.1, 0, 0]);   // poche poitrine
+    for (const sx of [-1, 1]) add(Bs, new THREE.BoxGeometry(0.03, 0.4, 0.02), pal.cuff, [sx * 0.2, 1.02, -0.05], [1, 1, 1], [0, 0, sx * 0.08]);   // bandes sur les flancs
+    // petit sac à dos
+    add(Bs, new THREE.BoxGeometry(0.26, 0.3, 0.1), pal.sash, [0, 1.05, 0.22]);
+    add(Bs, new THREE.BoxGeometry(0.22, 0.12, 0.04), pal.skirt, [0, 0.98, 0.28]);
+    for (const sx of [-1, 1]) add(Bs, new THREE.BoxGeometry(0.035, 0.36, 0.03), m(COL.bootDark), [sx * 0.09, 1.1, -0.19], [1, 1, 1], [0.12, 0, 0]);
     add(B, cyl(0.052, 0.052, 0.1), m(COL.skin), [0, 1.32, 0]);
 
     // ---------- Bras : larges manches de kimono ----------
@@ -325,18 +379,35 @@ export class Girl {
     this.arms = [-1, 1].map((sx) => {
       const arm = group(B, [sx * 0.19, 1.25, 0]);
       add(arm, sph, pal.top, [0, -0.02, 0], [0.08, 0.08, 0.08]);
-      add(arm, cyl(0.07, 0.1, 0.18), pal.top, [0, -0.09, 0]);
+      const ad = group(arm), as = group(arm);
+      add(ad, cyl(0.07, 0.1, 0.18), pal.top, [0, -0.09, 0]);
+      add(as, cyl(0.072, 0.068, 0.18, 12), pal.top, [0, -0.09, 0]);
       const fore = group(arm, [0, -0.17, 0]);
-      add(fore, sph, pal.top, [0, 0, 0], [0.095, 0.06, 0.095]);
-      add(fore, cyl(0.098, 0.125, 0.17), pal.top, [0, -0.085, 0]);
-      add(fore, cyl(0.128, 0.128, 0.06, 16, true), pal.cuff, [0, -0.19, 0]);
-      add(fore, cyl(0.131, 0.131, 0.015, 16, true), pal.sash, [0, -0.165, 0]);
-      add(fore, cyl(0.075, 0.075, 0.05, 12, true), m(COL.collar), [0, -0.21, 0]);   // manche intérieure blanche
+      const fd = group(fore), fs = group(fore);
+      add(fd, sph, pal.top, [0, 0, 0], [0.095, 0.06, 0.095]);
+      add(fd, cyl(0.098, 0.125, 0.17), pal.top, [0, -0.085, 0]);
+      add(fd, cyl(0.128, 0.128, 0.06, 16, true), pal.cuff, [0, -0.19, 0]);
+      add(fd, cyl(0.131, 0.131, 0.015, 16, true), pal.sash, [0, -0.165, 0]);
+      add(fd, cyl(0.075, 0.075, 0.05, 12, true), m(COL.collar), [0, -0.21, 0]);   // manche intérieure blanche
       // petite main avec doigts esquissés
-      add(fore, sph, m(COL.skin), [0, -0.235, 0], [0.05, 0.055, 0.035]);
-      for (const f of [-1, 0, 1]) add(fore, sph, m(COL.skin), [f * 0.025, -0.285, 0], [0.014, 0.024, 0.014]);
-      add(fore, sph, m(COL.skin), [-sx * 0.045, -0.25, 0], [0.013, 0.022, 0.013], [0, 0, sx * 0.6]);
+      add(fd, sph, m(COL.skin), [0, -0.235, 0], [0.05, 0.055, 0.035]);
+      for (const f of [-1, 0, 1]) add(fd, sph, m(COL.skin), [f * 0.025, -0.285, 0], [0.014, 0.024, 0.014]);
+      add(fd, sph, m(COL.skin), [-sx * 0.045, -0.25, 0], [0.013, 0.022, 0.013], [0, 0, sx * 0.6]);
+      // manche de combinaison, gros gant et bâton (tenu vers l'arrière, rondelle au bout)
+      add(fs, sph, pal.top, [0, 0, 0], [0.068, 0.06, 0.068]);
+      add(fs, cyl(0.066, 0.07, 0.16, 12), pal.top, [0, -0.08, 0]);
+      add(fs, cyl(0.078, 0.078, 0.06, 12), pal.cuff, [0, -0.17, 0]);
+      add(fs, sph, pal.cuff, [0, -0.22, 0], [0.065, 0.07, 0.06]);
+      add(fs, sph, pal.cuff, [-sx * 0.05, -0.2, -0.02], [0.025, 0.04, 0.025], [0, 0, sx * 0.5]);
+      const pole = group(fs, [0, -0.22, 0]);
+      pole.rotation.x = 1.25;
+      add(pole, cyl(0.012, 0.009, 1.0, 6), m(COL.pole), [0, -0.42, 0]);
+      add(pole, cyl(0.02, 0.02, 0.12, 8), m(COL.bootDark), [0, 0.02, 0]);
+      add(pole, cyl(0.055, 0.055, 0.01, 10), m(COL.bootDark), [0, -0.82, 0]);
+      add(pole, new THREE.ConeGeometry(0.012, 0.06, 6), m(COL.buckle), [0, -0.95, 0], [1, 1, 1], [Math.PI, 0, 0]);
       this.forearms.push(fore);
+      (this.poles ||= []).push(pole);
+      arm.userData = { dress: [ad, fd], suit: [as, fs] };
       return arm;
     });
 
@@ -399,6 +470,12 @@ export class Girl {
       add(H, new THREE.ConeGeometry(0.11, 0.24, 4), hairMat, [sx * 0.21, 0.36, 0.04], [1, 1, 0.55], [0, Math.PI / 4, -sx * 0.38]);
       add(H, new THREE.ConeGeometry(0.06, 0.14, 4), m(COL.hairLight), [sx * 0.2, 0.34, 0.0], [1, 1, 0.3], [0, Math.PI / 4, -sx * 0.38]);
     }
+    // masque de ski relevé sur le front (tenue de ski) : sangle, monture et écran orangé
+    this.goggles = group(H, [0, 0.16, 0]);
+    add(this.goggles, new THREE.TorusGeometry(0.37, 0.022, 6, 32), m(COL.bootDark), [0, 0, 0.02], [1, 1, 1.02], [Math.PI / 2 - 0.12, 0, 0]);
+    add(this.goggles, new THREE.BoxGeometry(0.42, 0.15, 0.09), pal.sash, [0, 0.02, -0.33], [1, 1, 1], [-0.25, 0, 0]);
+    add(this.goggles, new THREE.BoxGeometry(0.38, 0.12, 0.04), m(COL.goggle), [0, 0.02, -0.372], [1, 1, 1], [-0.25, 0, 0]);
+    add(this.goggles, new THREE.BoxGeometry(0.12, 0.03, 0.02), m('#ffe0b0'), [-0.09, 0.05, -0.395], [1, 1, 1], [-0.25, 0, 0.2]);
     // petites tresses avec perles et pompons, devant les épaules
     for (const sx of [-1, 1]) {
       const br = group(H, [sx * 0.24, -0.26, -0.05]);
@@ -423,6 +500,21 @@ export class Girl {
     this.deadT = 0;
     this.deathKind = 'bonk';
     this.spin = 0;
+    this.ski = { turn: 0, grind: 0, trick: 0 };
+    this.setOutfit('dress');
+  }
+
+  // 'dress' : kimono et longue jupe ; 'ski' : combinaison, chaussures, skis, bâtons et masque
+  setOutfit(kind) {
+    const ski = kind === 'ski';
+    this.outfit = kind;
+    this.dress.visible = !ski;
+    this.suit.visible = ski;
+    this.goggles.visible = ski;
+    for (const g of [...this.legs, ...this.arms]) {
+      for (const d of [].concat(g.userData.dress)) d.visible = !ski;
+      for (const d of [].concat(g.userData.suit)) d.visible = ski;
+    }
   }
 
   setPalette(i) {
@@ -472,6 +564,9 @@ export class Girl {
   reset() {
     this.pivot.rotation.set(0, 0, 0);
     this.pivot.scale.set(1, 1, 1);
+    this.body.rotation.set(0, 0, 0);
+    this.body.scale.set(1, 1, 1);
+    this.ski = { turn: 0, grind: 0, trick: 0, land: 0 };
     this.body.position.y = -0.55;
     this.root.rotation.set(0, 0, 0);
     this.deadT = 0;
@@ -492,6 +587,9 @@ export class Girl {
       bodyY: 0, lean: 0, headZ: 0, headX: 0,
     };
     let tailSpeed = 3, tailAmp = 0.25, tailLift = 0.75;
+    // à ski : genoux fléchis, skis à plat, buste penché vers l'avant (glisse, position de recherche, saut)
+    const ski = this.outfit === 'ski' && (mode === 'run' || mode === 'roll' || mode === 'jump');
+    let flex = 0;
 
     if (mode === 'run' || mode === 'roll') {
       this.phase += dt * (8 + speed * 0.22);
@@ -517,6 +615,34 @@ export class Girl {
       tgt.foreWave = Math.sin(t * 5) * 0.12;
       tgt.headZ = Math.sin(t * 1.4) * 0.1;
       tgt.headX = 0.06;
+    }
+    if (ski) {
+      const S = this.ski, turn = S.turn || 0, tuck = mode === 'roll', air = mode === 'jump';
+      this.phase += dt * 3;
+      // flexion : plus basse en recherche, à l'intérieur du virage et à la réception
+      flex = tuck ? 1.05 : air ? 0.8 : 0.5 + Math.abs(turn) * 0.22 + Math.sin(this.phase) * 0.025 + (S.land || 0) * 0.45;
+      if (S.grind) flex = 0.6;
+      tgt.legL = flex + Math.max(0, -turn) * 0.12;
+      tgt.legR = flex + Math.max(0, turn) * 0.12;
+      tgt.bodyY = -0.58 * (1 - Math.cos(flex)) * 0.85;
+      tgt.lean = tuck ? -0.55 : air ? -0.18 : -0.3;
+      tgt.headX = tuck ? -0.35 : -0.12;
+      tgt.headZ = -turn * 0.12;
+      if (tuck) {   // poings devant le visage, bâtons sous les bras
+        tgt.armLx = tgt.armRx = -1.25; tgt.armLz = -0.15; tgt.armRz = 0.15; tgt.fore = 1.7;
+      } else if (S.grind) {   // bras écartés pour l'équilibre sur la barre
+        tgt.armLx = tgt.armRx = -0.3; tgt.armLz = -1.45; tgt.armRz = 1.45; tgt.fore = 0.3;
+        tgt.lean = -0.15;
+      } else if (air) {
+        const big = S.trick > 0;
+        tgt.armLx = big ? -0.9 : -0.5; tgt.armRx = big ? -0.9 : -0.5;
+        tgt.armLz = big ? -1.0 : -0.7; tgt.armRz = big ? 1.0 : 0.7; tgt.fore = 0.5;
+      } else {
+        // bâtons en avant, celui de l'intérieur du virage planté un peu plus bas
+        tgt.armLx = -0.55 - Math.max(0, -turn) * 0.5; tgt.armRx = -0.55 - Math.max(0, turn) * 0.5;
+        tgt.armLz = -0.38 - Math.max(0, turn) * 0.25; tgt.armRz = 0.38 + Math.max(0, -turn) * 0.25; tgt.fore = 0.75;
+      }
+      tailSpeed = 7; tailAmp = 0.22; tailLift = 1.25;
     } else if (mode === 'dead') {
       const kd = this.deathKind;
       tailSpeed = 0; tailAmp = 0;
@@ -538,6 +664,11 @@ export class Girl {
 
     legL.rotation.x = lerp(legL.rotation.x, tgt.legL, k);
     legR.rotation.x = lerp(legR.rotation.x, tgt.legR, k);
+    // genoux : deux fois la flexion de la hanche ; chevilles : les skis restent à plat sur la neige
+    this.knees.forEach((kn, i) => {
+      const hip = i ? legR.rotation.x : legL.rotation.x;
+      kn.rotation.x = lerp(kn.rotation.x, ski ? -hip * 1.9 : 0, k);
+    });
     armL.rotation.x = lerp(armL.rotation.x, tgt.armLx, k);
     armR.rotation.x = lerp(armR.rotation.x, tgt.armRx, k);
     armL.rotation.z = lerp(armL.rotation.z, tgt.armLz, k);
@@ -548,6 +679,13 @@ export class Girl {
     armR.rotation.z = lerp(armR.rotation.z, tgt.armRz, k);
     this.body.position.y = lerp(this.body.position.y, -0.55 + tgt.bodyY, k);
     this.body.rotation.x = lerp(this.body.rotation.x, tgt.lean, k);
+    this.body.rotation.z = lerp(this.body.rotation.z, ski ? (this.ski.turn || 0) * 0.22 : 0, k);
+    this.ankles.forEach((an, i) => {
+      const hip = i ? legR.rotation.x : legL.rotation.x;
+      // en l'air, les spatules se relèvent un peu
+      const flat = -(this.body.rotation.x + hip + this.knees[i].rotation.x) + (mode === 'jump' && ski ? 0.18 : 0);
+      an.rotation.x = this.outfit === 'ski' && mode !== 'dead' ? flat : lerp(an.rotation.x, 0, k);
+    });
     this.head.rotation.z = lerp(this.head.rotation.z, tgt.headZ, k);
     this.head.rotation.x = lerp(this.head.rotation.x, tgt.headX, k);
 
@@ -561,11 +699,13 @@ export class Girl {
     // inclinaison et écrasement du changement de voie (décroissance douce)
     this.dashE = Math.max(0, this.dashE - dt * 4.5);
     const de = Math.sin(this.dashE * Math.PI) * (this.dashE > 0 ? 1 : 0);
-    this.root.rotation.z = -this.dashDir * 0.3 * de;
-    this.body.scale.set(1 + 0.12 * de, 1 - 0.1 * de, 1 + 0.06 * de);
+    if (this.outfit !== 'ski') {   // à ski, l'inclinaison du virage vient de la glisse (moteur du niveau)
+      this.root.rotation.z = -this.dashDir * 0.3 * de;
+      this.body.scale.set(1 + 0.12 * de, 1 - 0.1 * de, 1 + 0.06 * de);
+    }
 
     // roulade
-    if (mode === 'roll') {
+    if (mode === 'roll' && !ski) {
       this.pivot.rotation.x = -slideFrac * Math.PI * 2;
       const sq = Math.sin(slideFrac * Math.PI);
       this.pivot.scale.set(1 - sq * 0.15, 1 - sq * 0.5, 1 - sq * 0.15);
