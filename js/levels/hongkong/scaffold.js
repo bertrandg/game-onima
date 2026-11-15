@@ -371,8 +371,9 @@ export class ScaffoldObstacles extends Obstacles {
   spawnUpRow(z, speed, dist) {
     const s = this.sectionAt(z);
     if (!s) return 6;
-    // ni sur l'arrivée de la rampe, ni dans les derniers mètres (on redescend)
-    if (z > s.zStart - 10 || z < s.zEnd + 14) return 6;
+    // ni sur l'arrivée de la rampe, ni dans les derniers mètres (on redescend) : l'arrière de l'obstacle
+    // le plus profond (réservoir, 1,2 m) reste à 14 m du bout
+    if (z > s.zStart - 10 || z - 1.2 < s.zEnd + 14) return 6;
     const diff = Math.min(1, dist / 2500);
     const rowGap = Math.max(16, speed * 1.15) + rand(0, 8) * (1 - diff * 0.5);
     const minGap = Math.max(8, speed * 0.6);
