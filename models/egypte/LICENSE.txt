@@ -1,0 +1,11 @@
+Palmiers du niveau Égypte (plants.bin, plants.json)
+
+Trouvés sur Poly Pizza, tous de Quaternius (https://quaternius.com), licence CC0 1.0 (domaine public) :
+- « Palm Tree » : https://poly.pizza/m/A6cKJYFsIb (e_palm1)
+- « Palm Tree » : https://poly.pizza/m/DsrrAYmucG (e_palm2, et e_palmfar pour la palmeraie lointaine)
+- « Palm Tree » : https://poly.pizza/m/P0tgwyXBgr (e_palm3)
+
+Licence : https://creativecommons.org/publicdomain/zero/1.0/
+
+Simplifiés (Decimate) et convertis dans Blender (tools/export-plants.py, ONIMA_LEVEL=egypte) : texture
+remplacée par une couleur par triangle, recolorée dans le jeu (palmiers dattiers, js/levels/egypte/decor.js).

@@ -2,6 +2,9 @@ import * as THREE from 'three';
 import { Builder, TexBuilder, U, pick, rand } from '../../geo.js';
 import { Painter, S, PAPYRUS_SHAFT, PAPYRUS_CAP, AMPHORA, JAR, BOWL } from './shapes.js';
 import { PAINT, decorAtlas } from './textures.js';
+import { loadPlants, addPlant, plant } from '../../plants.js';
+
+await loadPlants('egypte');   // palmiers (modèles de Quaternius, voir models/egypte/LICENSE.txt)
 
 // Décor latéral de l'Égypte, en trois zones qui se suivent : l'allée des sphinx devant les temples,
 // les bords du Nil, puis le souk. Chaque élément est construit face à +x (vers la voie quand il est
@@ -120,38 +123,45 @@ function obelisk(b, t) {
   p.glow(PYRAMID, '#ffd860', [0, 1.1 + H + 0.32, 0], [0.31, 0.64, 0.31]);
 }
 
-// palmier dattier : stipe annelé un peu courbé, palmes retombantes, régimes de dattes
+// palmier dattier : modèle de Quaternius (trois variantes) recoloré, couronne un peu resserrée, régimes
+// de dattes sous les palmes. Feuilles et stipe se distinguent par leur couleur d'origine (vert / brun).
+const PALMS = ['e_palm1', 'e_palm2', 'e_palm3'];
+const isLeaf = (c) => c[1] > c[0];
+const palmPaint = (role, part, i, up, orig) => {
+  if (!isLeaf(orig)) return i % 3 ? '#8a6a42' : '#6e5232';
+  return up > 0.6 ? '#7aae48' : up > 0.1 ? '#5a9a3a' : '#3f7a2c';
+};
+// sommet du stipe (relatif, modèle de hauteur 1) : le plus haut triangle brun
+const crowns = {};
+function crown(key) {
+  if (crowns[key]) return crowns[key];
+  const m = plant(key);
+  let best = null;
+  for (let i = 0; i < m.n; i++) {
+    if (isLeaf(m.col.subarray(i * 3, i * 3 + 3))) continue;
+    const o = i * 9, y = (m.pos[o + 1] + m.pos[o + 4] + m.pos[o + 7]) / 3;
+    if (!best || y > best[1]) best = [(m.pos[o] + m.pos[o + 3] + m.pos[o + 6]) / 3, y, (m.pos[o + 2] + m.pos[o + 5] + m.pos[o + 8]) / 3];
+  }
+  return (crowns[key] = best);
+}
 function palm(b, t) {
   const p = P(b, t);
-  const H = rand(6.8, 8.6), lean = rand(0.02, 0.05), n = 10;
-  let x = 0, y = 0;
-  for (let i = 0; i < n; i++) {
-    const h = H / n, dx = lean * (i * 2 + 1) * h;
-    p.smooth(S.cylLo, i % 2 ? '#8a6a42' : '#7a5a36', [x + dx / 2, y + h / 2, 0], [0.2 - i * 0.008, h * 1.02, 0.2 - i * 0.008], [0, 0, -Math.atan2(dx, h)]);
-    p.smooth(S.cylLo, '#6a4a2c', [x + dx, y + h, 0], [0.22 - i * 0.008, 0.06, 0.22 - i * 0.008]);
-    x += dx; y += h;
+  const key = pick(PALMS), H = rand(6.8, 8.6), ry = rand(0, Math.PI * 2), k = rand(0.68, 0.8);
+  const mat = addPlant(b, key, [0, 0, 0], H, palmPaint, { s: [k, k], ry });
+  // le décor est tourné au hasard : la couronne ne dépasse pas 2,4 m de rayon autour du pied (comme
+  // l'emprise prévue), pour que rien ne retombe au-dessus de la chaussée
+  const g = b.parts[b.parts.length - 1], pos = g.attributes.position;
+  let reach = 0;
+  for (let i = 0; i < pos.count; i++) reach = Math.max(reach, Math.hypot(pos.getX(i), pos.getZ(i)));
+  const squeeze = Math.min(1, 2.4 / reach);
+  if (squeeze < 1) {
+    for (let i = 0; i < pos.count; i++) pos.setXYZ(i, pos.getX(i) * squeeze, pos.getY(i), pos.getZ(i) * squeeze);
+    g.computeVertexNormals();
   }
-  const top = [x, y, 0];
-  p.smooth(S.sphLo, '#5a7a2a', top, [0.32, 0.3, 0.32]);
-  const fronds = 9;
-  for (let f = 0; f < fronds; f++) {
-    const a = (f / fronds) * Math.PI * 2 + rand(-0.15, 0.15), rise = rand(0.2, 0.5);
-    const ca = Math.cos(a), sa = Math.sin(a);
-    for (let k = 0; k < 6; k++) {
-      const r0 = 0.2 + k * 0.44, yy = y + rise * k * 0.65 - 0.07 * k * k;
-      const px = x + ca * r0, pz = sa * r0;
-      const col = k < 3 ? '#4a8a32' : k < 5 ? '#5a9a3a' : '#7aae48';
-      b.add(U.box, '#6a7a32', [px, yy, pz], [0.42, 0.05, 0.06], [0, -a, -0.15 * k + rise]);
-      for (const s of [-1, 1]) {
-        const w = 0.66 - k * 0.07;
-        // foliole perpendiculaire à la palme, qui retombe vers l'extérieur
-        b.add(U.box, col, [px - sa * s * w * 0.45, yy - 0.08, pz + ca * s * w * 0.45], [w, 0.02, 0.16], [0, -a - s * Math.PI / 2, -0.5]);
-      }
-    }
-  }
-  for (let c = 0; c < 3; c++) {
+  const top = new THREE.Vector3(...crown(key)).applyMatrix4(mat).multiply(new THREE.Vector3(squeeze, 1, squeeze));
+  for (let c = 0; c < 3; c++) {   // régimes de dattes
     const a = c * 2.1 + 0.4;
-    for (let k = 0; k < 5; k++) p.smooth(S.sphLo, k % 2 ? '#d87a2a' : '#c0502a', [x + Math.cos(a) * 0.4 + rand(-0.12, 0.12), y - 0.35 - k * 0.08, Math.sin(a) * 0.4 + rand(-0.12, 0.12)], [0.1, 0.12, 0.1]);
+    for (let n = 0; n < 5; n++) p.smooth(S.sphLo, n % 2 ? '#d87a2a' : '#c0502a', [top.x + Math.cos(a) * 0.32 + rand(-0.1, 0.1), top.y - 0.3 - n * 0.08, top.z + Math.sin(a) * 0.32 + rand(-0.1, 0.1)], [0.1, 0.12, 0.1]);
   }
 }
 
@@ -365,15 +375,11 @@ function river(b, t) {
   }
 }
 
-// palmeraie sur l'autre rive (lointain, peu de détails)
+// palmeraie sur l'autre rive (lointain : modèle simplifié)
 function farPalms(b) {
   for (let i = 0; i < 5; i++) {
     const z = -6 + i * 3 + rand(-0.8, 0.8), x = rand(-2, 2), h = rand(5, 8);
-    b.add(U.cyl6, '#7a5a36', [x, h / 2, z], [0.18, h, 0.18], [rand(-0.08, 0.08), 0, rand(-0.08, 0.08)]);
-    for (let f = 0; f < 7; f++) {
-      const a = (f / 7) * Math.PI * 2;
-      b.add(U.box, f % 2 ? '#4a8a32' : '#5a9a3a', [x + Math.cos(a) * 0.9, h - 0.3, z + Math.sin(a) * 0.9], [1.9, 0.06, 0.4], [0, -a, -0.4]);
-    }
+    addPlant(b, 'e_palmfar', [x, 0, z], h, palmPaint, { s: [0.8, 0.8], ry: rand(0, Math.PI * 2) });
   }
   b.add(U.box, '#c8a074', [2, 1.2, 4], [3, 2.4, 3]);   // maison de terre
   b.add(U.box, '#b08860', [2, 2.5, 4], [3.2, 0.2, 3.2]);

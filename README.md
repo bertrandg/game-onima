@@ -159,6 +159,8 @@ Arbres, bouches d'incendie, bancs, poubelles, bennes et cagettes de New York : m
 (`models/newyork/`, détail dans `models/newyork/LICENSE.txt`).
 Banians, cagettes, ananas, tabourets et bancs de Hong Kong : modèles de Quaternius et Kenney, même provenance
 (`models/hongkong/`, détail dans `models/hongkong/LICENSE.txt`).
+Palmiers dattiers d'Égypte : trois « Palm Tree » de Quaternius, même provenance, simplifiés et recolorés
+(`models/egypte/`, détail dans `models/egypte/LICENSE.txt`).
 Plantes d'intérieur, mannequins de couturière et bancs du centre commercial : modèles de Quaternius et reyshapes, même
 provenance ; parements des façades (marbre, chêne, lattes, brique blanchie) et sol : photos de
 [Poly Haven](https://polyhaven.com), licence CC0 (`models/mall/`, détail dans `models/mall/LICENSE.txt`).
