@@ -44,7 +44,7 @@ const TRI = (() => {
 const REFL = { neonV0: '#ff6a3a', neonV1: '#ffe04a', neonV2: '#3aff8a', neonV3: '#ff4aa8',
   neonH0: '#ff4a4a', neonH1: '#3af0ff', neonH2: '#ffd040', neonH3: '#b06aff', neonH4: '#3aff8a', neonH5: '#ff4aa8' };
 // traînée de reflet sur le trottoir sous une enseigne (vers la voie et vers le joueur, qui arrive par +z)
-const SIDEWALK_Y = 0.135;
+const SIDEWALK_Y = 0.03;
 function streak(p, F, z, w, len, color, x0 = 0.3) { p.refl('streak', [F + x0 + w / 2, SIDEWALK_Y, z + len * 0.3], [w, len], color); }
 
 // ---------- Enseignes au néon ----------
@@ -91,7 +91,7 @@ function shopfronts(p, closed) {
     }
     p.lit(sign, [F + 0.205, 3.5, zc], [3.5, 0.7]);
     p.lit('in' + i, [F - DEPTH + 0.01, 1.55, zc], [3.64, 3.1]);
-    p.flat(U.box, '#6a6470', [F - DEPTH / 2, 0.13, zc], [DEPTH, 0.02, 3.64]);   // sol de la boutique
+    p.flat(U.box, '#6a6470', [F - DEPTH / 2, 0.015, zc], [DEPTH, 0.03, 3.64]);   // sol de la boutique
     p.glow(S.box, '#fff4e0', [F - DEPTH / 2, 3.08, zc], [0.5, 0.04, 3.2]);    // plafonnier
     // comptoir ou étal devant l'entrée, selon la boutique
     const side = pick([-1, 1]), cz = zc + side * 1.0;
@@ -454,11 +454,13 @@ function flowers(b, t) {   // pots de fleurs et petits arbres en pot devant les 
 
 // ---------- Sols ----------
 const STRIP = 32;
-function hkSidewalk(b) {   // trottoir de dalles, bordure peinte en jaune, plaques d'égout
-  b.add(U.box, '#4a4858', [0, 0.06, 0], [3.4, 0.12, STRIP]);
-  for (let i = 0; i <= 20; i++) b.add(U.box, '#3a3846', [0, 0.122, -STRIP / 2 + i * 1.6], [3.4, 0.004, 0.04]);
-  b.add(U.box, '#e8c020', [1.62, 0.14, 0], [0.12, 0.04, STRIP]);
-  for (let i = 0; i < 4; i++) b.add(U.box, '#2a2a34', [rand(-1.2, 1.2), 0.125, rand(-15, 15)], [0.6, 0.01, 0.6]);
+function hkSidewalk(b) {   // trottoir carrelé (texture du sol, visible) : bordure peinte en jaune, plaques d'égout
+  b.add(U.box, '#e8c020', [1.62, 0.012, 0], [0.12, 0.024, STRIP]);
+  for (let i = 0; i < 4; i++) {
+    const x = rand(-1.2, 1.2), z = rand(-15, 15);
+    b.add(U.box, '#2a2a34', [x, 0.006, z], [0.62, 0.012, 0.62]);
+    b.add(U.box, '#3a3a46', [x, 0.013, z], [0.5, 0.004, 0.5]);
+  }
 }
 function promenade(b) {   // promenade en planches
   b.add(U.box, '#5a4a40', [0, 0.06, 0], [3.4, 0.12, STRIP]);

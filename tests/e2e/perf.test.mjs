@@ -14,8 +14,9 @@ const BUDGET = {
   'newyork (égouts)': { calls: 235, triangles: 830000 },
   egypte: { calls: 205, triangles: 820000 },
   'egypte (tombeau)': { calls: 215, triangles: 900000 },   // maximum relevé pendant la chute (deux étages affichés)
-  hongkong: { calls: 240, triangles: 740000 },
-  'hongkong (passerelles)': { calls: 235, triangles: 570000 },
+  // Hong Kong : + 1 appel par tranche de décor pour les reflets sur le trottoir mouillé (matière additive), novembre 2026
+  hongkong: { calls: 250, triangles: 740000 },
+  'hongkong (passerelles)': { calls: 245, triangles: 570000 },
   mall: { calls: 270, triangles: 1000000 },   // relevé en novembre 2026 en montant les six étages (deux ou trois étages affichés près des escalators) ; façades détaillées : jusqu'à 915 000
 };
 // autre étage : voie où poser l'ouverture (New York : bouches sur les côtés seulement), ou passerelle au-dessus

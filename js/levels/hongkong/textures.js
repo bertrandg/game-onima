@@ -293,27 +293,18 @@ const INTERIOR_PAINTERS = [
 ];
 
 // ---------- Sol ----------
-// chaussée mouillée : bitume sombre, flaques qui reflètent les néons
-export const wetAsphalt = () => canvasTex(256, 256, (g, w, h) => {
-  g.fillStyle = '#2a2a36'; g.fillRect(0, 0, w, h);
-  speckle(g, 0, 0, w, h, 2600, ['#24242e', '#32323e', '#2e2e3a', '#3a3a48'], 2);
-  for (let i = 0; i < 9; i++) {
-    const col = pickOf(['255,80,170', '60,230,255', '255,220,90', '170,110,255']);
-    const px = rnd(0, w), py = rnd(0, h), pw = rnd(14, 40), ph = rnd(30, 70);
-    const grd = g.createLinearGradient(px, py, px, py + ph);
-    grd.addColorStop(0, `rgba(${col},0)`); grd.addColorStop(0.5, `rgba(${col},0.35)`); grd.addColorStop(1, `rgba(${col},0)`);
-    g.fillStyle = grd; g.fillRect(px, py, pw, ph);
-  }
-});
-// trottoir de dalles carrées sous la lumière des vitrines
-export const sidewalkTiles = () => canvasTex(256, 256, (g, w, h) => {
-  g.fillStyle = '#3a3846'; g.fillRect(0, 0, w, h);
-  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
-    const v = rnd(-8, 8);
-    g.fillStyle = `rgb(${92 + v},${88 + v},${104 + v})`;
-    g.fillRect(c * 32 + 1, r * 32 + 1, 30, 30);
-  }
-});
+// Chaussée et trottoirs : photos de Poly Haven (models/hongkong/LICENSE.txt) préparées pour la nuit. Asphalte
+// fissuré et flaques qui reflètent les néons (road.jpg, 3 m par répétition), petits carreaux du trottoir
+// (sidewalk.jpg, 2,4 m).
+function photoTex(name) {
+  const t = new THREE.TextureLoader().load(new URL('../../../models/hongkong/' + name, import.meta.url).href);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 8;
+  return t;
+}
+export const wetAsphalt = () => photoTex('road.jpg');
+export const sidewalkTiles = () => photoTex('sidewalk.jpg');
 // marquage au sol : bandes jaunes et blanches à la hongkongaise (fond transparent)
 export const laneWear = () => canvasTex(128, 128, (g, w, h) => {
   g.clearRect(0, 0, w, h);

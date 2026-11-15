@@ -35,7 +35,7 @@ export default {
     decor: { DECOR, THEMES, THEME_ORDER, THEME_LEN, weighted, prebuild, texMats: makeTexMats() },
     lights: { sky: '#9a90e8', ground: '#3a2848', hemi: 1.45, sun: '#d0d8ff', sunI: 1.3 },
     track: {
-      ground: HX.sidewalkTiles, groundTile: 8, bed: HX.wetAsphalt, sleepers: HX.laneWear, rails: false,
+      ground: HX.sidewalkTiles, groundTile: 2.4, bed: HX.wetAsphalt, sleepers: HX.laneWear, rails: false,
       overlay: HX.roadLines, overlayTile: 6, curb: '#8a8898',
     },
     particles: { texture: drizzle, size: 0.32, colors: ['#ffffff', '#c8e8ff', '#ffd0ec', '#d8f8ff'] },
